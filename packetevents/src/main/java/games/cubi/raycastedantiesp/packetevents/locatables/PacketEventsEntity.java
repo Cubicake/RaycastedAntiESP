@@ -7,8 +7,8 @@ import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsEntityRep
 import java.util.UUID;
 
 public class PacketEventsEntity extends NettyEntityLocatable<EntityType, PacketEventsEntityReplayData> {
-    public PacketEventsEntity(UUID world, double x, double y, double z, int entityID, UUID entityUUID, SpawnType spawnType, EntityType entityType, boolean visible) {
-        super(world, x, y, z, entityID, entityUUID, spawnType, entityType, visible);
+    public PacketEventsEntity(UUID world, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, EntityType entityType, boolean visible) {
+        super(world, x, y, z, entityID, entityUUID, isSelfEntity, entityType, visible);
     }
 
     private PacketEventsEntity(int selfEntityID, UUID selfEntityUUID) {
@@ -27,7 +27,7 @@ public class PacketEventsEntity extends NettyEntityLocatable<EntityType, PacketE
 
         if (entityID() != that.entityID()) return false;
         if (!entityUUID().equals(that.entityUUID())) return false;
-        if (spawnType() != that.spawnType()) return false;
+        if (isSelfEntity() != that.isSelfEntity()) return false;
         if (entityType() != that.entityType()) return false;
         if (visible() != that.visible()) return false;
         if (yaw() != that.yaw()) return false;

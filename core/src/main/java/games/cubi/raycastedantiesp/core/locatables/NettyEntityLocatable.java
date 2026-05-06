@@ -15,7 +15,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     // immutable fields
     private final int entityID;
     private final UUID entityUUID;
-    private final SpawnType spawnType;
+    private final boolean isSelfEntity;
     private final EntityType entityType;
 
     // Netty mutatable fields. Should NEVER be mutated from the engine thread, but reads are fine.
@@ -39,13 +39,13 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     // engine thread mutable, reads from netty and engine.
     private volatile boolean visible;
 
-    public NettyEntityLocatable(UUID world, double x, double y, double z, int entityID, UUID entityUUID, SpawnType spawnType, EntityType entityType, boolean visible) {
+    public NettyEntityLocatable(UUID world, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, EntityType entityType, boolean visible) {
         this.world = world;
         this.x = x; this.y = y; this.z = z;
 
         this.entityID = entityID;
         this.entityUUID = entityUUID;
-        this.spawnType = spawnType;
+        this.isSelfEntity = isSelfEntity;
         this.entityType = entityType;
 
         this.visible = visible;
@@ -54,7 +54,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     protected NettyEntityLocatable(int selfPlayerID, UUID entityUUID) {
         entityID = selfPlayerID;
         this.entityUUID = entityUUID;
-        spawnType = SpawnType.SELF;
+        isSelfEntity = true;
         entityType = null;
     }
 
@@ -110,8 +110,8 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     }
 
     @Override
-    public SpawnType spawnType() {
-        return spawnType;
+    public boolean isSelfEntity() {
+        return isSelfEntity;
     }
 
     @Override

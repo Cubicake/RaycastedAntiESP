@@ -9,13 +9,6 @@ import java.util.UUID;
  * Per-player platform-independent representation of an entity
  */
 public interface EntityLocatable<EntityType, PacketReplayData> extends MutableLocatable {
-    enum SpawnType {
-        LIVING,
-        ENTITY,
-        PAINTING,
-        PLAYER,
-        SELF, // Used to track the player's own position. Should never be shown or hidden.
-    }
 
     int entityID();
 
@@ -30,7 +23,7 @@ public interface EntityLocatable<EntityType, PacketReplayData> extends MutableLo
     boolean clientVisible();
     EntityLocatable<?, ?> setClientVisible(boolean clientVisible);
 
-    SpawnType spawnType();
+    boolean isSelfEntity();
 
     float yaw();
     EntityLocatable<?, ?> setYaw(float yaw);
