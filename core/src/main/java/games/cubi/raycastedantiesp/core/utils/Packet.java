@@ -16,6 +16,7 @@ public @interface Packet {
         ENTITY_EVENT("https://minecraft.wiki/w/Java_Edition_protocol/Packets#Entity_Event", "WrapperPlayServerEntityStatus"),
         HURT_ANIMATION("https://minecraft.wiki/w/Java_Edition_protocol/Packets#Hurt_Animation", "WrapperPlayServerHurtAnimation"),
         UPDATE_ATTRIBUTES("https://minecraft.wiki/w/Java_Edition_protocol/Packets#Update_Attributes", "WrapperPlayServerUpdateAttributes"),
+        LEASH_ENTITY("https://minecraft.wiki/w/Java_Edition_protocol/Packets#Link_Entities", "WrapperPlayServerAttachEntity"), //Note in 1.8 and below this was also used for setting passengers
         ;
 
         Packets(String wikiURL, String PEName) {
