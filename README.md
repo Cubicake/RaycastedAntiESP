@@ -26,7 +26,7 @@ The supported versions are 1.21.x PaperMC and Pufferfish. Other server versions 
 ## Versioning:
 Note that the following versioning information only applies to v2 and beyond.
 
-RaycastedAntiESP binaries are composed of four distinct modules: the core, Locatable-lib (used for platform-independent location objects), a very basic logging api, and a platform adapter.
+RaycastedAntiESP binaries are composed of four distinct modules: the core, Locatable-lib (used for platform-independent location objects), [CubiLogging](https://github.com/Cubicake/CubiLogging/tree/main), and a platform adapter.
 
 Each of these has its own versioning system. Locatable-lib and the logging api both declare public apis, and follow [Semantic Versioning](https://semver.org/#semantic-versioning-specification-semver). The platform adapter and core do not declare public apis, and thus [cannot follow semantic versioning](https://semver.org/#spec-item-1). They still follow a major.minor.patch versioning system, but which version number increments is less deterministic. Generally, major version bumps will be for when significant refactoring or rewriting has occurred, or a very significant distinct feature has been added or removed. Minor version bumps will be for the addition/removal of smaller distinct features, while patch version bumps are for bug fixes and tweaks or minor addition/removals which are related to the features added/removed in the minor version bumps.
 
