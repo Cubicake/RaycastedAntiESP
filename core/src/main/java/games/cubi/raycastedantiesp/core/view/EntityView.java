@@ -11,12 +11,6 @@ import java.util.UUID;
 public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable {
     void insertEntity(T entity);
 
-    @Deprecated(forRemoval = true)
-    void moveRelative(int entityID, double deltaX, double deltaY, double deltaZ, int currentTick);
-
-    @Deprecated(forRemoval = true)
-    void moveAbsolute(int entityID, double x, double y, double z, int currentTick);
-
     void removeEntity(int entityID, int currentTick);
 
     void removeEntity(UUID entityUUID, int currentTick);

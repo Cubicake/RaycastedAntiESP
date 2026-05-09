@@ -43,24 +43,6 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     }
 
     @Override
-    public void moveRelative(int entityID, double deltaX, double deltaY, double deltaZ, int currentTick) {
-        PacketEventsEntity existing = getTrackedEntity(entityID);
-        if (existing == null) {
-            return;
-        }
-        existing.add(deltaX, deltaY, deltaZ);
-    }
-
-    @Override
-    public void moveAbsolute(int entityID, double x, double y, double z, int currentTick) {
-        PacketEventsEntity existing = getTrackedEntity(entityID);
-        if (existing == null) {
-            return;
-        }
-        existing.set(x, y, z, existing.world());
-    }
-
-    @Override
     public void removeEntity(int entityID, int currentTick) {
         UUID entityUUID = entityUUIDsByID.remove(entityID);
         if (entityUUID == null) {
