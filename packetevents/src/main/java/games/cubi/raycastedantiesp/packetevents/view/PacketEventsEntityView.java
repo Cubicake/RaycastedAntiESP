@@ -124,6 +124,7 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
                     + " tick=" + currentTick);
             return;
         }
+        if (existing.isSelfEntity()) return;
         if (existing.visible() != visible) {
             transitions.add(new EntityViewTransition(
                     visible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE,
