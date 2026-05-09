@@ -629,7 +629,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                         continue;
                     }
                     PacketEventsEntityReplayData replayData = ensureReplayData(entity);
-                    sendEntityShow(viewer, entity, replayData);
+                    sendEntityShow(viewer, PlayerRegistry.getInstance().getPlayerData(viewerUUID), entity, replayData);
                     entity.setClientVisible(true);
                 }
             }
@@ -654,12 +654,19 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             );
     }
 
-    private WrapperPlayServerSetPassengers buildPassengersPacket(PacketEventsEntity entity) {
+    private WrapperPlayServerSetPassengers buildPassengersPacket(NettyEntityLocatable<?,?> entity) {
         int[] passengerIDs = entity.passengerIDs();
         if (passengerIDs == null || passengerIDs.length == 0) {
             return null;
         }
-        return new WrapperPlayServerSetPassengers(entity.entityID(), passengerIDs);
+        ArrayList<Integer> visiblePassengerIDs = new ArrayList<>();
+        for (int passengerID : passengerIDs) {
+            NettyEntityLocatable<?,?> passenger = entityFromID(passengerID, null);
+            if (passenger != null && passenger.visible()) {
+                visiblePassengerIDs.add(passengerID);
+            }
+        }
+        return new WrapperPlayServerSetPassengers(entity.entityID(), visiblePassengerIDs.stream().mapToInt(Integer::intValue).toArray());
     }
 
     private @Nullable WrapperPlayServerAttachEntity[] buildLeashPackets(PacketEventsEntity entity, PlayerData playerData) {
@@ -775,7 +782,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         return replayData;
     }
 
-    private void sendEntityShow(User viewer, PacketEventsEntity entity, PacketEventsEntityReplayData replayData) {
+    private void sendEntityShow(User viewer, PlayerData data, PacketEventsEntity entity, PacketEventsEntityReplayData replayData) {
         viewer.writePacketSilently(buildSpawnPacket(entity));
         sendEntityAbsoluteCorrection(viewer, entity);
 
@@ -804,7 +811,8 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             }
         }
         common.writeIfPresent(viewer, buildPassengersPacket(entity));
-        WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, PlayerRegistry.getInstance().getPlayerData(viewer.getUUID()));
+        common.writeIfPresent(viewer, buildPassengersPacket(entityFromID(entity.vehicleID(), data)));
+        WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, data);
         if (leashPackets == null) return;
         for (WrapperPlayServerAttachEntity leashPacket : leashPackets) {
             if (leashPacket != null) {
