@@ -2,9 +2,12 @@ package games.cubi.raycastedantiesp.core.locatables;
 
 import games.cubi.locatables.MutableLocatable;
 import games.cubi.locatables.implementations.MutableLocatableImpl;
+import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.raycastedantiesp.core.utils.IntArrayList;
+import games.cubi.raycastedantiesp.core.utils.IntArrayListMarker;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -28,6 +31,11 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     private volatile double velocityY;
     private volatile double velocityZ;
     private volatile boolean onGround = true;
+    private int@IntArrayListMarker[] leashedIDs;
+    private int leasherID = NO_LEASHER;
+    private int[] passengerIDs;
+    private int vehicleID = -1;
+
 
     private volatile int entityData;
     private volatile PacketReplayData packetReplayData; // For use storing the packets we can't be bothered to directly store, with all cached packets being sent back out to the client when entity is visible again.
@@ -51,9 +59,9 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
         this.visible = visible;
     }
 
-    protected NettyEntityLocatable(int selfPlayerID, UUID entityUUID) {
+    protected NettyEntityLocatable(int selfPlayerID, UUID ownUUID) {
         entityID = selfPlayerID;
-        this.entityUUID = entityUUID;
+        entityUUID = ownUUID;
         isSelfEntity = true;
         entityType = null;
     }
@@ -214,13 +222,49 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
 
     @Override
     public int[] passengerIDs() {
-        return passengerIDs.clone();
+        return passengerIDs == null ? null : passengerIDs.clone();
     }
 
     @Override
     public EntityLocatable<?, ?> setPassengerIDs(int[] passengerIDs) {
         this.passengerIDs = passengerIDs == null ? new int[0] : passengerIDs.clone();
         return this;
+    }
+
+    @Override
+    public void setVehicleID(int vehicleID) {
+        this.vehicleID = vehicleID;
+    }
+
+    @Override
+    public int vehicleID() {
+        return vehicleID;
+    }
+
+    @Override
+    public void addLeashedEntity(int leashedEntityID) {
+        IntArrayList.add(leashedIDs, leashedEntityID);
+    }
+
+    @Override
+    public void removeLeashedEntity(int leashedEntityID) {
+        IntArrayList.remove(leashedIDs, leashedEntityID);
+    }
+
+    public int@Nullable[] leashedEntityIDsOrNull() {
+        return IntArrayList.getCopyOrNull(leashedIDs);
+    }
+
+    public static final int NO_LEASHER = -2;
+
+    @Override
+    public int leashingEntity() {
+        return leasherID;
+    }
+
+    @Override
+    public void setLeashingEntity(int leashingEntityID) {
+        this.leasherID = leashingEntityID;
     }
 
     @Override

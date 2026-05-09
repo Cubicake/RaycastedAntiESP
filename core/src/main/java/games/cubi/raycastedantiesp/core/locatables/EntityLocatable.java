@@ -1,8 +1,8 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
 import games.cubi.locatables.MutableLocatable;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -49,6 +49,15 @@ public interface EntityLocatable<EntityType, PacketReplayData> extends MutableLo
 
     int[] passengerIDs();
     EntityLocatable<?, ?> setPassengerIDs(int[] passengerIDs);
+
+    void setVehicleID(int vehicleID);
+    int vehicleID();
+
+    void addLeashedEntity(int leashedEntityID);
+    void removeLeashedEntity(int leashedEntityID);
+    int@Nullable[] leashedEntityIDsOrNull();
+    int leashingEntity();
+    void setLeashingEntity(int leashingEntityID);
 
     PacketReplayData packetReplayData();
     EntityLocatable<?, ?> setPacketReplayData(PacketReplayData packetReplayData);

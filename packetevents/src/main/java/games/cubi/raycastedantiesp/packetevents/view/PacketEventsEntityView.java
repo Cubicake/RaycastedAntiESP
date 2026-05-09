@@ -110,7 +110,7 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     @Override
     public Locatable getLocation(UUID entityUUID) {
         PacketEventsEntity entity = entitiesByUUID.get(entityUUID);
-        if (entity == null || entity.spawnType() == null) {
+        if (entity == null) {
             return null;
         }
         return entity.clonePlainAndCentreIfBlockLocation().set(entity.x(), entity.y() + 0.5, entity.z(), entity.world());
@@ -162,9 +162,6 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     public Collection<UUID> getNeedingRecheck(int recheckTicks, int currentTick) {
         List<UUID> needingRecheck = new ArrayList<>();
         for (PacketEventsEntity state : entitiesByUUID.values()) {
-            if (state.spawnType() == null) {
-                continue;
-            }
             if (state.visible() && (currentTick - state.lastChecked()) < recheckTicks) {
                 continue;
             }
