@@ -73,7 +73,7 @@ public abstract class PacketEntityViewController<P> {
 
         if ((!isPlayer && entityConfig.enabled()) || isPlayer && playerConfig.enabled()) {
             double distanceSquared = playerData.ownLocation().distanceSquared(entity);
-            if (distanceSquared > hideOnSpawnEntityDistanceSquared) {
+            if (distanceSquared > (isPlayer ? hideOnSpawnPlayerDistanceSquared : hideOnSpawnEntityDistanceSquared)) {
                 entity.setVisible(false);
                 entity.setClientVisible(false);
                 if (isPlayer) {
