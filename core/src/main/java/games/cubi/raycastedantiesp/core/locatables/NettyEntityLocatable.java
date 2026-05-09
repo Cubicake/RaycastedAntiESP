@@ -59,11 +59,14 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
         this.visible = visible;
     }
 
+    // For creating the self entity, where we don't have access to the world or position. Always visible.
     protected NettyEntityLocatable(int selfPlayerID, UUID ownUUID) {
         entityID = selfPlayerID;
         entityUUID = ownUUID;
         isSelfEntity = true;
         entityType = null;
+        clientVisible = true;
+        visible = true;
     }
 
     @Override
