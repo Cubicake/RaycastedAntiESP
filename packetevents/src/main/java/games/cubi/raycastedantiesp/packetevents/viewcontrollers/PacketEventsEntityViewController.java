@@ -621,7 +621,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                     }
                 }
                 case SHOW -> {
-                    if (entity == null || entity.isSelfEntity() == true) {
+                    if (entity == null || entity.isSelfEntity()) {
                         Logger.warning("PacketEvents.processEntityTransitions show-skipped viewer=" + viewerUUID
                                 + " target=" + transition.targetUUID()
                                 + " reason="
