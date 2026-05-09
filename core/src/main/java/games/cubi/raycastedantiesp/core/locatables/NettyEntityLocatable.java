@@ -243,12 +243,12 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
 
     @Override
     public void addLeashedEntity(int leashedEntityID) {
-        IntArrayList.add(leashedIDs, leashedEntityID);
+        leashedIDs = IntArrayList.add(leashedIDs, leashedEntityID);
     }
 
     @Override
     public void removeLeashedEntity(int leashedEntityID) {
-        IntArrayList.remove(leashedIDs, leashedEntityID);
+        leashedIDs = IntArrayList.remove(leashedIDs, leashedEntityID);
     }
 
     public int@Nullable[] leashedEntityIDsOrNull() {
