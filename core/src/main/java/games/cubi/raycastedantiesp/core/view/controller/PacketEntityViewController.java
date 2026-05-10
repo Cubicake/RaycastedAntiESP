@@ -22,7 +22,7 @@ public abstract class PacketEntityViewController<P> {
     private static final int SAFETY_MARGIN_FACTOR = 2; // Multiplier for the max delayed packet retry count. While the below values were set based on testing which showed no errors, these are magic numbers based on nothing concrete, and mojang could break it at any time. Adding a safety factor should prevent any issues.
     public static final int DELAYED_CACHE_PACKET_RETRY_COUNT = 3 * SAFETY_MARGIN_FACTOR; // A delay of 3 seems to be exactly perfect from my testing, with no packets needing more or less than two retries.
     public static final int DELAYED_PASSENGER_PACKET_RETRY_COUNT = 72 * SAFETY_MARGIN_FACTOR; //Such a high delay only seems relevant when the player spawns in while riding an entity, probably because all player packets are sent before the vehicle packets.
-    public static final int DELAYED_LEASH_PACKET_RETRY_COUNT = 32 * SAFETY_MARGIN_FACTOR;
+    public static final int DELAYED_LEASH_PACKET_RETRY_COUNT = 64 * SAFETY_MARGIN_FACTOR;
 
     protected EntityConfig entityConfig = null;
     protected PlayerConfig playerConfig = null;
@@ -298,7 +298,7 @@ public abstract class PacketEntityViewController<P> {
     }
 
     private boolean handleLeashEntity(int leashedEntity, int leashingEntity, PlayerData playerData, int retriesRemaining) {
-        //Note, leashing entity ID will be -1 to unleash
+        //Note, leashing entity ID will be -1 to unleash. From testing it sometimes seems to be 0?
         NettyEntityLocatable<?,?> leashed = playerData.entityFromID(leashedEntity);
         if (leashed == null) {
             if (retriesRemaining > 0) {
@@ -308,7 +308,7 @@ public abstract class PacketEntityViewController<P> {
             Logger.error(new RuntimeException("Found null leashed entity when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID()), 2, PacketEntityViewController.class);
             return false;
         }
-        if (leashingEntity == -1) {
+        if (leashingEntity == -1 || leashingEntity == 0) {
             int previouslyLeashingEntityID = leashed.leashingEntity();
             if (previouslyLeashingEntityID == NO_LEASHER) {
                 Logger.error("Entity was already unleashing when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
