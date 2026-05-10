@@ -19,6 +19,7 @@ import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.N
  * @param <P> The platform's packet wrapper (PacketWrapper<?>)
  */
 public abstract class PacketEntityViewController<P> {
+    public static final int DELAYED_PACKET_RETRY_COUNT = 5;
     protected EntityConfig entityConfig = null;
     protected PlayerConfig playerConfig = null;
     protected double hideOnSpawnEntityDistanceSquared = 0;
@@ -241,15 +242,35 @@ public abstract class PacketEntityViewController<P> {
      * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
      */
     protected boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick) {
+        return handleEntityPassengers(entityID, passengers, playerData, currentTick, DELAYED_PACKET_RETRY_COUNT);
+    }
+
+    private boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick, int retriesRemaining) {
         NettyEntityLocatable<?,?> entity = entityFromID(entityID, playerData);
+        if (entity == null) {
+            if (retriesRemaining > 0) {
+                delayPacketHandling(playerData, () -> handleEntityPassengers(entityID, passengers, playerData, currentTick, retriesRemaining - 1));
+                return false;
+            }
+            Logger.error("Found null vehicle when handling entity passengers packet, vehicleID=" + entityID + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
+            return false;
+        }
         entity.setPassengerIDs(passengers);
+        boolean shouldRetry = false;
         for (int passengerID : passengers) {
             NettyEntityLocatable<?,?> passenger = entityFromID(passengerID, playerData);
             if (passenger == null) {
+                if (retriesRemaining > 0) {
+                    shouldRetry = true;
+                    continue;
+                }
                 Logger.error("Found null passenger when handling entity passengers packet, passengerID=" + passengerID + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
                 continue;
             }
             passenger.setVehicleID(entityID);
+        }
+        if (shouldRetry) {
+            delayPacketHandling(playerData, () -> handleEntityPassengers(entityID, passengers, playerData, currentTick, retriesRemaining - 1));
         }
         checkVehicle(entity, playerData);
         if (cancelIfEnabledAndHidden(entityID, playerData)) return true;
@@ -315,17 +336,25 @@ public abstract class PacketEntityViewController<P> {
      * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
      */
     @Packet(Packet.Packets.LEASH_ENTITY)
-    protected boolean handleLeashEntity(P packet, int leashedEntity, int leashingEntity, PlayerData playerData) {
+    protected boolean handleLeashEntity(int leashedEntity, int leashingEntity, PlayerData playerData) {
+        return handleLeashEntity(leashedEntity, leashingEntity, playerData, DELAYED_PACKET_RETRY_COUNT);
+    }
+
+    private boolean handleLeashEntity(int leashedEntity, int leashingEntity, PlayerData playerData, int retriesRemaining) {
         //Note, leashing entity ID will be -1 to unleash
         NettyEntityLocatable<?,?> leashed = entityFromID(leashedEntity, playerData);
         if (leashed == null) {
-            Logger.error(new RuntimeException("Found null leashed entity when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID() + ". Packet:" + packet), 2, PacketEntityViewController.class);
+            if (retriesRemaining > 0) {
+                delayPacketHandling(playerData, () -> handleLeashEntity(leashedEntity, leashingEntity, playerData, retriesRemaining - 1));
+                return false;
+            }
+            Logger.error(new RuntimeException("Found null leashed entity when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID()), 2, PacketEntityViewController.class);
             return false;
         }
         if (leashingEntity == -1) {
             int previouslyLeashingEntityID = leashed.leashingEntity();
             if (previouslyLeashingEntityID == NO_LEASHER) {
-                Logger.error("Entity was already unleashing when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID() + ". Packet:" + packet, 2, PacketEntityViewController.class);
+                Logger.error("Entity was already unleashing when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
                 return false;
             }
             entityFromID(previouslyLeashingEntityID, playerData).removeLeashedEntity(leashedEntity);
@@ -335,7 +364,11 @@ public abstract class PacketEntityViewController<P> {
         else {
             NettyEntityLocatable<?,?> leashing = entityFromID(leashingEntity, playerData);
             if (leashing == null) {
-                Logger.error("Found null leashing entity when handling leash entity packet, leashingEntityID=" + leashingEntity + " for player: " + playerData.getPlayerUUID() + ". Packet:" + packet, 2, PacketEntityViewController.class);
+                if (retriesRemaining > 0) {
+                    delayPacketHandling(playerData, () -> handleLeashEntity(leashedEntity, leashingEntity, playerData, retriesRemaining - 1));
+                    return false;
+                }
+                Logger.error("Found null leashing entity when handling leash entity packet, leashingEntityID=" + leashingEntity + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
                 return false;
             }
             leashed.setLeashingEntity(leashingEntity);
@@ -412,6 +445,10 @@ public abstract class PacketEntityViewController<P> {
 
     protected abstract void cachePacket(P packet, int entityID, PlayerData playerData);
 
+    //Only needed because for some absurd reason mojang decides to send some packets before the spawn packet of the entity.
+    protected void delayPacketHandling(PlayerData playerData, Runnable task) {
+        playerData.runNettyTaskASAP(task);
+    }
     /**   @return The entity ID of the entity   */
     protected abstract int processRotationPacket(P packet, PlayerData playerData, int currentTick);
 

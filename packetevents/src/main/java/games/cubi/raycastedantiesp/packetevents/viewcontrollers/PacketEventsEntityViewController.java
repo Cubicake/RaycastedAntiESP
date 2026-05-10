@@ -232,7 +232,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             }
             case PacketType.Play.Server.ATTACH_ENTITY -> {
                 WrapperPlayServerAttachEntity wrapper = new WrapperPlayServerAttachEntity(event);
-                if (handleLeashEntity(wrapper, wrapper.getAttachedId(), wrapper.getHoldingId(), playerData) == REQUIRE_EVENT_CANCELLATION)
+                if (handleLeashEntity(wrapper.getAttachedId(), wrapper.getHoldingId(), playerData) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             default -> {}
@@ -521,27 +521,20 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     @Override
     protected void cachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData) {
-        NettyEntityLocatable<?,?> entity = entityFromID(entityID, playerData);
-        if (entity == null) {
-            Logger.error("Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ". Will attempt again.", 6, PacketEventsEntityViewController.class);
-            playerData.runNettyTaskASAP(() -> retryCachePacket(packet, entityID, playerData, 5));
-            return;
-        }
-        ensureReplayData((PacketEventsEntity) entity).addPacket(packet);
+        cachePacket(packet, entityID, playerData, DELAYED_PACKET_RETRY_COUNT);
     }
 
-    // yeah this is stupid but idk why packet order is off to begin with. For some reason, a WrapperPlayServerEntityEquipment was firing before the corresponding spawn packet, but only on first join. Adding delay allows the spawn packet to be handled first.
-    private void retryCachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData, int countDown) {
-        if (countDown > 0) {
-            playerData.runNettyTaskASAP(() -> retryCachePacket(packet, entityID, playerData, countDown - 1));
-            return;
-        }
+    private void cachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData, int retriesRemaining) {
         NettyEntityLocatable<?,?> entity = entityFromID(entityID, playerData);
         if (entity == null) {
-            Logger.error("Failed to cache packet twice, id=" + entityID + " packet=" + packet.getClass().getSimpleName(), 2, PacketEventsEntityViewController.class);
+            if (retriesRemaining > 0) {
+                Logger.error("Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ". Will attempt again.", 6, PacketEventsEntityViewController.class);
+                delayPacketHandling(playerData, () -> cachePacket(packet, entityID, playerData, retriesRemaining - 1));
+                return;
+            }
+            Logger.error("Failed to cache packet after retries, id=" + entityID + " packet=" + packet.getClass().getSimpleName(), 2, PacketEventsEntityViewController.class);
             return;
         }
-        Logger.info("Successfully cached packet on retry attempt, id=" + entityID + " packet=" + packet.getClass().getSimpleName(), 6, PacketEventsEntityViewController.class);
         ensureReplayData((PacketEventsEntity) entity).addPacket(packet);
     }
 
@@ -654,14 +647,17 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             );
     }
 
-    private WrapperPlayServerSetPassengers buildPassengersPacket(NettyEntityLocatable<?,?> entity) {
+    private WrapperPlayServerSetPassengers buildPassengersPacket(@Nullable NettyEntityLocatable<?,?> entity, PlayerData playerData) {
+        if (entity == null) {
+            return null;
+        }
         int[] passengerIDs = entity.passengerIDs();
         if (passengerIDs == null || passengerIDs.length == 0) {
             return null;
         }
         ArrayList<Integer> visiblePassengerIDs = new ArrayList<>();
         for (int passengerID : passengerIDs) {
-            NettyEntityLocatable<?,?> passenger = entityFromID(passengerID, null);
+            NettyEntityLocatable<?,?> passenger = entityFromID(passengerID, playerData);
             if (passenger != null && passenger.visible()) {
                 visiblePassengerIDs.add(passengerID);
             }
@@ -675,7 +671,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerAttachEntity leashingShow = null;
         if (leashingID != NO_LEASHER) {
             NettyEntityLocatable<?,?> leashHolder = entityFromID(leashingID, playerData);
-            if (leashHolder.visible()) {
+            if (leashHolder != null && leashHolder.visible()) {
                 leashingShow = new WrapperPlayServerAttachEntity(entity.entityID(), leashingID, true);
             }
         }
@@ -690,7 +686,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         }
         for (int leashedID : leashedIDs) {
             NettyEntityLocatable<?,?> leashHolder = entityFromID(leashedID, playerData);
-            if (leashHolder.visible()) {
+            if (leashHolder != null && leashHolder.visible()) {
                 packets[index] = new WrapperPlayServerAttachEntity(leashedID, entity.entityID(), true);
                 index++;
             }
@@ -810,8 +806,8 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 Logger.warning("Unsupported cached packet type for replay: " + cachedPacket.getClass().getName(), 2, PacketEventsEntityViewController.class);
             }
         }
-        common.writeIfPresent(viewer, buildPassengersPacket(entity));
-        common.writeIfPresent(viewer, buildPassengersPacket(entityFromID(entity.vehicleID(), data)));
+        common.writeIfPresent(viewer, buildPassengersPacket(entity, data));
+        common.writeIfPresent(viewer, buildPassengersPacket(entityFromID(entity.vehicleID(), data), data));
         WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, data);
         if (leashPackets == null) return;
         for (WrapperPlayServerAttachEntity leashPacket : leashPackets) {
