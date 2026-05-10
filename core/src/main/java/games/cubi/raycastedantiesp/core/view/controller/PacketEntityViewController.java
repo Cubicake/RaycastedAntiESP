@@ -19,7 +19,7 @@ import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.N
  * @param <P> The platform's packet wrapper (PacketWrapper<?>)
  */
 public abstract class PacketEntityViewController<P> {
-    private static final int SAFETY_MARGIN_FACTOR = 2; // Multiplier for the max delayed packet retry count. While the below values were set based on testing which showed no errors, these are magic numbers based on nothing concrete, and mojang could break it at any time.
+    private static final int SAFETY_MARGIN_FACTOR = 2; // Multiplier for the max delayed packet retry count. While the below values were set based on testing which showed no errors, these are magic numbers based on nothing concrete, and mojang could break it at any time. Adding a safety factor should prevent any issues.
     public static final int DELAYED_CACHE_PACKET_RETRY_COUNT = 3 * SAFETY_MARGIN_FACTOR; // A delay of 3 seems to be exactly perfect from my testing, with no packets needing more or less than two retries.
     public static final int DELAYED_PASSENGER_PACKET_RETRY_COUNT = 72 * SAFETY_MARGIN_FACTOR; //Such a high delay only seems relevant when the player spawns in while riding an entity, probably because all player packets are sent before the vehicle packets.
     public static final int DELAYED_LEASH_PACKET_RETRY_COUNT = 32 * SAFETY_MARGIN_FACTOR;
