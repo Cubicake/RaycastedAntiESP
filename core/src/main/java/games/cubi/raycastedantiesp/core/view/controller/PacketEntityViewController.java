@@ -109,55 +109,7 @@ public abstract class PacketEntityViewController<P> {
     protected boolean handleHurtAnimation(int entityID, PlayerData playerData) {
         return cancelIfEnabledAndHidden(entityID, playerData);
     }
-/*
-    /**
-     * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
-     *\/
-    protected boolean handlePaintingSpawn(P packet, PlayerData playerData, UUID world, int currentTick) {
-        if (world == null) {
-            Logger.error(new RuntimeException("World null when handling spawn painting packet, uuid=" + playerData.getPlayerUUID() + " tick=" + currentTick), 2, PacketEntityViewController.class);
-            return true;
-        }
-        NettyEntityLocatable<?,?> entity = processPaintingSpawn(playerData, packet, world, currentTick);
 
-        if (entityConfig.enabled()) {
-            double distanceSquared = playerData.ownLocation().distanceSquared(entity);
-            if (distanceSquared > hideOnSpawnEntityDistanceSquared) {
-                entity.setVisible(false);
-                entity.setClientVisible(false);
-                insertEntityToEntityView(entity, playerData);
-                return true;
-            }
-        } else {
-            entity.setClientVisible(true);
-        }
-        insertEntityToEntityView(entity, playerData);
-        return false;
-    }
-    /**
-     * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
-     *\/
-    protected boolean handlePlayerSpawn(P packet, PlayerData playerData, UUID world, int currentTick) {
-        if (world == null) {
-            Logger.error(new RuntimeException("World null when handling spawn player packet, uuid=" + playerData.getPlayerUUID() + " tick=" + currentTick), 2, PacketEntityViewController.class);
-            return true;
-        }
-        NettyEntityLocatable<?,?> entity = processPlayerSpawn(playerData, packet, world, currentTick);
-
-        if (playerConfig.enabled()) {
-            double distanceSquared = playerData.ownLocation().distanceSquared(entity);
-            if (distanceSquared > hideOnSpawnPlayerDistanceSquared) {
-                entity.setVisible(false);
-                entity.setClientVisible(false);
-                insertEntityToPlayerView(entity, playerData);
-                return true;
-            }
-        } else {
-            entity.setClientVisible(true);
-        }
-        insertEntityToPlayerView(entity, playerData);
-        return false;
-    }*/
     /**
      * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
      */
