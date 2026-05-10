@@ -203,7 +203,7 @@ public abstract class PacketEntityViewController<P> {
 
     //This (and leash handling) leaks some info to the client, as it will receive the passenger packet even if the passengers are auto-hidden once parsed, but as the packet doesn't include any location or type info, this shouldn't be too incriminating.
     private boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick, int retriesRemaining) {
-        NettyEntityLocatable<?,?> entity = entityFromID(entityID, playerData);
+        NettyEntityLocatable<?,?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             if (retriesRemaining > 0) {
                 delayPacketHandling(playerData, () -> handleEntityPassengers(entityID, passengers, playerData, currentTick, retriesRemaining - 1));
@@ -215,7 +215,7 @@ public abstract class PacketEntityViewController<P> {
         entity.setPassengerIDs(passengers);
         boolean shouldRetry = false;
         for (int passengerID : passengers) {
-            NettyEntityLocatable<?,?> passenger = entityFromID(passengerID, playerData);
+            NettyEntityLocatable<?,?> passenger = playerData.entityFromID(passengerID);
             if (passenger == null) {
                 if (retriesRemaining > 0) {
                     shouldRetry = true;
@@ -251,7 +251,7 @@ public abstract class PacketEntityViewController<P> {
     private void checkVehicle(NettyEntityLocatable<?,?> entity, PlayerData playerData) {
         int vehicleID = entity.vehicleID();
         if (vehicleID >= 0) {
-            NettyEntityLocatable<?,?> vehicle = entityFromID(vehicleID, playerData);
+            NettyEntityLocatable<?,?> vehicle = playerData.entityFromID(vehicleID);
             if (vehicle == null) {
                 Logger.error(new RuntimeException("Found null vehicle when handling entity passengers packet, vehicleID=" + vehicleID + " for player: " + playerData.getPlayerUUID()), 2, PacketEntityViewController.class);
                 return;
@@ -272,7 +272,7 @@ public abstract class PacketEntityViewController<P> {
 
     protected void handleDestroyEntities(int[] entityIDs, PlayerData playerData, int currentTick) {
         for (int entityID : entityIDs) {
-            EntityView<?> entityView = viewFromEntityID(entityID, playerData);
+            EntityView<?> entityView = playerData.viewFromEntityID(entityID);
             if (entityView == null) {
                 Logger.error("Could not find view for entity when processing destroy packet, id=" + entityID, 2, PacketEntityViewController.class);
                 continue;
@@ -299,7 +299,7 @@ public abstract class PacketEntityViewController<P> {
 
     private boolean handleLeashEntity(int leashedEntity, int leashingEntity, PlayerData playerData, int retriesRemaining) {
         //Note, leashing entity ID will be -1 to unleash
-        NettyEntityLocatable<?,?> leashed = entityFromID(leashedEntity, playerData);
+        NettyEntityLocatable<?,?> leashed = playerData.entityFromID(leashedEntity);
         if (leashed == null) {
             if (retriesRemaining > 0) {
                 delayPacketHandling(playerData, () -> handleLeashEntity(leashedEntity, leashingEntity, playerData, retriesRemaining - 1));
@@ -314,12 +314,12 @@ public abstract class PacketEntityViewController<P> {
                 Logger.error("Entity was already unleashing when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
                 return false;
             }
-            entityFromID(previouslyLeashingEntityID, playerData).removeLeashedEntity(leashedEntity);
+            playerData.entityFromID(previouslyLeashingEntityID).removeLeashedEntity(leashedEntity);
             leashed.setLeashingEntity(NO_LEASHER);
             return cancelIfEnabledAndHidden(leashedEntity, playerData);
         }
         else {
-            NettyEntityLocatable<?,?> leashing = entityFromID(leashingEntity, playerData);
+            NettyEntityLocatable<?,?> leashing = playerData.entityFromID(leashingEntity);
             if (leashing == null) {
                 if (retriesRemaining > 0) {
                     delayPacketHandling(playerData, () -> handleLeashEntity(leashedEntity, leashingEntity, playerData, retriesRemaining - 1));
@@ -334,29 +334,6 @@ public abstract class PacketEntityViewController<P> {
         }
     }
 
-    /**
-     * @return Either the entity or player view for this player, depending on the entity ID
-     */
-    protected EntityView<?> viewFromEntityID(int entityID, PlayerData playerData) {
-        EntityView<?> entityView = playerData.entityView();
-        if (entityView.exists(entityID)) {
-            return entityView;
-        }
-        if (playerData.playerView().exists(entityID)) {
-            return playerData.playerView();
-        }
-        Logger.warning("Could not find view for entityID=" + entityID + " uuid=" + playerData.getPlayerUUID(), 6, PacketEntityViewController.class);
-        return null;
-    }
-
-    protected NettyEntityLocatable<?,?> entityFromID(int entityID, PlayerData playerData) {
-        EntityView<?> entityView = viewFromEntityID(entityID, playerData);
-        if (entityView == null) {
-            return null;
-        }
-        return (NettyEntityLocatable<?, ?>) entityView.getEntity(entityID);
-    }
-
     protected RaycastConfig getCorrectConfig(EntityView<?> entityView) {
         if (entityView.isPlayerView()) {
             return playerConfig;
@@ -369,7 +346,7 @@ public abstract class PacketEntityViewController<P> {
      * @return True if the packet should be suppressed
      */
     protected boolean cancelIfEnabledAndHidden(int entityID, PlayerData playerData) {
-        EntityView<?> entityView = viewFromEntityID(entityID, playerData);
+        EntityView<?> entityView = playerData.viewFromEntityID(entityID);
 
         if (entityView == null) {
             Logger.warning("Checked if packet for entity should be cancelled, but entity did not exist. ID: " + entityID + " for player: " + playerData.getPlayerUUID(), 6, PacketEntityViewController.class);

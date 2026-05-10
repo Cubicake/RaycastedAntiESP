@@ -1,5 +1,6 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
+import games.cubi.locatables.Locatable;
 import games.cubi.locatables.MutableLocatable;
 import games.cubi.locatables.implementations.MutableLocatableImpl;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
@@ -20,6 +21,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     private final UUID entityUUID;
     private final boolean isSelfEntity;
     private final EntityType entityType;
+    private final PlayerData owningPlayer;
 
     // Netty mutatable fields. Should NEVER be mutated from the engine thread, but reads are fine.
     private volatile UUID world;
@@ -47,7 +49,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     // engine thread mutable, reads from netty and engine.
     private volatile boolean visible;
 
-    public NettyEntityLocatable(UUID world, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, EntityType entityType, boolean visible) {
+    public NettyEntityLocatable(PlayerData owningPlayer, UUID world, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, EntityType entityType, boolean visible) {
         this.world = world;
         this.x = x; this.y = y; this.z = z;
 
@@ -57,12 +59,15 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
         this.entityType = entityType;
 
         this.visible = visible;
+
+        this.owningPlayer = owningPlayer;
     }
 
     // For creating the self entity, where we don't have access to the world or position. Always visible.
-    protected NettyEntityLocatable(int selfPlayerID, UUID ownUUID) {
+    protected NettyEntityLocatable(PlayerData selfData, int selfPlayerID, UUID ownUUID) {
         entityID = selfPlayerID;
         entityUUID = ownUUID;
+        owningPlayer = selfData;
         isSelfEntity = true;
         entityType = null;
         clientVisible = true;
@@ -328,6 +333,40 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     public MutableLocatable setWorld(UUID world) {
         this.world = world;
         return this;
+    }
+
+    @Override
+    public MutableLocatable set(double x, double y, double z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        updatePassengerPositions();
+        return this;
+    }
+
+    @Override
+    public MutableLocatable add(double x, double y, double z) {
+        this.x += x;
+        this.y += y;
+        this.z += z;
+        updatePassengerPositions();
+        return this;
+    }
+
+    // This does not correctly set the passenger position, as the passenger is above the vehicle. It is however close enough to minimise annoying interpolation on show.
+    private void updatePassengerPositions() {
+        if (passengerIDs == null || passengerIDs.length == 0) return;
+        for (int passengerID : passengerIDs) {
+            NettyEntityLocatable<?, ?> passenger = owningPlayer.entityFromID(passengerID);
+            if (passenger != null) {
+                passenger.setVehicleID(entityID);
+                passenger.setWorld(world);
+                passenger.setX(x);
+                passenger.setY(y);
+                passenger.setZ(z);
+                passenger.updatePassengerPositions();
+            }
+        }
     }
 
     @Override

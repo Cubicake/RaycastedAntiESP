@@ -3,9 +3,11 @@ package games.cubi.raycastedantiesp.core.players;
 import games.cubi.locatables.Locatable;
 import games.cubi.locatables.implementations.ThreadSafeLocatable;
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
+import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -96,6 +98,28 @@ public class PlayerData {
 
     public int getJoinTick() {
         return joinTick;
+    }
+
+    /**
+     * @return Either the entity or player view for this player, depending on the entity ID
+     */
+    public EntityView<?> viewFromEntityID(int entityID) {
+        if (entityView.exists(entityID)) {
+            return entityView;
+        }
+        if (playerView.exists(entityID)) {
+            return playerView;
+        }
+        Logger.warning("Could not find view for entityID=" + entityID + " uuid=" + playerUUID, 6, PacketEntityViewController.class);
+        return null;
+    }
+
+    public NettyEntityLocatable<?,?> entityFromID(int entityID) {
+        EntityView<?> entityView = viewFromEntityID(entityID);
+        if (entityView == null) {
+            return null;
+        }
+        return (NettyEntityLocatable<?, ?>) entityView.getEntity(entityID);
     }
 
     public void setBypassPermission(boolean hasBypassPermission) {
