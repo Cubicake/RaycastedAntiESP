@@ -18,7 +18,7 @@ dependencies {
     compileOnly(project(":logging"))
 }
 
-val coreVersion = "0.3.1-SNAPSHOT"
+val coreVersion = "0.3.2-SNAPSHOT"
 
 val isRelease = gradle.startParameter.taskNames.any {
     it.contains("buildRelease")
