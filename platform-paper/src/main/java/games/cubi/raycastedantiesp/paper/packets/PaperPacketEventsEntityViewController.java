@@ -28,7 +28,7 @@ public class PaperPacketEventsEntityViewController extends PacketEventsEntityVie
         super(currentTickSupplier);
         Bukkit.getPluginManager().registerEvents(this, RaycastedAntiESP.get());
         Bukkit.getWorlds().forEach(this::registerWorld);
-        PacketEvents.getAPI().getEventManager().registerListener(this, PacketListenerPriority.NORMAL);
+        PacketEvents.getAPI().getEventManager().registerListener(this, PacketListenerPriority.HIGHEST);
     }
 
     @Override
