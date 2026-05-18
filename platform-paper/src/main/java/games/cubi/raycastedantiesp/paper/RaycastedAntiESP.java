@@ -120,7 +120,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
     @Override
     public void onDisable() {
         metricsCollector.shutdown();
-        loggerAdapter.clear();
+        loggerAdapter.forceFlushToFileNow();
     }
 
 
