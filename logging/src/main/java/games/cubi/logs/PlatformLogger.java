@@ -106,4 +106,22 @@ public interface PlatformLogger {
         builder.append("] ").append(message);
         return builder.toString();
     }
+
+    static String constructFileLogMessage(String message, Level logLevel, int importance,  Class<?>... source) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("[").append(logLevel.name()).append("] ");
+        builder.append("[").append(importance).append("] ");
+        if (source != null && source.length > 0) {
+            builder.append("[");
+            for (int i = 0; i < source.length; i++) {
+                builder.append(source[i].getSimpleName());
+                if (i != source.length - 1) {
+                    builder.append(".");
+                }
+            }
+            builder.append("] ");
+        }
+        builder.append(message);
+        return builder.toString();
+    }
 }
