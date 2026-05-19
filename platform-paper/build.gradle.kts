@@ -15,8 +15,8 @@ repositories {
 }
 
 dependencies {
-    //paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
-    paperweight.paperDevBundle("26.1.2.build.+")
+    paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
+    //paperweight.paperDevBundle("26.1.2.build.+")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.0")
     compileOnly("org.spongepowered:configurate-core:4.2.0")
     compileOnly("org.spongepowered:configurate-yaml:4.2.0")
@@ -33,12 +33,12 @@ dependencies {
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
 group = "games.cubi.raycastedantiesp.paper"
 
-val platformPaperVersion: String = "0.4.3-DEBUG"
+val platformPaperVersion: String = "0.4.4-SNAPSHOT"
 val coreVersion = project(":core").version.toString()
 
 val commitShort = providers.exec {

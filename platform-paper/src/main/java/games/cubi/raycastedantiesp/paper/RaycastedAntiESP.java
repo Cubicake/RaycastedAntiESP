@@ -94,7 +94,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
         }));
         //bStats
         metricsCollector =  new MetricsCollector(this, config);
-
+/*
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
             for (World world : Bukkit.getWorlds()) {
                 Logger.debug("Printing bukkit info for world " + world.getName() + ": " + world.getLoadedChunks().length + " loaded chunks, " + world.getEntities().size() + " entities");
@@ -102,7 +102,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
                     Logger.debug("Entity " + entity.getType() + " at " + entity.getLocation() + " with id " + entity.getEntityId() + " and uuid " + entity.getUniqueId() +  " is tracked by " + parseTrackers(entity.getTrackedPlayers()));
                 }
             }
-        }, 1200, 1200);
+        }, 1200, 1200);*/
     }
 
     private String parseTrackers(Set<Player> trackers) {
