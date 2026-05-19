@@ -312,10 +312,17 @@ public abstract class PacketEntityViewController<P> {
         if (leashingEntity == -1 || leashingEntity == 0) {
             int previouslyLeashingEntityID = leashed.leashingEntity();
             if (previouslyLeashingEntityID == NO_LEASHER) {
-                Logger.error("Entity was already unleashing when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
+                Logger.warning("Entity was already unleashing when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID(), 4, PacketEntityViewController.class);
                 return false;
             }
-            playerData.entityFromID(previouslyLeashingEntityID).removeLeashedEntity(leashedEntity);
+            NettyEntityLocatable<?,?> previouslyLeashing = playerData.entityFromID(previouslyLeashingEntityID);
+
+            if (previouslyLeashing == null) {
+                Logger.warning("Found null previously leashing entity when handling leash entity packet, previouslyLeashingEntityID=" + previouslyLeashingEntityID + " for player: " + playerData.getPlayerUUID(), 5, PacketEntityViewController.class);
+            }
+            else {
+                previouslyLeashing.removeLeashedEntity(leashedEntity);
+            }
             leashed.setLeashingEntity(NO_LEASHER);
             return cancelIfEnabledAndHidden(leashedEntity, playerData);
         }
