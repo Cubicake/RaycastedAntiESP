@@ -63,10 +63,6 @@ public class RaycastConfig implements Config {
         );
     }
 
-    public boolean isEnabled() {
-        return enabled;
-    }
-
     public boolean enabled() {
         return enabled;
     }

@@ -13,9 +13,9 @@ import java.util.UUID;
 public interface BlockView extends Clearable {
     boolean isBlockOccluding(BlockLocatable location);
 
-    void insertTileEntityIfAbsent(BlockLocatable location, int blockID);
+    void insertTileEntityIfAbsent(BlockLocatable location, int blockID, boolean visible);
 
-    void insertTileEntity(BlockLocatable location, int blockID);
+    void insertTileEntity(BlockLocatable location, int blockID, boolean visible);
 
     void removeTileEntity(BlockLocatable location);
 

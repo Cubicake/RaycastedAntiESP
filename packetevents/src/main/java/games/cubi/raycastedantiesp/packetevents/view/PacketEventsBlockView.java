@@ -9,8 +9,8 @@ import java.util.UUID;
 
 public class PacketEventsBlockView extends AbstractBlockView<PacketEventsTileEntity> {
     @Override
-    protected PacketEventsTileEntity createTrackedTileEntity(BlockLocatable location, int blockID) {
-        return new PacketEventsTileEntity(location, false, 0, blockID);
+    protected PacketEventsTileEntity createTrackedTileEntity(BlockLocatable location, int blockID, boolean visible) {
+        return new PacketEventsTileEntity(location, visible, 0, blockID);
     }
 
     @Override

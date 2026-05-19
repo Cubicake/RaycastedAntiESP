@@ -1,20 +1,23 @@
 package games.cubi.raycastedantiesp.packetevents.locatables;
 
 import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
-import com.github.retrooper.packetevents.protocol.world.Direction;
-import com.github.retrooper.packetevents.protocol.world.PaintingType;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsEntityReplayData;
 
 import java.util.UUID;
 
-public class PacketEventsEntity extends NettyEntityLocatable<EntityType, PaintingType, Direction, PacketEventsEntityReplayData> {
-    public PacketEventsEntity(UUID world, double x, double y, double z, int entityID, UUID entityUUID, SpawnType spawnType, EntityType entityType) {
-        super(world, x, y, z, entityID, entityUUID, spawnType, entityType);
+public class PacketEventsEntity extends NettyEntityLocatable<EntityType, PacketEventsEntityReplayData> {
+    public PacketEventsEntity(PlayerData owningPlayer, UUID world, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, EntityType entityType, boolean visible) {
+        super(owningPlayer,world, x, y, z, entityID, entityUUID, isSelfEntity, entityType, visible);
     }
 
-    public PacketEventsEntity(UUID world, double x, double y, double z, int entityID, UUID entityUUID, SpawnType spawnType, PaintingType paintingType, Direction paintingDirection) {
-        super(world, x, y, z, entityID, entityUUID, spawnType, paintingType, paintingDirection);
+    private PacketEventsEntity(PlayerData selfData, int selfEntityID, UUID selfEntityUUID) {
+        super(selfData, selfEntityID, selfEntityUUID);
+    }
+
+    public static PacketEventsEntity createSelfEntity(PlayerData selfData, int selfEntityID, UUID selfEntityUUID) {
+        return new PacketEventsEntity(selfData, selfEntityID, selfEntityUUID);
     }
 
     @Override
@@ -25,10 +28,16 @@ public class PacketEventsEntity extends NettyEntityLocatable<EntityType, Paintin
 
         if (entityID() != that.entityID()) return false;
         if (!entityUUID().equals(that.entityUUID())) return false;
-        if (spawnType() != that.spawnType()) return false;
-        if (entityType() != null ? !entityType().equals(that.entityType()) : that.entityType() != null) return false;
-        if (paintingType() != null ? !paintingType().equals(that.paintingType()) : that.paintingType() != null)
-            return false;
-        return paintingDirection() == that.paintingDirection();
+        if (isSelfEntity() != that.isSelfEntity()) return false;
+        if (entityType() != that.entityType()) return false;
+        if (visible() != that.visible()) return false;
+        if (yaw() != that.yaw()) return false;
+        if (pitch() != that.pitch()) return false;
+        if (headYaw() != that.headYaw()) return false;
+        if (velocityX() != that.velocityX()) return false;
+        if (velocityY() != that.velocityY()) return false;
+        if (velocityZ() != that.velocityZ()) return false;
+        if (onGround() != that.onGround()) return false;
+        return entityData() == that.entityData();
     }
 }

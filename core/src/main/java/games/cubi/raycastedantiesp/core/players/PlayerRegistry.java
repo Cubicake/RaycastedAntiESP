@@ -1,7 +1,5 @@
 package games.cubi.raycastedantiesp.core.players;
 
-import games.cubi.locatables.BlockLocatable;
-
 import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,11 +19,18 @@ public class PlayerRegistry {
 
     private final ConcurrentHashMap<UUID, PlayerData> playerDataMap = new ConcurrentHashMap<>();
 
-    public void registerPlayer(UUID playerUUID, boolean hasBypassPermission, int joinTick) {
+    public void registerPlayerIfAbsent(UUID playerUUID, boolean hasBypassPermission, int joinTick) {
         playerDataMap.putIfAbsent(playerUUID, new PlayerData(playerUUID, hasBypassPermission, joinTick));
     }
 
-    public PlayerData registerAndGetPlayer(UUID playerUUID, boolean hasBypassPermission, int joinTick) {
+    /** Forcefully registers a player and returns the new PlayerData, even if they were already registered.**/
+    public PlayerData registerAndGetPlayer(UUID playerUUID, int joinTick) {
+        PlayerData newData = new PlayerData(playerUUID, joinTick);
+        playerDataMap.put(playerUUID, newData);
+        return newData;
+    }
+
+    public PlayerData registerAndGetPlayerIfAbsent(UUID playerUUID, boolean hasBypassPermission, int joinTick) {
         PlayerData newData = new PlayerData(playerUUID, hasBypassPermission, joinTick);
         PlayerData existingData = playerDataMap.putIfAbsent(playerUUID, newData);
         return existingData != null ? existingData : newData;

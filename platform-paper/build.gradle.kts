@@ -15,14 +15,14 @@ repositories {
 }
 
 dependencies {
-    //paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
-    paperweight.paperDevBundle("26.1.2.build.+")
+    paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
+    //paperweight.paperDevBundle("26.1.2.build.+")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.0")
     compileOnly("org.spongepowered:configurate-core:4.2.0")
     compileOnly("org.spongepowered:configurate-yaml:4.2.0")
 
-    compileOnly("net.strokkur.commands:annotations-paper:2.1.1")
-    annotationProcessor("net.strokkur.commands:processor-paper:2.1.1")
+    compileOnly("net.strokkur.commands:annotations-paper:2.1.2")
+    annotationProcessor("net.strokkur.commands:processor-paper:2.1.2")
 
     implementation("org.jetbrains:annotations:24.0.1")
 
@@ -33,12 +33,12 @@ dependencies {
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
 group = "games.cubi.raycastedantiesp.paper"
 
-val platformPaperVersion: String = "0.2.2-SNAPSHOT"
+val platformPaperVersion: String = "0.4.4-SNAPSHOT"
 val coreVersion = project(":core").version.toString()
 
 val commitShort = providers.exec {
@@ -82,6 +82,7 @@ tasks {
         // This is the only required configuration besides applying the plugin.
         // Your plugin's jar (or shadowJar if present) will be used automatically.
         minecraftVersion("26.1.2")
+        //minecraftVersion("1.21.11")
         jvmArgs("-Xms4G", "-Xmx4G", "-Dcom.mojang.eula.agree=true")
     }
 

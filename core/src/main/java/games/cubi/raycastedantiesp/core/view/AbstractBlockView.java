@@ -21,7 +21,7 @@ public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implem
     private final ConcurrentLinkedQueue<BlockViewTransition> transitions = new ConcurrentLinkedQueue<>();
 
     @Deprecated
-    protected abstract T createTrackedTileEntity(BlockLocatable location, int blockID);
+    protected abstract T createTrackedTileEntity(BlockLocatable location, int blockID, boolean visible);
 
     protected abstract T createTrackedTileEntity(UUID world, int x, int y, int z, int blockID);
 
@@ -48,14 +48,14 @@ public abstract class AbstractBlockView<T extends TileEntityLocatable<?>> implem
     }
 
     @Override
-    public void insertTileEntityIfAbsent(BlockLocatable location, int blockID) {
-        knownTileEntities.computeIfAbsent(location, ignored -> createTrackedTileEntity(location, blockID));
+    public void insertTileEntityIfAbsent(BlockLocatable location, int blockID, boolean visible) {
+        knownTileEntities.computeIfAbsent(location, ignored -> createTrackedTileEntity(location, blockID, visible));
     }
 
     @Override
-    public void insertTileEntity(BlockLocatable location, int blockID) {
+    public void insertTileEntity(BlockLocatable location, int blockID, boolean visible) {
         knownTileEntities.remove(location);
-        knownTileEntities.add(createTrackedTileEntity(location, blockID));
+        knownTileEntities.add(createTrackedTileEntity(location, blockID, visible));
     }
 
     @Override

@@ -44,7 +44,7 @@ public class SimpleEngine implements Engine {
         if (threads < 1) threads = 1;
 
         if (!tickThreadsRunning.compareAndSet(0, threads)) {
-            Logger.warning("RaycastedAntiESP is still ticking from the last tick! Skipping this tick to avoid concurrent modification issues.", 2, SimpleEngine.class);
+            Logger.warning("RaycastedAntiESP is still ticking from the last tick! Skipping this tick to avoid concurrent modification issues. Current tick: " + currentTickSupplier.getAsInt(), 2, SimpleEngine.class);
             return;
         }
 
@@ -58,14 +58,19 @@ public class SimpleEngine implements Engine {
         TileEntityConfig tileEntityConfig = config.getTileEntityConfig();
         DebugConfig debugConfig = config.getDebugConfig();
 
+        Logger.debug("Tick #" + currentTick);
+        if (currentTick % 1200 == 0) {
+            Logger.debug("Printing player data");
+            for (PlayerData playerData : allPlayers) {
+                Logger.debug("Player " + playerData.getPlayerUUID() + " location=" + playerData.ownLocation());
+                Logger.debug("EntityView:"+ playerData.entityView().getStringDataForDebugging());
+                Logger.debug("PlayerView:"+ playerData.playerView().getStringDataForDebugging());
+            }
+        }
+
         // If only one thread is configured, just use the current async thread to avoid the overhead of scheduling tasks and context switching.
         if (threads == 1) {
-            try {
-                processTickForPlayers(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig.showDebugParticles(), currentTick);
-            }
-            finally {
-                tickThreadsRunning.set(0);
-            }
+            subTick(new ArrayList<>(allPlayers), entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick);
             return;
         }
 
@@ -80,24 +85,26 @@ public class SimpleEngine implements Engine {
         }
 
         for (List<PlayerData> batch : batches) {
-            asyncRunner.runNow(() -> {
-                try {
-                    processTickForPlayers(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig.showDebugParticles(), currentTick);
+            asyncRunner.runNow(() -> subTick(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig, currentTick));
+        }
+    }
+
+    private void subTick(List<PlayerData> batch, EntityConfig entityConfig, PlayerConfig playerConfig, TileEntityConfig tileEntityConfig, DebugConfig debugConfig, int currentTick) {
+        try {
+            processTickForPlayers(batch, entityConfig, playerConfig, tileEntityConfig, debugConfig.showDebugParticles(), currentTick);
+        }
+        finally {
+            int threadsRemaining = tickThreadsRunning.decrementAndGet();
+            if (threadsRemaining < 0) {
+                Logger.warning("tickThreadsRunning went below 0! This should never happen. Resetting to 0 to avoid further issues.", 2, SimpleEngine.class);
+                tickThreadsRunning.set(0);
+            }
+            if (threadsRemaining == 0) {
+                long elapsedNanos = System.nanoTime() - tickNanos.get();
+                if (elapsedNanos > 40 * 1000000) {//40 ms
+                    Logger.warning("Tick completed in " + (elapsedNanos / 1_000_000.0) + " ms. If you see this warning frequently, consider reducing the raycasting load by adjusting the configuration.", 5, SimpleEngine.class);
                 }
-                finally {
-                    int threadsRemaining = tickThreadsRunning.decrementAndGet();
-                    if (threadsRemaining < 0) {
-                        Logger.warning("tickThreadsRunning went below 0! This should never happen. Resetting to 0 to avoid further issues.", 2, SimpleEngine.class);
-                        tickThreadsRunning.set(0);
-                    }
-                    if (threadsRemaining == 0) {
-                        long elapsedNanos = System.nanoTime() - tickNanos.get();
-                        if (elapsedNanos > 40 * 1000000) {//40 ms
-                            Logger.warning("Tick completed in " + (elapsedNanos / 1_000_000.0) + " ms. If you see this warning frequently, consider reducing the raycasting load by adjusting the configuration.", 5, SimpleEngine.class);
-                        }
-                    }
-                }
-            });
+            }
         }
     }
 
@@ -114,9 +121,9 @@ public class SimpleEngine implements Engine {
                 continue;
             }
 
-            if (entityConfig.isEnabled()) checkEntities(playerData, playerLocation, entityConfig, debugParticles, blockView, currentTick);
-            if (playerConfig.isEnabled()) checkPlayers(playerData, playerLocation, playerConfig, debugParticles, blockView, currentTick);
-            if (tileEntityConfig.isEnabled()) checkTileEntities(playerData, playerLocation, tileEntityConfig, debugParticles, blockView, currentTick);
+            if (entityConfig.enabled()) checkEntities(playerData, playerLocation, entityConfig, debugParticles, blockView, currentTick);
+            if (playerConfig.enabled()) checkPlayers(playerData, playerLocation, playerConfig, debugParticles, blockView, currentTick);
+            if (tileEntityConfig.enabled()) checkTileEntities(playerData, playerLocation, tileEntityConfig, debugParticles, blockView, currentTick);
         }
     }
 

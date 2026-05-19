@@ -8,12 +8,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-public interface EntityView<T extends EntityLocatable<?, ?, ?, ?>>  extends Clearable {
+public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable {
     void insertEntity(T entity);
-
-    void moveRelative(int entityID, double deltaX, double deltaY, double deltaZ, int currentTick);
-
-    void moveAbsolute(int entityID, double x, double y, double z, int currentTick);
 
     void removeEntity(int entityID, int currentTick);
 
@@ -27,7 +23,16 @@ public interface EntityView<T extends EntityLocatable<?, ?, ?, ?>>  extends Clea
 
     int getEntityID(UUID entityUUID);
 
+    boolean exists(UUID entityUUID);
+
+    boolean exists(int entityID);
+
+    @Deprecated
     boolean isVisible(UUID entityUUID, int currentTick);
+
+    boolean isVisible(UUID entityUUID);
+
+    boolean isVisible(int entityID);
 
     void setVisibility(UUID entityUUID, boolean visible, int currentTick);
 
@@ -39,9 +44,13 @@ public interface EntityView<T extends EntityLocatable<?, ?, ?, ?>>  extends Clea
 
     List<EntityViewTransition> drainTransitions();
 
+    boolean isPlayerView();
+
     default <T> T cast() {
         return (T) this;
     }
+
+    String getStringDataForDebugging();
 
     interface Factory {
         EntityView<?> createEntityView();

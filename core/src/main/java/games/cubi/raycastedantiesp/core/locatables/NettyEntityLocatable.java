@@ -1,24 +1,27 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
+import games.cubi.locatables.Locatable;
 import games.cubi.locatables.MutableLocatable;
 import games.cubi.locatables.implementations.MutableLocatableImpl;
+import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.raycastedantiesp.core.utils.IntArrayList;
+import games.cubi.raycastedantiesp.core.utils.IntArrayListMarker;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
  * Designed for use with netty-based systems, where entity data updates only ever come from one thread, but reads may come from multiple threads. This is however not enforced, and must be kept in mind when using this class.
  * A representation of an entity for a specific player.
  */
-public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, PacketReplayData extends Clearable> implements EntityLocatable<EntityType, PaintingType, Direction, PacketReplayData> {
+public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends Clearable> implements EntityLocatable<EntityType, PacketReplayData> {
     // immutable fields
     private final int entityID;
     private final UUID entityUUID;
-    private final SpawnType spawnType;
-    private final EntityType entityType; // Null if type is painting
-    private final PaintingType paintingType; // Null if type is not painting
-    private final Direction paintingDirection; //Null if type is not painting
+    private final boolean isSelfEntity;
+    private final EntityType entityType;
+    private final PlayerData owningPlayer;
 
     // Netty mutatable fields. Should NEVER be mutated from the engine thread, but reads are fine.
     private volatile UUID world;
@@ -30,11 +33,13 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
     private volatile double velocityY;
     private volatile double velocityZ;
     private volatile boolean onGround = true;
+    private int@IntArrayListMarker[] leashedIDs;
+    private int leasherID = NO_LEASHER;
+    private int[] passengerIDs;
+    private int vehicleID = -1;
+
 
     private volatile int entityData;
-    private volatile List<?> metadata = List.of();
-    private volatile List<?> equipment = List.of();
-    private volatile int[] passengerIDs = new int[0];
     private volatile PacketReplayData packetReplayData; // For use storing the packets we can't be bothered to directly store, with all cached packets being sent back out to the client when entity is visible again.
 
     // mutatable by several threads (engine and netty), may need to investigate atomic updates for thread safety
@@ -42,30 +47,31 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
     private volatile boolean clientVisible = true;
 
     // engine thread mutable, reads from netty and engine.
-    private volatile boolean visible = true;
+    private volatile boolean visible;
 
-    public NettyEntityLocatable(UUID world, double x, double y, double z, int entityID, UUID entityUUID, SpawnType spawnType, EntityType entityType) {
+    public NettyEntityLocatable(PlayerData owningPlayer, UUID world, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, EntityType entityType, boolean visible) {
         this.world = world;
         this.x = x; this.y = y; this.z = z;
 
         this.entityID = entityID;
         this.entityUUID = entityUUID;
-        this.spawnType = spawnType;
+        this.isSelfEntity = isSelfEntity;
         this.entityType = entityType;
-        this.paintingDirection = null;
-        this.paintingType = null;
+
+        this.visible = visible;
+
+        this.owningPlayer = owningPlayer;
     }
 
-    public NettyEntityLocatable(UUID world, double x, double y, double z, int entityID, UUID entityUUID, SpawnType spawnType, PaintingType paintingType, Direction paintingDirection) {
-        this.world = world;
-        this.x = x; this.y = y; this.z = z;
-
-        this.entityID = entityID;
-        this.entityUUID = entityUUID;
-        this.spawnType = spawnType;
-        this.entityType = null;
-        this.paintingDirection = paintingDirection;
-        this.paintingType = paintingType;
+    // For creating the self entity, where we don't have access to the world or position. Always visible.
+    protected NettyEntityLocatable(PlayerData selfData, int selfPlayerID, UUID ownUUID) {
+        entityID = selfPlayerID;
+        entityUUID = ownUUID;
+        owningPlayer = selfData;
+        isSelfEntity = true;
+        entityType = null;
+        clientVisible = true;
+        visible = true;
     }
 
     @Override
@@ -92,7 +98,7 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
      * Wherever possible, effort should be made to only call this from the engine thread, for thread safety reasons.
      */
     @Override
-    public EntityLocatable<?, ?, ?, ?> setVisible(boolean visible) {
+    public EntityLocatable<?, ?> setVisible(boolean visible) {
         this.visible = visible;
         return this;
     }
@@ -103,7 +109,7 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
     }
 // todo it may be that this is only ever set by the engine thread? If so, just volatile annotation may be safe enough, as no two engine threads should update a single player at the same time (add guard lock for this)
     @Override
-    public EntityLocatable<?, ?, ?, ?> setLastChecked(int lastChecked) {
+    public EntityLocatable<?, ?> setLastChecked(int lastChecked) {
         this.lastChecked = lastChecked;
         return this;
     }
@@ -114,14 +120,14 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
     }
 
     @Override
-    public EntityLocatable<?, ?, ?, ?> setClientVisible(boolean clientVisible) {
+    public EntityLocatable<?, ?> setClientVisible(boolean clientVisible) {
         this.clientVisible = clientVisible;
         return this;
     }
 
     @Override
-    public SpawnType spawnType() {
-        return spawnType;
+    public boolean isSelfEntity() {
+        return isSelfEntity;
     }
 
     @Override
@@ -133,7 +139,7 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public EntityLocatable<?, ?, ?, ?> setYaw(float yaw) {
+    public EntityLocatable<?, ?> setYaw(float yaw) {
         this.yaw = yaw;
         return this;
     }
@@ -147,7 +153,7 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public EntityLocatable<?, ?, ?, ?> setPitch(float pitch) {
+    public EntityLocatable<?, ?> setPitch(float pitch) {
         this.pitch = pitch;
         return this;
     }
@@ -161,7 +167,7 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public EntityLocatable<?, ?, ?, ?> setHeadYaw(float headYaw) {
+    public EntityLocatable<?, ?> setHeadYaw(float headYaw) {
         this.headYaw = headYaw;
         return this;
     }
@@ -185,7 +191,7 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public EntityLocatable<?, ?, ?, ?> setVelocity(double velocityX, double velocityY, double velocityZ) {
+    public EntityLocatable<?, ?> setVelocity(double velocityX, double velocityY, double velocityZ) {
         this.velocityX = velocityX;
         this.velocityY = velocityY;
         this.velocityZ = velocityZ;
@@ -201,7 +207,7 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public EntityLocatable<?, ?, ?, ?> setOnGround(boolean onGround) {
+    public EntityLocatable<?, ?> setOnGround(boolean onGround) {
         this.onGround = onGround;
         return this;
     }
@@ -217,55 +223,56 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
     }
 
     @Override
-    public EntityLocatable<?, ?, ?, ?> setEntityData(int entityData) {
+    public EntityLocatable<?, ?> setEntityData(int entityData) {
         this.entityData = entityData;
         return this;
     }
 
     @Override
-    public PaintingType paintingType() {
-        return paintingType;
-    }
-
-    @Override
-    public Direction paintingDirection() {
-        return paintingDirection;
-    }
-
-    @Override
-    public List<?> metadata() {
-        return metadata;
-    }
-
-    /**
-     * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
-     */
-    @Override
-    public EntityLocatable<?, ?, ?, ?> setMetadata(List<?> metadata) {
-        this.metadata = metadata == null ? List.of() : List.copyOf(metadata);
-        return this;
-    }
-
-    @Override
-    public List<?> equipment() {
-        return equipment;
-    }
-
-    @Override
-    public EntityLocatable<?, ?, ?, ?> setEquipment(List<?> equipment) {
-        this.equipment = equipment == null ? List.of() : List.copyOf(equipment);
-        return this;
-    }
-
-    @Override
     public int[] passengerIDs() {
-        return passengerIDs.clone();
+        return passengerIDs == null ? null : passengerIDs.clone();
     }
 
     @Override
-    public EntityLocatable<?, ?, ?, ?> setPassengerIDs(int[] passengerIDs) {
+    public EntityLocatable<?, ?> setPassengerIDs(int[] passengerIDs) {
         this.passengerIDs = passengerIDs == null ? new int[0] : passengerIDs.clone();
         return this;
+    }
+
+    @Override
+    public void setVehicleID(int vehicleID) {
+        this.vehicleID = vehicleID;
+    }
+
+    @Override
+    public int vehicleID() {
+        return vehicleID;
+    }
+
+    @Override
+    public void addLeashedEntity(int leashedEntityID) {
+        leashedIDs = IntArrayList.add(leashedIDs, leashedEntityID);
+    }
+
+    @Override
+    public void removeLeashedEntity(int leashedEntityID) {
+        leashedIDs = IntArrayList.remove(leashedIDs, leashedEntityID);
+    }
+
+    public int@Nullable[] leashedEntityIDsOrNull() {
+        return IntArrayList.getCopyOrNull(leashedIDs);
+    }
+
+    public static final int NO_LEASHER = -2;
+
+    @Override
+    public int leashingEntity() {
+        return leasherID;
+    }
+
+    @Override
+    public void setLeashingEntity(int leashingEntityID) {
+        this.leasherID = leashingEntityID;
     }
 
     @Override
@@ -274,7 +281,7 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
     }
 
     @Override
-    public EntityLocatable<?, ?, ?, ?> setPacketReplayData(PacketReplayData packetReplayData) {
+    public EntityLocatable<?, ?> setPacketReplayData(PacketReplayData packetReplayData) {
         this.packetReplayData = packetReplayData;
         return this;
     }
@@ -329,13 +336,49 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
     }
 
     @Override
+    public MutableLocatable set(double x, double y, double z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        updatePassengerPositions();
+        return this;
+    }
+
+    @Override
+    public MutableLocatable add(double x, double y, double z) {
+        this.x += x;
+        this.y += y;
+        this.z += z;
+        updatePassengerPositions();
+        return this;
+    }
+
+    // This does not correctly set the passenger position, as the passenger is above the vehicle. It is however close enough to minimise annoying interpolation on show.
+    private void updatePassengerPositions() {
+        if (passengerIDs == null || passengerIDs.length == 0) return;
+        for (int passengerID : passengerIDs) {
+            NettyEntityLocatable<?, ?> passenger = owningPlayer.entityFromID(passengerID);
+            if (passenger != null) {
+                passenger.setVehicleID(entityID);
+                passenger.setWorld(world);
+                passenger.setX(x);
+                passenger.setY(y);
+                passenger.setZ(z);
+                passenger.updatePassengerPositions();
+            }
+        }
+    }
+
+    @Override
     public void clear() {
         world = null;
-        metadata = null;
-        equipment = null;
-        passengerIDs = null;
         packetReplayData.clear();
         packetReplayData = null;
+
+        vehicleID = -1;
+        passengerIDs = null;
+        leashedIDs = null;
+        leasherID = NO_LEASHER;
     }
 
     @Override
@@ -350,6 +393,27 @@ public abstract class NettyEntityLocatable<EntityType, PaintingType, Direction, 
 
     @Override
     public String toString() {
-        return toStringForm();
+        return "NettyEntityLocatable{" +
+                "entityID=" + entityID +
+                ", entityUUID=" + entityUUID +
+                ", isSelfEntity=" + isSelfEntity +
+                ", entityType=" + entityType +
+                ", world=" + world +
+                ", x=" + x +
+                ", y=" + y +
+                ", z=" + z +
+                ", yaw=" + yaw +
+                ", pitch=" + pitch +
+                ", headYaw=" + headYaw +
+                ", velocityX=" + velocityX +
+                ", velocityY=" + velocityY +
+                ", velocityZ=" + velocityZ +
+                ", onGround=" + onGround +
+                ", leashedIDs=" + (leashedIDs == null ? null : IntArrayList.toString(leashedIDs)) +
+                ", leasherID=" + leasherID +
+                ", passengerIDs=" + (passengerIDs == null ? null : IntArrayList.toString(passengerIDs)) +
+                ", vehicleID=" + vehicleID +
+                ", entityData=" + entityData +
+                '}';
     }
 }

@@ -11,7 +11,6 @@ repositories {
 }
 
 dependencies {
-    compileOnly("com.github.retrooper:packetevents-spigot:2.8.0")
     compileOnly("org.spongepowered:configurate-core:4.2.0")
     compileOnly("org.spongepowered:configurate-yaml:4.2.0")
 
@@ -19,7 +18,7 @@ dependencies {
     compileOnly(project(":logging"))
 }
 
-val coreVersion = "0.2.1-SNAPSHOT"
+val coreVersion = "0.3.4-SNAPSHOT"
 
 val isRelease = gradle.startParameter.taskNames.any {
     it.contains("buildRelease")

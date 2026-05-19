@@ -6,11 +6,7 @@ import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
 import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -18,6 +14,19 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     private final Map<UUID, PacketEventsEntity> entitiesByUUID = new ConcurrentHashMap<>();
     private final Map<Integer, UUID> entityUUIDsByID = new ConcurrentHashMap<>();
     private final ConcurrentLinkedQueue<EntityViewTransition> transitions = new ConcurrentLinkedQueue<>();
+    private final boolean isPlayerView;
+
+    public PacketEventsEntityView(boolean isPlayerView) {
+        this.isPlayerView = isPlayerView;
+    }
+
+    public static PacketEventsEntityView createPlayerView() {
+        return new PacketEventsEntityView(true);
+    }
+
+    public static PacketEventsEntityView createEntityView() {
+        return new PacketEventsEntityView(false);
+    }
 
     @Override
     public void insertEntity(PacketEventsEntity entity) {
@@ -27,24 +36,6 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
         }
         entitiesByUUID.put(entity.entityUUID(), entity);
         entityUUIDsByID.put(entity.entityID(), entity.entityUUID());
-    }
-
-    @Override
-    public void moveRelative(int entityID, double deltaX, double deltaY, double deltaZ, int currentTick) {
-        PacketEventsEntity existing = getTrackedEntity(entityID);
-        if (existing == null) {
-            return;
-        }
-        existing.add(deltaX, deltaY, deltaZ);
-    }
-
-    @Override
-    public void moveAbsolute(int entityID, double x, double y, double z, int currentTick) {
-        PacketEventsEntity existing = getTrackedEntity(entityID);
-        if (existing == null) {
-            return;
-        }
-        existing.set(x, y, z, existing.world());
     }
 
     @Override
@@ -78,9 +69,26 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     }
 
     @Override
+    public boolean exists(UUID entityUUID) {
+        return entitiesByUUID.containsKey(entityUUID);
+    }
+
+    @Override
+    public boolean exists(int entityID) {
+        return entityUUIDsByID.containsKey(entityID);
+    }
+
+    @Override
+    public boolean isVisible(int entityID) {
+        PacketEventsEntity entity = getTrackedEntity(entityID);
+        assert entity != null;
+        return entity.visible();
+    }
+
+    @Override
     public Locatable getLocation(UUID entityUUID) {
         PacketEventsEntity entity = entitiesByUUID.get(entityUUID);
-        if (entity == null || entity.spawnType() == null) {
+        if (entity == null) {
             return null;
         }
         return entity.clonePlainAndCentreIfBlockLocation().set(entity.x(), entity.y() + 0.5, entity.z(), entity.world());
@@ -94,6 +102,11 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
 
     @Override
     public boolean isVisible(UUID entityUUID, int currentTick) {
+        return isVisible(entityUUID);
+    }
+
+    @Override
+    public boolean isVisible(UUID entityUUID) {
         PacketEventsEntity entity = entitiesByUUID.get(entityUUID);
         return entity == null || entity.visible();
     }
@@ -107,6 +120,7 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
                     + " tick=" + currentTick);
             return;
         }
+        if (existing.isSelfEntity()) return;
         if (existing.visible() != visible) {
             transitions.add(new EntityViewTransition(
                     visible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE,
@@ -127,9 +141,6 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     public Collection<UUID> getNeedingRecheck(int recheckTicks, int currentTick) {
         List<UUID> needingRecheck = new ArrayList<>();
         for (PacketEventsEntity state : entitiesByUUID.values()) {
-            if (state.spawnType() == null) {
-                continue;
-            }
             if (state.visible() && (currentTick - state.lastChecked()) < recheckTicks) {
                 continue;
             }
@@ -154,6 +165,11 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     }
 
     @Override
+    public boolean isPlayerView() {
+        return isPlayerView;
+    }
+
+    @Override
     public void clear() {
         entitiesByUUID.clear();
         entityUUIDsByID.clear();
@@ -163,5 +179,19 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     private PacketEventsEntity getTrackedEntity(int entityID) {
         UUID entityUUID = entityUUIDsByID.get(entityID);
         return entityUUID == null ? null : entitiesByUUID.get(entityUUID);
+    }
+
+    public String getStringDataForDebugging() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("EntityView isPlayerView=").append(isPlayerView).append("\n");
+        Set<Map.Entry<Integer, UUID>> entries = new HashSet<>(entityUUIDsByID.entrySet());
+        for (Map.Entry<Integer, UUID> entry : entries) {
+            PacketEventsEntity entity = entitiesByUUID.get(entry.getValue());
+            builder.append("EntityID=").append(entry.getKey())
+                    .append(" UUID=").append(entry.getValue())
+                    .append(" Entity=").append(entity.toString())
+                    .append("\n");
+        }
+        return builder.toString();
     }
 }

@@ -54,6 +54,13 @@ public sealed interface Locatable extends ChunkSectionLocatable, StrictEquality 
         return dx * dx + dy * dy + dz * dz;
     }
 
+    default double distanceSquared(double x, double y, double z) {
+        double dx = this.x() - x;
+        double dy = this.y() - y;
+        double dz = this.z() - z;
+        return dx * dx + dy * dy + dz * dz;
+    }
+
     default MutableLocatable clonePlainAndCentreIfBlockLocation() {
         return new MutableLocatableImpl(world(), x(), y(), z());
     }

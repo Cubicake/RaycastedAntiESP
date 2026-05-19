@@ -1,16 +1,10 @@
 package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
 import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
-import com.github.retrooper.packetevents.protocol.packettype.PacketType;
-import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
-import games.cubi.raycastedantiesp.core.players.PlayerData;
-import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 
-import java.util.UUID;
 import java.util.function.IntSupplier;
 
 public class PacketEventsCommonViewController {
@@ -27,19 +21,6 @@ public class PacketEventsCommonViewController {
             INSTANCE = new PacketEventsCommonViewController(currentTick);
         }
         return INSTANCE;
-    }
-
-    public PlayerData ensurePlayerData(UUID viewerUUID, PacketSendEvent event) {
-        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(viewerUUID);
-        if (playerData != null) {
-            return playerData;
-        }
-
-        if (event.getPacketType() == PacketType.Login.Server.LOGIN_SUCCESS) {
-            PlayerRegistry.getInstance().registerPlayer(viewerUUID, false, currentTickSupplier.getAsInt());
-            return PlayerRegistry.getInstance().getPlayerData(viewerUUID);
-        }
-        return null;
     }
 
     public void writeIfPresent(User viewer, PacketWrapper<?> packet) {

@@ -2,6 +2,7 @@ package games.cubi.raycastedantiesp.paper;
 
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import com.destroystokyo.paper.event.server.ServerTickStartEvent;
+import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.paper.engine.PaperSimpleEngine;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
@@ -56,12 +57,11 @@ public class EventListener extends PaperListener {
 
         boolean hasBypassPermission = player.hasPermission("raycastedantiesp.bypass");
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
-        if (playerData == null) {
-            PlayerRegistry.getInstance().registerPlayer(player.getUniqueId(), hasBypassPermission, currentTickSupplier.getAsInt());
-            playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
-        }
 
-        if (playerData == null) return;
+        if (playerData == null) {
+            Logger.warning("Failed to load player data for " + player.getName() + " (" + player.getUniqueId() + "). Attempting to reconstruct.", 3, EventListener.class);
+            playerData = PlayerRegistry.getInstance().registerAndGetPlayerIfAbsent(player.getUniqueId(), hasBypassPermission, currentTickSupplier.getAsInt());
+        }
         playerData.setBypassPermission(hasBypassPermission);
         updateOwnLocation(playerData, player.getEyeLocation());
     }

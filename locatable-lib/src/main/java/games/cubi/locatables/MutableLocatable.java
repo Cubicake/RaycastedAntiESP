@@ -49,6 +49,13 @@ public non-sealed interface MutableLocatable extends Locatable {
         return this;
     }
 
+    default MutableLocatable set(double x, double y, double z) {
+        setX(x);
+        setY(y);
+        setZ(z);
+        return this;
+    }
+
     /**
      * @return The same Locatable, now mutated to have the same position and world as the given values.
      */
