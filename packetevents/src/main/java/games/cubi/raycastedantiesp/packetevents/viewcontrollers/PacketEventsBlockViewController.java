@@ -161,7 +161,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
                 TileEntityLocatable<?> existing = blockView.getTrackedTileEntity(location);
                 if (existing == null || existing.blockID() != blockID) {
                     double distanceSquared = location.distanceSquared(playerLocation);
-                    blockView.insertTileEntity(location, blockID, distanceSquared <= hideOnSpawnDistanceSquared);
+                    blockView.insertTileEntity(location, blockID, ((distanceSquared <= hideOnSpawnDistanceSquared) && tileEntityConfig.enabled()));
                 }
                 if (!blockView.isVisible(location, currentTick)) {
                     change.setBlockId(getHiddenBlockId(location.blockY()));
@@ -212,7 +212,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
             TileEntityLocatable<?> existing = playerData.blockView().getTrackedTileEntity(location);
             if (existing == null || existing.blockID() != blockID) {
                 double distanceSquared = location.distanceSquared(playerData.ownLocation());
-                playerData.blockView().insertTileEntity(location, blockID, distanceSquared <= hideOnSpawnDistanceSquared);
+                playerData.blockView().insertTileEntity(location, blockID, ((distanceSquared <= hideOnSpawnDistanceSquared) && tileEntityConfig.enabled()));
             }
             if (!playerData.blockView().isVisible(location, currentTick)) {
                 event.setCancelled(true);
