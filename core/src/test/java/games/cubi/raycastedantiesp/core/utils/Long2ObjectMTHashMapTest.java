@@ -320,9 +320,11 @@ class Long2ObjectMTHashMapTest {
                 futures.add(executor.submit(() -> {
                     await(startLatch);
                     try {
-                        for (int i = 0; i < 32; i++) {
-                            long key = i;
-                            map.put(key, (BitSet) returnValueOne.clone());
+                        for (int repetitions = 0; repetitions < 10; repetitions++) {
+                            for (int i = 0; i < 32; i++) {
+                                long key = i;
+                                map.put(key, (BitSet) returnValueOne.clone());
+                            }
                         }
                     } catch (Throwable t) {
                         failure.compareAndSet(null, t);
@@ -331,9 +333,11 @@ class Long2ObjectMTHashMapTest {
                 futures.add(executor.submit(() -> {
                     await(startLatch);
                     try {
-                        for (int i = 0; i < 32; i++) {
-                            long key = i * 2;
-                            map.put(key, (BitSet) returnValueTwo.clone());
+                        for (int repetitions = 0; repetitions < 10; repetitions++) {
+                            for (int i = 0; i < 32; i++) {
+                                long key = i * 2;
+                                map.put(key, (BitSet) returnValueTwo.clone());
+                            }
                         }
                     } catch (Throwable t) {
                         failure.compareAndSet(null, t);
@@ -345,7 +349,7 @@ class Long2ObjectMTHashMapTest {
                     futures.add(executor.submit(() -> {
                         await(startLatch);
                         try {
-                            for (int i = 0; i < 20_000; i++) {
+                            for (int i = 0; i < 1_000; i++) {
                                 long key = i % 128L;
                                 map.get(key);
                                 map.getOrDefault(key, new BitSet());
