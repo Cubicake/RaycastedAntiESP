@@ -305,14 +305,14 @@ class Long2ObjectMTHashMapTest {
     @Test
     void multipleThreadsReadingAndWriting() {
         assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
-            Long2ObjectMTHashMap<BitSet> map = new Long2ObjectMTHashMap<>(128);
+            Long2ObjectMTHashMap<BitSet> map = new Long2ObjectMTHashMap<>(256);
             ExecutorService executor = Executors.newFixedThreadPool(6);
             CountDownLatch startLatch = new CountDownLatch(1);
             AtomicReference<Throwable> failure = new AtomicReference<>();
             List<Future<?>> futures = new ArrayList<>();
 
             // Pre-populate the map with all keys from 0 to 127
-            for (long i = 0; i < 128; i++) {
+            for (long i = 0; i < 256; i++) {
                 map.put(i, (BitSet) initialValue.clone());
             }
 
@@ -320,12 +320,13 @@ class Long2ObjectMTHashMapTest {
                 futures.add(executor.submit(() -> {
                     await(startLatch);
                     try {
-                        for (int repetitions = 0; repetitions < 10; repetitions++) {
-                            for (int i = 0; i < 32; i++) {
+                        for (int repetitions = 0; repetitions < 44; repetitions++) {
+                            for (int i = 0; i < 64; i++) {
                                 long key = i;
                                 map.put(key, (BitSet) returnValueOne.clone());
                             }
                         }
+                        System.out.println("Writer 1 done, current successful optimistic reads: " + map.successfulOptimisticReads.get());
                     } catch (Throwable t) {
                         failure.compareAndSet(null, t);
                     }
@@ -333,12 +334,13 @@ class Long2ObjectMTHashMapTest {
                 futures.add(executor.submit(() -> {
                     await(startLatch);
                     try {
-                        for (int repetitions = 0; repetitions < 10; repetitions++) {
-                            for (int i = 0; i < 32; i++) {
+                        for (int repetitions = 0; repetitions < 44; repetitions++) {
+                            for (int i = 0; i < 64; i++) {
                                 long key = i * 2;
                                 map.put(key, (BitSet) returnValueTwo.clone());
                             }
                         }
+                        System.out.println("Writer 2 done, current successful optimistic reads: " + map.successfulOptimisticReads.get());
                     } catch (Throwable t) {
                         failure.compareAndSet(null, t);
                     }
@@ -349,8 +351,8 @@ class Long2ObjectMTHashMapTest {
                     futures.add(executor.submit(() -> {
                         await(startLatch);
                         try {
-                            for (int i = 0; i < 1_000; i++) {
-                                long key = i % 128L;
+                            for (int i = 0; i < 800; i++) {
+                                long key = i % 256L;
                                 map.get(key);
                                 map.getOrDefault(key, new BitSet());
                                 map.containsKey(key);
@@ -372,11 +374,11 @@ class Long2ObjectMTHashMapTest {
                 int sharedKeysWithReturnValueOne = 0;
                 int sharedKeysWithReturnValueTwo = 0;
 
-                for (long i = 0; i < 128; i++) {
+                for (long i = 0; i < 256; i++) {
                     BitSet value = map.get(i);
                     assertNotNull(value, "Value for key " + i + " should not be null");
 
-                    if (i <= 30 && i % 2 == 0) {
+                    if (i <= 62 && i % 2 == 0) {
                         boolean matchesOne = value.equals(returnValueOne);
                         boolean matchesTwo = value.equals(returnValueTwo);
 
@@ -387,10 +389,10 @@ class Long2ObjectMTHashMapTest {
                         } else {
                             sharedKeysWithReturnValueTwo++;
                         }
-                    } else if (i <= 31) {
+                    } else if (i <= 63) {
                         assertEquals(returnValueOne, value, "Key " + i + " should contain returnValueOne, but was "
                                         + Arrays.toString(value.toLongArray()));
-                    } else if (i <= 62 && i % 2 == 0) {
+                    } else if (i <= 127 && i % 2 == 0) {
                         assertEquals(returnValueTwo, value, "Key " + i + " should contain returnValueTwo, but was "
                                         + Arrays.toString(value.toLongArray()));
                     } else {
@@ -401,10 +403,13 @@ class Long2ObjectMTHashMapTest {
                 System.out.println("Results from testing Long2ObjectMTHashMap with multiple threads:");
                 System.out.println("Shared keys with returnValueOne: " + sharedKeysWithReturnValueOne);
                 System.out.println("Shared keys with returnValueTwo: " + sharedKeysWithReturnValueTwo);
+                System.out.println("Successful atomic reads: " + map.successfulOptimisticReads.get());
+                System.out.println("Failed optimistic reads (due to concurrent writes): " + map.failedOptimisticReads.get());
             } finally {
                 executor.shutdownNow();
                 executor.awaitTermination(5, TimeUnit.SECONDS);
             }
         });
+        int rerunTest = 2;
     }
 }

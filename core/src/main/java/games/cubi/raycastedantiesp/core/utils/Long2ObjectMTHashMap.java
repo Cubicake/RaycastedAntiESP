@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.longs.LongObjectBiConsumer;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.LongFunction;
 import java.util.function.LongPredicate;
@@ -46,7 +47,7 @@ public class Long2ObjectMTHashMap<V> {
     public V get(final long key) {
         long stamp = lock.tryOptimisticRead();
         V value = backingMap.get(key);
-        if (!lock.validate(stamp)) {
+        if (failsValidation(stamp)) {
             assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
@@ -61,7 +62,7 @@ public class Long2ObjectMTHashMap<V> {
     public V getOrDefault(final long key, final V defaultValue) {
         long stamp = lock.tryOptimisticRead();
         V value = getOrDefaultInternal(key, defaultValue);
-        if (!lock.validate(stamp)) {
+        if (failsValidation(stamp)) {
             assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
@@ -76,7 +77,7 @@ public class Long2ObjectMTHashMap<V> {
     public boolean containsKey(final long key) {
         long stamp = lock.tryOptimisticRead();
         boolean contains = backingMap.containsKey(key);
-        if (!lock.validate(stamp)) {
+        if (failsValidation(stamp)) {
             assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
@@ -91,7 +92,7 @@ public class Long2ObjectMTHashMap<V> {
     public int size() {
         long stamp = lock.tryOptimisticRead();
         int size = backingMap.size();
-        if (!lock.validate(stamp)) {
+        if (failsValidation(stamp)) {
             assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
@@ -106,7 +107,7 @@ public class Long2ObjectMTHashMap<V> {
     public boolean isEmpty() {
         long stamp = lock.tryOptimisticRead();
         boolean empty = backingMap.isEmpty();
-        if (!lock.validate(stamp)) {
+        if (failsValidation(stamp)) {
             assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
@@ -293,6 +294,21 @@ public class Long2ObjectMTHashMap<V> {
                 writeLockedCallbackDepth.set(depth);
             }
         }
+    }
+
+    final AtomicInteger successfulOptimisticReads = new AtomicInteger();
+    final AtomicInteger failedOptimisticReads = new AtomicInteger();
+
+    private boolean failsValidation(long stamp) {
+        boolean valid = lock.validate(stamp);
+        if (!valid) {
+            failedOptimisticReads.incrementAndGet();
+        } else {
+            successfulOptimisticReads.incrementAndGet();
+        }
+        return !valid;
+
+        //return !lock.validate(stamp);
     }
 
     @FunctionalInterface
