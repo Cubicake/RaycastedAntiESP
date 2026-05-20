@@ -1,4 +1,5 @@
 import java.time.Instant
+import org.gradle.jvm.toolchain.JavaToolchainService
 
 plugins {
     id("java-library")
@@ -35,6 +36,8 @@ dependencies {
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
+
+val javaToolchainService = project.extensions.getByType(JavaToolchainService::class.java)
 
 group = "games.cubi.raycastedantiesp.paper"
 
@@ -81,6 +84,10 @@ tasks {
         // Configure the Minecraft version for our task.
         // This is the only required configuration besides applying the plugin.
         // Your plugin's jar (or shadowJar if present) will be used automatically.
+        javaLauncher = javaToolchainService.launcherFor {
+            //languageVersion.set(paperRunJavaVersion.map(JavaLanguageVersion::of))
+            languageVersion.set(JavaLanguageVersion.of(25))
+        }
         minecraftVersion("26.1.2")
         //minecraftVersion("1.21.11")
         jvmArgs("-Xms4G", "-Xmx4G", "-Dcom.mojang.eula.agree=true")
