@@ -1,97 +1,84 @@
 package games.cubi.raycastedantiesp.core.utils;
 
-
 import it.unimi.dsi.fastutil.Hash;
-import it.unimi.dsi.fastutil.longs.*;
-import it.unimi.dsi.fastutil.objects.ObjectCollection;
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongObjectBiConsumer;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
-import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.locks.StampedLock;
-import java.util.function.BiFunction;
 import java.util.function.LongFunction;
+import java.util.function.LongPredicate;
 
 /**
- * A type-specific hash map with a fast, small-footprint implementation. The map is thread-safe with a backing StampedLock.
+ * A small thread-safe utility map for primitive {@code long} keys.
+ *
+ * <p>Reads use optimistic locking where possible. Mutations use the write lock. Callback-based
+ * methods such as {@link #computeIfAbsent(long, LongFunction)}, {@link #forEach(LongObjectBiConsumer)},
+ * and {@link #removeIfKey(LongPredicate)} run their callbacks while holding the write lock, so those
+ * callbacks must not call back into this same map instance.
+ *
+ * <p>This class only synchronizes access to the map structure itself. Stored values are returned by
+ * reference and are not made thread-safe by this map.
  *
  * @param <V> the type of mapped values
  */
-public class Long2ObjectMTHashMap<V> extends Long2ObjectOpenHashMap<V> {
+public class Long2ObjectMTHashMap<V> {
+    private final Long2ObjectOpenHashMap<V> backingMap;
     private final StampedLock lock = new StampedLock();
+    private final ThreadLocal<Integer> writeLockedCallbackDepth = ThreadLocal.withInitial(() -> 0);
 
-    public Long2ObjectMTHashMap(final int expected, final float f) {
-        super(expected, f);
+    public Long2ObjectMTHashMap(final int expected, final float loadFactor) {
+        this.backingMap = new Long2ObjectOpenHashMap<>(expected, loadFactor);
     }
 
-    /**
-     * Creates a new hash map with {@link Hash#DEFAULT_LOAD_FACTOR} as load factor.
-     *
-     * @param expected the expected number of elements in the hash map.
-     */
     public Long2ObjectMTHashMap(final int expected) {
-        this(expected, DEFAULT_LOAD_FACTOR);
+        this(expected, Hash.DEFAULT_LOAD_FACTOR);
     }
 
-    /**
-     * Creates a new hash map with initial expected {@link Hash#DEFAULT_INITIAL_SIZE} entries and
-     * {@link Hash#DEFAULT_LOAD_FACTOR} as load factor.
-     */
     public Long2ObjectMTHashMap() {
-        this(DEFAULT_INITIAL_SIZE, DEFAULT_LOAD_FACTOR);
+        this(Hash.DEFAULT_INITIAL_SIZE, Hash.DEFAULT_LOAD_FACTOR);
     }
 
-    @Override
-    public V get(long k) {
+    public V get(final long key) {
         long stamp = lock.tryOptimisticRead();
-        V v = super.get(k);
+        V value = backingMap.get(key);
         if (!lock.validate(stamp)) {
+            assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
-                v = super.get(k);
+                value = backingMap.get(key);
             } finally {
                 lock.unlockRead(stamp);
             }
         }
-        return v;
+        return value;
     }
 
-    @Override
-    public V getOrDefault(long k, V defaultValue) {
+    public V getOrDefault(final long key, final V defaultValue) {
         long stamp = lock.tryOptimisticRead();
-        V v = super.getOrDefault(k, defaultValue);
+        V value = getOrDefaultInternal(key, defaultValue);
         if (!lock.validate(stamp)) {
+            assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
-                v = super.getOrDefault(k, defaultValue);
+                value = getOrDefaultInternal(key, defaultValue);
             } finally {
                 lock.unlockRead(stamp);
             }
         }
-        return v;
+        return value;
     }
 
-    @Override
-    public boolean containsKey(long k) {
+    public boolean containsKey(final long key) {
         long stamp = lock.tryOptimisticRead();
-        boolean contains = super.containsKey(k);
+        boolean contains = backingMap.containsKey(key);
         if (!lock.validate(stamp)) {
+            assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
-                contains = super.containsKey(k);
-            } finally {
-                lock.unlockRead(stamp);
-            }
-        }
-        return contains;
-    }
-
-    @Override
-    public boolean containsValue(Object v) {
-        long stamp = lock.tryOptimisticRead();
-        boolean contains = super.containsValue(v);
-        if (!lock.validate(stamp)) {
-            stamp = lock.readLock();
-            try {
-                contains = super.containsValue(v);
+                contains = backingMap.containsKey(key);
             } finally {
                 lock.unlockRead(stamp);
             }
@@ -99,14 +86,14 @@ public class Long2ObjectMTHashMap<V> extends Long2ObjectOpenHashMap<V> {
         return contains;
     }
 
-    @Override
     public int size() {
         long stamp = lock.tryOptimisticRead();
-        int size = super.size();
+        int size = backingMap.size();
         if (!lock.validate(stamp)) {
+            assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
-                size = super.size();
+                size = backingMap.size();
             } finally {
                 lock.unlockRead(stamp);
             }
@@ -114,14 +101,14 @@ public class Long2ObjectMTHashMap<V> extends Long2ObjectOpenHashMap<V> {
         return size;
     }
 
-    @Override
     public boolean isEmpty() {
         long stamp = lock.tryOptimisticRead();
-        boolean empty = super.isEmpty();
+        boolean empty = backingMap.isEmpty();
         if (!lock.validate(stamp)) {
+            assertNoWriteLockedCallbackReentry();
             stamp = lock.readLock();
             try {
-                empty = super.isEmpty();
+                empty = backingMap.isEmpty();
             } finally {
                 lock.unlockRead(stamp);
             }
@@ -129,209 +116,185 @@ public class Long2ObjectMTHashMap<V> extends Long2ObjectOpenHashMap<V> {
         return empty;
     }
 
-    @Override
-    public void forEach(LongObjectBiConsumer<? super V> consumer) {
-        long stamp = lock.tryOptimisticRead();
-        super.forEach(consumer);
-        if (!lock.validate(stamp)) {
-            stamp = lock.readLock();
-            try {
-                super.forEach(consumer);
-            } finally {
-                lock.unlockRead(stamp);
+    public V put(final long key, final V value) {
+        assertNoWriteLockedCallbackReentry();
+
+        long stamp = lock.writeLock();
+        try {
+            return backingMap.put(key, value);
+        } finally {
+            lock.unlockWrite(stamp);
+        }
+    }
+
+    public V putIfAbsent(final long key, final V value) {
+        assertNoWriteLockedCallbackReentry();
+
+        long stamp = lock.writeLock();
+        try {
+            if (backingMap.containsKey(key)) {
+                return backingMap.get(key);
             }
+            backingMap.put(key, value);
+            return null;
+        } finally {
+            lock.unlockWrite(stamp);
         }
     }
 
-    @Override
-    public FastEntrySet<V> long2ObjectEntrySet() {
-        long stamp = lock.tryOptimisticRead();
-        FastEntrySet<V> entrySet = super.long2ObjectEntrySet();
-        if (!lock.validate(stamp)) {
-            stamp = lock.readLock();
-            try {
-                entrySet = super.long2ObjectEntrySet();
-            } finally {
-                lock.unlockRead(stamp);
+    public V replace(final long key, final V value) {
+        assertNoWriteLockedCallbackReentry();
+
+        long stamp = lock.writeLock();
+        try {
+            if (!backingMap.containsKey(key)) {
+                return null;
             }
+            return backingMap.put(key, value);
+        } finally {
+            lock.unlockWrite(stamp);
         }
-        return entrySet;
     }
 
-    @Override
-    public LongSet keySet() {
-        long stamp = lock.tryOptimisticRead();
-        LongSet keySet = super.keySet();
-        if (!lock.validate(stamp)) {
-            stamp = lock.readLock();
-            try {
-                keySet = super.keySet();
-            } finally {
-                lock.unlockRead(stamp);
+    public boolean replace(final long key, final V oldValue, final V value) {
+        assertNoWriteLockedCallbackReentry();
+
+        long stamp = lock.writeLock();
+        try {
+            if (!backingMap.containsKey(key) || !Objects.equals(backingMap.get(key), oldValue)) {
+                return false;
             }
+            backingMap.put(key, value);
+            return true;
+        } finally {
+            lock.unlockWrite(stamp);
         }
-        return keySet;
     }
 
-    @Override
-    public ObjectCollection<V> values() {
-        long stamp = lock.tryOptimisticRead();
-        ObjectCollection<V> values = super.values();
-        if (!lock.validate(stamp)) {
-            stamp = lock.readLock();
-            try {
-                values = super.values();
-            } finally {
-                lock.unlockRead(stamp);
+    public V remove(final long key) {
+        assertNoWriteLockedCallbackReentry();
+
+        long stamp = lock.writeLock();
+        try {
+            return backingMap.remove(key);
+        } finally {
+            lock.unlockWrite(stamp);
+        }
+    }
+
+    public boolean remove(final long key, final Object value) {
+        assertNoWriteLockedCallbackReentry();
+
+        long stamp = lock.writeLock();
+        try {
+            if (!backingMap.containsKey(key) || !Objects.equals(backingMap.get(key), value)) {
+                return false;
             }
-        }
-        return values;
-    }
-
-    @Override
-    public int hashCode() {
-        long stamp = lock.tryOptimisticRead();
-        int hash = super.hashCode();
-        if (!lock.validate(stamp)) {
-            stamp = lock.readLock();
-            try {
-                hash = super.hashCode();
-            } finally {
-                lock.unlockRead(stamp);
-            }
-        }
-        return hash;
-    }
-
-    // Write operations
-
-    @Override
-    public V put(long k, V v) {
-        long stamp = lock.writeLock();
-        try {
-            return super.put(k, v);
+            backingMap.remove(key);
+            return true;
         } finally {
             lock.unlockWrite(stamp);
         }
     }
 
-    @Override
-    public void putAll(Map<? extends Long, ? extends V> m) {
-        long stamp = lock.writeLock();
-        try {
-            super.putAll(m);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public V remove(long k) {
-        long stamp = lock.writeLock();
-        try {
-            return super.remove(k);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public boolean remove(long k, Object v) {
-        long stamp = lock.writeLock();
-        try {
-            return super.remove(k, v);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public V putIfAbsent(long k, V v) {
-        long stamp = lock.writeLock();
-        try {
-            return super.putIfAbsent(k, v);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public boolean replace(long k, V oldValue, V v) {
-        long stamp = lock.writeLock();
-        try {
-            return super.replace(k, oldValue, v);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public V replace(long k, V v) {
-        long stamp = lock.writeLock();
-        try {
-            return super.replace(k, v);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public V computeIfAbsent(long k, LongFunction<? extends V> mappingFunction) {
-        long stamp = lock.writeLock();
-        try {
-            return super.computeIfAbsent(k, mappingFunction);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public V computeIfAbsent(long key, Long2ObjectFunction<? extends V> mappingFunction) {
-        long stamp = lock.writeLock();
-        try {
-            return super.computeIfAbsent(key, mappingFunction);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public V computeIfPresent(long k, BiFunction<? super Long, ? super V, ? extends V> remappingFunction) {
-        long stamp = lock.writeLock();
-        try {
-            return super.computeIfPresent(k, remappingFunction);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public V compute(long k, BiFunction<? super Long, ? super V, ? extends V> remappingFunction) {
-        long stamp = lock.writeLock();
-        try {
-            return super.compute(k, remappingFunction);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
-    public V merge(long k, V v, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-        long stamp = lock.writeLock();
-        try {
-            return super.merge(k, v, remappingFunction);
-        } finally {
-            lock.unlockWrite(stamp);
-        }
-    }
-
-    @Override
     public void clear() {
+        assertNoWriteLockedCallbackReentry();
+
         long stamp = lock.writeLock();
         try {
-            super.clear();
+            backingMap.clear();
         } finally {
             lock.unlockWrite(stamp);
         }
+    }
+
+    public V computeIfAbsent(final long key, final LongFunction<? extends V> mappingFunction) {
+        assertNoWriteLockedCallbackReentry();
+        Objects.requireNonNull(mappingFunction, "mappingFunction");
+
+        long stamp = lock.writeLock();
+        try {
+            if (backingMap.containsKey(key)) {
+                return backingMap.get(key);
+            }
+
+            V value = invokeWriteLockedCallback(() -> mappingFunction.apply(key));
+            backingMap.put(key, value);
+            return value;
+        } finally {
+            lock.unlockWrite(stamp);
+        }
+    }
+
+    public void forEach(final LongObjectBiConsumer<? super V> consumer) {
+        assertNoWriteLockedCallbackReentry();
+        Objects.requireNonNull(consumer, "consumer");
+
+        long stamp = lock.writeLock();
+        try {
+            ObjectIterator<Long2ObjectMap.Entry<V>> iterator = backingMap.long2ObjectEntrySet().fastIterator();
+            while (iterator.hasNext()) {
+                Long2ObjectMap.Entry<V> entry = iterator.next();
+                invokeWriteLockedCallback(() -> {
+                    consumer.accept(entry.getLongKey(), entry.getValue());
+                    return null;
+                });
+            }
+        } finally {
+            lock.unlockWrite(stamp);
+        }
+    }
+
+    public int removeIfKey(final LongPredicate predicate) {
+        assertNoWriteLockedCallbackReentry();
+        Objects.requireNonNull(predicate, "predicate");
+
+        long stamp = lock.writeLock();
+        try {
+            int removed = 0;
+            ObjectIterator<Long2ObjectMap.Entry<V>> iterator = backingMap.long2ObjectEntrySet().fastIterator();
+            while (iterator.hasNext()) {
+                Long2ObjectMap.Entry<V> entry = iterator.next();
+                if (invokeWriteLockedCallback(() -> predicate.test(entry.getLongKey()))) {
+                    iterator.remove();
+                    removed++;
+                }
+            }
+            return removed;
+        } finally {
+            lock.unlockWrite(stamp);
+        }
+    }
+
+    private V getOrDefaultInternal(final long key, final V defaultValue) {
+        V value = backingMap.get(key);
+        return value != null || backingMap.containsKey(key) ? value : defaultValue;
+    }
+
+    private void assertNoWriteLockedCallbackReentry() {
+        if (writeLockedCallbackDepth.get() > 0) {
+            throw new IllegalStateException(
+                    "Callbacks executed under the write lock must not reenter this Long2ObjectMTHashMap instance."
+            );
+        }
+    }
+
+    private <T> T invokeWriteLockedCallback(final Long2ObjectMTHashMapCallback<T> callback) {
+        writeLockedCallbackDepth.set(writeLockedCallbackDepth.get() + 1);
+        try {
+            return callback.invoke();
+        } finally {
+            int depth = writeLockedCallbackDepth.get() - 1;
+            if (depth == 0) {
+                writeLockedCallbackDepth.remove();
+            } else {
+                writeLockedCallbackDepth.set(depth);
+            }
+        }
+    }
+
+    @FunctionalInterface
+    private interface Long2ObjectMTHashMapCallback<T> {
+        T invoke();
     }
 }
