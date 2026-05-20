@@ -12,12 +12,14 @@ import java.util.function.LongFunction;
 import java.util.function.LongPredicate;
 
 /**
- * A small thread-safe utility map for primitive {@code long} keys.
+ * A small thread-safe utility map for primitive {@code long} keys backed by a {@link StampedLock} and a {@link Long2ObjectOpenHashMap}.
  *
- * <p>Reads use optimistic locking where possible. Mutations use the write lock. Callback-based
- * methods such as {@link #computeIfAbsent(long, LongFunction)}, {@link #forEach(LongObjectBiConsumer)},
+ * <p>Reads use optimistic locking where possible. Mutations use the write lock. Tests indicate that
+ * even under heavy read-write contention, optimistic reading works almost all the time.
+ *
+ * <p>Callback-based methods such as {@link #computeIfAbsent(long, LongFunction)}, {@link #forEach(LongObjectBiConsumer)},
  * and {@link #removeIfKey(LongPredicate)} run their callbacks while holding the write lock, so those
- * callbacks must not call back into this same map instance.
+ * callbacks must not call back into this same map instance or deadlock may occur as StampedLock is not reentrant.
  *
  * <p>This class only synchronizes access to the map structure itself. Stored values are returned by
  * reference and are not made thread-safe by this map.
