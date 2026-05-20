@@ -403,7 +403,7 @@ class Long2ObjectMTHashMapTest {
                 System.out.println("Results from testing Long2ObjectMTHashMap with multiple threads:");
                 System.out.println("Shared keys with returnValueOne: " + sharedKeysWithReturnValueOne);
                 System.out.println("Shared keys with returnValueTwo: " + sharedKeysWithReturnValueTwo);
-                System.out.println("Successful atomic reads: " + map.successfulOptimisticReads.get());
+                System.out.println("Successful optimistic  reads: " + map.successfulOptimisticReads.get());
                 System.out.println("Failed optimistic reads (due to concurrent writes): " + map.failedOptimisticReads.get());
             } finally {
                 executor.shutdownNow();
