@@ -117,6 +117,10 @@ public class RaycastedAntiESPCommand {
 
     @Subcommand("test")
     static class TestCommands {
+        @Executes("log")
+        void logString(@StringArg(StringArgType.GREEDY) String message) {
+            Logger.info(message, 1, RaycastedAntiESPCommand.class);
+        }
 
         @Executes("location-drift")
         void testCommand(CommandSender sender) {
