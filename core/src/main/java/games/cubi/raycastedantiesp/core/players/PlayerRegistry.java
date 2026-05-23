@@ -44,6 +44,7 @@ public class PlayerRegistry {
         unregisteredPlayer.blockView().clear();
         unregisteredPlayer.entityView().clear();
         unregisteredPlayer.playerView().clear();
+        unregisteredPlayer.nettyData().clear();
     }
 
     public PlayerData getPlayerData(UUID playerUUID) {

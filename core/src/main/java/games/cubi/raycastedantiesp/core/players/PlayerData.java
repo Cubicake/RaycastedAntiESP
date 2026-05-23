@@ -23,6 +23,7 @@ public class PlayerData {
     private final BlockView blockView;
     private final EntityView<?> entityView;
     private final EntityView<?> playerView;
+    private final NettyData nettyData;
 
     public PlayerData(UUID player, boolean hasBypassPermission, int joinTick) {
         this(player, joinTick);
@@ -36,6 +37,7 @@ public class PlayerData {
         blockView = ViewRegistry.createBlockView();
         entityView = ViewRegistry.createEntityView();
         playerView = ViewRegistry.createPlayerEntityView();
+        nettyData = new NettyData();
         ownLocation = new ThreadSafeLocatable(null, 0, 0, 0);
     }
 
@@ -45,6 +47,10 @@ public class PlayerData {
 
     public EntityView<?> playerView() {
         return playerView;
+    }
+
+    public NettyData nettyData() {
+        return nettyData;
     }
 
     private final Queue<Runnable> nettyTasks = new java.util.concurrent.ConcurrentLinkedQueue<>();
@@ -136,6 +142,7 @@ public class PlayerData {
                 ", blockView=" + blockView +
                 ", entityView=" + entityView +
                 ", playerView=" + playerView +
+                ", nettyData=" + nettyData +
                 '}';
     }
 }
