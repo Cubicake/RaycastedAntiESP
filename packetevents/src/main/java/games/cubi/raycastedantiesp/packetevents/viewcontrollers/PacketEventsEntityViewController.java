@@ -19,6 +19,7 @@ import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
+import games.cubi.raycastedantiesp.core.utils.IntArrayList;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
 import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
@@ -809,9 +810,39 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     protected void insertEntityToPlayerView(NettyEntityLocatable<?,?> entity, PlayerData playerData) {
         playerData.playerView().insertEntity(entity.cast());
+        reconcileUnresolvedLeashes(entity, playerData);
     }
 
     protected void insertEntityToEntityView(NettyEntityLocatable<?,?> entity, PlayerData playerData) {
         playerData.entityView().insertEntity(entity.cast()); //todo: no need to put here, move to abstract packet view controller
+        reconcileUnresolvedLeashes(entity, playerData);
+    }
+
+    private void reconcileUnresolvedLeashes(NettyEntityLocatable<?,?> insertedEntity, PlayerData playerData) {
+        int[] pendingLeashedEntityIDs = playerData.nettyData().consumeUnresolvedLeashes(insertedEntity.entityID());
+        if (IntArrayList.isEmpty(pendingLeashedEntityIDs)) {
+            return;
+        }
+        for (int leashedEntityID : pendingLeashedEntityIDs) {
+            NettyEntityLocatable<?,?> leashedEntity = playerData.entityFromID(leashedEntityID);
+            if (leashedEntity == null || leashedEntity.leashingEntity() != insertedEntity.entityID()) {
+                continue;
+            }
+            insertedEntity.addLeashedEntity(leashedEntityID);
+        }
+        if (!insertedEntity.clientVisible()) {
+            return;
+        }
+        WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets((PacketEventsEntity) insertedEntity, playerData);
+        if (leashPackets == null) {
+            return;
+        }
+        Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(playerData.getPlayerUUID());
+        User viewer = PacketEvents.getAPI().getProtocolManager().getUser(channel);
+        for (WrapperPlayServerAttachEntity leashPacket : leashPackets) {
+            if (leashPacket != null) {
+                viewer.writePacketSilently(leashPacket);
+            }
+        }
     }
 }
