@@ -26,7 +26,7 @@ public class PaperLoggerAdapter implements PlatformLogger {
      * Set this to true to send logs to the file instead of the console.
      * Set this to false to use the normal Paper console logger.
      */
-    private static final boolean LOG_TO_FILE = false;
+    private static final boolean LOG_TO_FILE = true;
 
     /*
      * If too many logs queue up before clear() is called, flush them anyway.
@@ -108,7 +108,7 @@ public class PaperLoggerAdapter implements PlatformLogger {
 
     @Deprecated @Override
     public void debug(String message) {
-        //forwardLog(message, Level.INFO, 1);
+        forwardLog(message, Level.INFO, 10);
     }
 
     @Override
@@ -141,7 +141,6 @@ public class PaperLoggerAdapter implements PlatformLogger {
         if (LOG_TO_FILE) {
             message = PlatformLogger.constructFileLogMessage(message, severity, level, source);
             queueFileLog(message, severity);
-            return;
         }
         if (configManager != null && configManager.getDebugConfig() != null) {
             DebugConfig debug = configManager.getDebugConfig();
