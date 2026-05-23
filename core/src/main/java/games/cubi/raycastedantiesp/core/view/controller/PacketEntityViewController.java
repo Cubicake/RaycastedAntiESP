@@ -273,6 +273,8 @@ public abstract class PacketEntityViewController<P> {
 
     protected void handleDestroyEntities(int[] entityIDs, PlayerData playerData, int currentTick) {
         for (int entityID : entityIDs) {
+            clearPendingHolderReference(entityID, playerData);
+            playerData.nettyData().removeUnresolvedLeashedEntityFromAll(entityID);
             EntityView<?> entityView = playerData.viewFromEntityID(entityID);
             if (entityView == null) {
                 Logger.error("Could not find view for entity when processing destroy packet, id=" + entityID, 2, PacketEntityViewController.class);
@@ -280,6 +282,19 @@ public abstract class PacketEntityViewController<P> {
             }
             Logger.debug("Removing entity from view due to destroy packet, entityID=" + entityID + " player=" + playerData.getPlayerUUID() + " tick=" + currentTick);
             entityView.removeEntity(entityID, currentTick);
+        }
+    }
+
+    private void clearPendingHolderReference(int holderEntityID, PlayerData playerData) {
+        int[] pendingLeashedEntityIDs = playerData.nettyData().removePendingHolder(holderEntityID);
+        if (pendingLeashedEntityIDs == null || pendingLeashedEntityIDs.length == 0) {
+            return;
+        }
+        for (int leashedEntityID : pendingLeashedEntityIDs) {
+            NettyEntityLocatable<?,?> leashedEntity = playerData.entityFromID(leashedEntityID);
+            if (leashedEntity != null && leashedEntity.leashingEntity() == holderEntityID) {
+                leashedEntity.setLeashingEntity(NO_LEASHER);
+            }
         }
     }
 
@@ -310,37 +325,42 @@ public abstract class PacketEntityViewController<P> {
             Logger.error(new RuntimeException("Found null leashed entity when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID()), 2, PacketEntityViewController.class);
             return false;
         }
+        removeExistingLeashReference(leashedEntity, leashed, playerData);
         if (leashingEntity == -1 || leashingEntity == 0) {
-            int previouslyLeashingEntityID = leashed.leashingEntity();
-            if (previouslyLeashingEntityID == NO_LEASHER) {
+            if (leashed.leashingEntity() == NO_LEASHER) {
                 Logger.warning("Entity was already unleashing when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID(), 4, PacketEntityViewController.class);
                 return false;
-            }
-            NettyEntityLocatable<?,?> previouslyLeashing = playerData.entityFromID(previouslyLeashingEntityID);
-
-            if (previouslyLeashing == null) {
-                Logger.warning("Found null previously leashing entity when handling leash entity packet, previouslyLeashingEntityID=" + previouslyLeashingEntityID + " for player: " + playerData.getPlayerUUID(), 5, PacketEntityViewController.class);
-            }
-            else {
-                previouslyLeashing.removeLeashedEntity(leashedEntity);
             }
             leashed.setLeashingEntity(NO_LEASHER);
             return cancelIfEnabledAndHidden(leashedEntity, playerData);
         }
         else {
+            leashed.setLeashingEntity(leashingEntity);
             NettyEntityLocatable<?,?> leashing = playerData.entityFromID(leashingEntity);
             if (leashing == null) {
-                if (retriesRemaining > 0) {
-                    delayPacketHandling(playerData, () -> handleLeashEntity(leashedEntity, leashingEntity, playerData, retriesRemaining - 1));
-                    return false;
-                }
-                Logger.error("Found null leashing entity when handling leash entity packet, leashingEntityID=" + leashingEntity + ", leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
-                return false;
+                playerData.nettyData().addUnresolvedLeash(leashingEntity, leashedEntity);
             }
-            leashed.setLeashingEntity(leashingEntity);
-            leashing.addLeashedEntity(leashedEntity);
+            else {
+                leashing.addLeashedEntity(leashedEntity);
+            }
             return cancelIfEnabledAndHidden(leashedEntity, playerData) || cancelIfEnabledAndHidden(leashingEntity, playerData);
         }
+    }
+
+    private void removeExistingLeashReference(int leashedEntityID, NettyEntityLocatable<?,?> leashed, PlayerData playerData) {
+        int previousLeashingEntityID = leashed.leashingEntity();
+        if (previousLeashingEntityID == NO_LEASHER) {
+            return;
+        }
+        if (playerData.nettyData().removeUnresolvedLeash(previousLeashingEntityID, leashedEntityID)) {
+            return;
+        }
+        NettyEntityLocatable<?,?> previouslyLeashing = playerData.entityFromID(previousLeashingEntityID);
+        if (previouslyLeashing == null) {
+            Logger.warning("Found null previously leashing entity when handling leash entity packet, previouslyLeashingEntityID=" + previousLeashingEntityID + " for player: " + playerData.getPlayerUUID(), 5, PacketEntityViewController.class);
+            return;
+        }
+        previouslyLeashing.removeLeashedEntity(leashedEntityID);
     }
 
     protected RaycastConfig getCorrectConfig(EntityView<?> entityView) {
