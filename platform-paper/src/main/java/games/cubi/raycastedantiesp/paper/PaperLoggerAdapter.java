@@ -22,9 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class PaperLoggerAdapter implements PlatformLogger {
 
-    /*
-     * Set this to true to send logs to the file instead of the console.
-     * Set this to false to use the normal Paper console logger.
+    /**
+     * Set this to true to send logs to the file regardless of the log level.
      */
     private static final boolean LOG_TO_FILE = true;
 
