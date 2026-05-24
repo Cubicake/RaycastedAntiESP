@@ -159,10 +159,12 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
             ImmutableBlockLocatable location = new ImmutableBlockLocatable(world, change.getX(), change.getY(), change.getZ());
             if (tileEntity) {
                 TileEntityLocatable<?> existing = blockView.getTrackedTileEntity(location);
-                if (existing == null || existing.blockID() != blockID) {
+                boolean visibleIfNew = false;
+                if (existing == null) {
                     double distanceSquared = location.distanceSquared(playerLocation);
-                    blockView.insertTileEntity(location, blockID, ((distanceSquared <= hideOnSpawnDistanceSquared) && tileEntityConfig.enabled()));
+                    visibleIfNew = (distanceSquared <= hideOnSpawnDistanceSquared) && tileEntityConfig.enabled();
                 }
+                blockView.updateOrInsertTileEntity(location, blockID, visibleIfNew);
                 if (!blockView.isVisible(location, currentTick)) {
                     change.setBlockId(getHiddenBlockId(location.blockY()));
                     event.markForReEncode(true);
@@ -210,10 +212,12 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         playerData.blockView().upsertBlock(world, position.getX(), position.getY(), position.getZ(), occluding);
         if (tileEntity) {
             TileEntityLocatable<?> existing = playerData.blockView().getTrackedTileEntity(location);
-            if (existing == null || existing.blockID() != blockID) {
+            boolean visibleIfNew = false;
+            if (existing == null) {
                 double distanceSquared = location.distanceSquared(playerData.ownLocation());
-                playerData.blockView().insertTileEntity(location, blockID, ((distanceSquared <= hideOnSpawnDistanceSquared) && tileEntityConfig.enabled()));
+                visibleIfNew = (distanceSquared <= hideOnSpawnDistanceSquared) && tileEntityConfig.enabled();
             }
+            playerData.blockView().updateOrInsertTileEntity(location, blockID, visibleIfNew);
             if (!playerData.blockView().isVisible(location, currentTick)) {
                 event.setCancelled(true);
                 sendHiddenBlock(viewer, location);
@@ -273,7 +277,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
                         if (blockInfoResolver.isTileEntity(blockID)) {
                             ImmutableBlockLocatable location = new ImmutableBlockLocatable(worldID, blockX, blockY, blockZ);
                             tileEntities.add(location);
-                            blockView.insertTileEntityIfAbsent(location, blockID, false);
+                            blockView.updateOrInsertTileEntity(location, blockID, false);
                             section.set(localX, localY, localZ, getHiddenBlockId(blockY));
                         }
                     }
@@ -320,7 +324,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
                         Logger.warning("Recovered uncached chunk block entity from chunk sections with a non-tile-entity block state ID (" + blockID + "). Location: " + location.world() + " " + location.blockX() + "," + location.blockY() + "," + location.blockZ(), 3, PacketEventsBlockViewController.class);
                     }
 
-                    blockView.insertTileEntityIfAbsent(location, blockID, false);
+                    blockView.updateOrInsertTileEntity(location, blockID, false);
                     state = getTrackedTileEntity(blockView, location);
                     if (state == null) {
                         Logger.warning("Skipping uncached chunk block entity because caching recovery failed. Location: " + location.world() + " " + location.blockX() + "," + location.blockY() + "," + location.blockZ(), 3, PacketEventsBlockViewController.class);
