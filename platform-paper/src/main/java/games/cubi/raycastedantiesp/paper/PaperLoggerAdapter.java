@@ -138,8 +138,7 @@ public class PaperLoggerAdapter implements PlatformLogger {
     private void forwardLog(String message, Level severity, int level, Class<?>... source) {
         ConfigManager configManager = RaycastedAntiESP.getConfigManager();
         if (LOG_TO_FILE) {
-            message = PlatformLogger.constructFileLogMessage(message, severity, level, source);
-            queueFileLog(message, severity);
+            queueFileLog(PlatformLogger.constructFileLogMessage(message, severity, level, source), severity);
         }
         if (configManager != null && configManager.getDebugConfig() != null) {
             DebugConfig debug = configManager.getDebugConfig();
