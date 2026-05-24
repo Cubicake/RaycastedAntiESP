@@ -39,10 +39,6 @@ public class NettyData {
         return unresolvedLeashedEntityIDsByHolderID.remove(holderEntityID);
     }
 
-    public int[] removePendingHolder(int holderEntityID) {
-        return unresolvedLeashedEntityIDsByHolderID.remove(holderEntityID);
-    }
-
     public void removeUnresolvedLeashedEntityFromAll(int leashedEntityID) {
         ObjectIterator<Int2ObjectMap.Entry<int @IntArrayListMarker []>> iterator = unresolvedLeashedEntityIDsByHolderID.int2ObjectEntrySet().iterator();
         while (iterator.hasNext()) {
