@@ -4,6 +4,7 @@ import games.cubi.raycastedantiesp.core.utils.IntArrayList;
 import games.cubi.raycastedantiesp.core.utils.IntArrayListMarker;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 
 /**
@@ -43,15 +44,19 @@ public class NettyData {
     }
 
     public void removeUnresolvedLeashedEntityFromAll(int leashedEntityID) {
-        for (Int2ObjectMap.Entry<int @IntArrayListMarker []> entry : unresolvedLeashedEntityIDsByHolderID.int2ObjectEntrySet()) {
+        ObjectIterator<Int2ObjectMap.Entry<int @IntArrayListMarker []>> iterator = unresolvedLeashedEntityIDsByHolderID.int2ObjectEntrySet().fastIterator();
+        while (iterator.hasNext()) {
+            Int2ObjectMap.Entry<int @IntArrayListMarker []> entry = iterator.next();
             int[] existing = entry.getValue();
             if (!IntArrayList.contains(existing, leashedEntityID)) {
                 continue;
             }
-            unresolvedLeashedEntityIDsByHolderID.computeIfPresent(entry.getIntKey(), (ignored, current) -> {
-                int[] updated = IntArrayList.remove(current, leashedEntityID);
-                return IntArrayList.isEmpty(updated) ? null : updated;
-            });
+            int[] updated = IntArrayList.remove(existing, leashedEntityID);
+            if (IntArrayList.isEmpty(updated)) {
+                iterator.remove();
+                continue;
+            }
+            entry.setValue(updated);
         }
     }
 
