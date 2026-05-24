@@ -44,7 +44,7 @@ public class NettyData {
     }
 
     public void removeUnresolvedLeashedEntityFromAll(int leashedEntityID) {
-        ObjectIterator<Int2ObjectMap.Entry<int @IntArrayListMarker []>> iterator = unresolvedLeashedEntityIDsByHolderID.int2ObjectEntrySet().fastIterator();
+        ObjectIterator<Int2ObjectMap.Entry<int @IntArrayListMarker []>> iterator = unresolvedLeashedEntityIDsByHolderID.int2ObjectEntrySet().iterator();
         while (iterator.hasNext()) {
             Int2ObjectMap.Entry<int @IntArrayListMarker []> entry = iterator.next();
             int[] existing = entry.getValue();
