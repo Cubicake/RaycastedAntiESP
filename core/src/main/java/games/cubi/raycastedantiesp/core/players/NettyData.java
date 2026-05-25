@@ -1,5 +1,7 @@
 package games.cubi.raycastedantiesp.core.players;
 
+import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.raycastedantiesp.core.utils.FutureNettyTask;
 import games.cubi.raycastedantiesp.core.utils.IntArrayList;
 import games.cubi.raycastedantiesp.core.utils.IntArrayListMarker;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
@@ -10,8 +12,12 @@ import it.unimi.dsi.fastutil.objects.ObjectIterator;
 /**
  * Per-player mutable state intended for Netty-side packet tracking and deferred reconciliation.
  */
-public class NettyData {
-    private final Int2ObjectMap<int[]> unresolvedLeashedEntityIDsByHolderID = new Int2ObjectArrayMap<>(16); // shot in the dark guess at capacity here
+public class NettyData implements Clearable {
+    //
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // START Leash tracking:
+    //
+    private final Int2ObjectArrayMap<int[]> unresolvedLeashedEntityIDsByHolderID = new Int2ObjectArrayMap<>(16); // shot in the dark guess at capacity here. Can't be the more generic Int2ObjectMap because that doesn't expose a fast iterator.
 
     public void addUnresolvedLeash(int holderEntityID, int leashedEntityID) {
         unresolvedLeashedEntityIDsByHolderID.compute(holderEntityID, (ignored, existing) -> {
@@ -40,7 +46,7 @@ public class NettyData {
     }
 
     public void removeUnresolvedLeashedEntityFromAll(int leashedEntityID) {
-        ObjectIterator<Int2ObjectMap.Entry<int @IntArrayListMarker []>> iterator = unresolvedLeashedEntityIDsByHolderID.int2ObjectEntrySet().iterator();
+        ObjectIterator<Int2ObjectMap.Entry<int @IntArrayListMarker []>> iterator = unresolvedLeashedEntityIDsByHolderID.int2ObjectEntrySet().fastIterator();
         while (iterator.hasNext()) {
             Int2ObjectMap.Entry<int @IntArrayListMarker []> entry = iterator.next();
             int[] existing = entry.getValue();
@@ -55,7 +61,49 @@ public class NettyData {
             entry.setValue(updated);
         }
     }
+    //
+    // END Leash tracking.
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //
 
+    //
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // START Netty task queue:
+    //
+    private final Int2ObjectArrayMap<FutureNettyTask> pendingNettyTasksByEntityID = new Int2ObjectArrayMap<>(16); // shot in the dark guess at capacity here. Can't be the more generic Int2ObjectMap because that doesn't expose a fast iterator.
+
+    public void addPendingNettyTask(int entityID, FutureNettyTask task) {
+        pendingNettyTasksByEntityID.put(entityID, task);
+    }
+
+    public void runPendingNettyTaskForEntity(int entityID) {
+        FutureNettyTask task = pendingNettyTasksByEntityID.remove(entityID);
+        if (task != null) {
+            task.run();
+        }
+    }
+
+    public void evictOldPendingNettyTasks(int currentTick) {
+        ObjectIterator<Int2ObjectMap.Entry<FutureNettyTask>> iterator = pendingNettyTasksByEntityID.int2ObjectEntrySet().fastIterator();
+        while (iterator.hasNext()) {
+            Int2ObjectMap.Entry<FutureNettyTask> entry = iterator.next();
+            FutureNettyTask task = entry.getValue();
+            FutureNettyTask evictUntil = task.evictUntilThis(currentTick);
+            if (evictUntil == task) continue;
+            if (evictUntil == null) {
+                iterator.remove();
+            } else {
+                entry.setValue(evictUntil);
+            }
+        }
+    }
+
+    //
+    // END Netty task queue.
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //
+
+    @Override
     public void clear() {
         unresolvedLeashedEntityIDsByHolderID.clear();
     }
