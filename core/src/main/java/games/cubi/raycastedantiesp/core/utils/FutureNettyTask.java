@@ -13,24 +13,42 @@ public interface FutureNettyTask extends Runnable {
     }
 
     /**
-     * @return the first entry in the linked list of tasks which does not need to be evicted yet, or null if all tasks should be evicted.
+     * Appends the provided task to the end of this linked task chain.
      */
-    default FutureNettyTask evictUntilThis(int currentTick) {
-        if (!thisShouldBeEvicted(currentTick)) {
-            return this;
+    default void appendLinkedTask(FutureNettyTask task) {
+        FutureNettyTask current = this;
+        while (current.getNext() != null) {
+            current = current.getNext();
         }
-        Logger.warning("A task was evicted from the Netty task queue due to being too old! This should not happen under normal circumstances and may indicate a problem with the system being overloaded or tasks taking too long to execute. It was a " + getClass().getSimpleName(), 3, FutureNettyTask.class);
-        if (hasNextLinkedTask()) {
-            evictUntilThis(currentTick);
-        }
-        return null;
+        current.setNext(task);
     }
 
-    default void runAllLinkedTasks() {
-        run();
-        if (hasNextLinkedTask()) {
-            assert getNext() != null;
-            getNext().runAllLinkedTasks();
+    /**
+     * @return the first task in this chain that should not be evicted yet, or null if all tasks should be evicted.
+     */
+    @Nullable
+    default FutureNettyTask trimExpiredTasks(int currentTick) {
+        FutureNettyTask current = this;
+        while (current != null && current.thisShouldBeEvicted(currentTick)) {
+            Logger.warning("A task was evicted from the Netty task queue due to being too old! This should not happen under normal circumstances and may indicate a problem with the system being overloaded or tasks taking too long to execute. Current tick=" + currentTick + " Task=" + current, 3, FutureNettyTask.class);
+            FutureNettyTask next = current.getNext();
+            current.setNext(null);
+            current = next;
+        }
+        return current;
+    }
+
+    default void runLinkedTasks() {
+        FutureNettyTask current = this;
+        while (current != null) {
+            FutureNettyTask next = current.getNext();
+            current.setNext(null);
+            try {
+                current.run();
+            } catch (Exception e) {
+                Logger.error("Error while running future netty task " + current, e, 3, FutureNettyTask.class);
+            }
+            current = next;
         }
     }
 
@@ -40,5 +58,11 @@ public interface FutureNettyTask extends Runnable {
      */
     @Nullable FutureNettyTask getNext();
 
-    boolean hasNextLinkedTask();
+    /**
+     * Sets the next task in the linked task chain.
+     * Passing null is allowed and is used when detaching already-linked tasks before eviction or execution.
+     * <p>
+     * This should generally not be called directly, use {@link #appendLinkedTask} to link tasks together and let the system handle detaching when necessary.
+     */
+    void setNext(@Nullable FutureNettyTask next);
 }
