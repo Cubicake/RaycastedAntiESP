@@ -33,6 +33,7 @@ public interface FutureNettyTask extends Runnable {
             Logger.warning("A task was evicted from the Netty task queue due to being too old! This should not happen under normal circumstances and may indicate a problem with the system being overloaded or tasks taking too long to execute. Current tick=" + currentTick + " Task=" + current, 3, FutureNettyTask.class);
             FutureNettyTask next = current.getNext();
             current.setNext(null);
+            current.run(); // perhaps the task is salvageable even if we missed the correct caller
             current = next;
         }
         return current;
