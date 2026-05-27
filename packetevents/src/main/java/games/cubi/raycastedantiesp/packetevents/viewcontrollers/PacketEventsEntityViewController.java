@@ -38,15 +38,27 @@ import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.N
 import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.NO_VEHICLE;
 
 public abstract class PacketEventsEntityViewController extends PacketEntityViewController<PacketWrapper<?>> implements PacketListener {
-    private final IntSupplier currentTickSupplier;
-    private final PacketEventsCommonViewController common;
     private final IntSupplier CURRENT_TICK_SUPPLIER;
     private final PacketEventsCommonViewController COMMON;
+    private static PacketEventsEntityViewController SELF;
+
+    {
+        synchronized (PacketEventsEntityViewController.class) {
+            if (SELF != null) {
+                throw new IllegalStateException("Multiple instances of PacketEventsEntityViewController created.");
+            }
+            SELF = this;
+
+        }
+    }
+
+    static PacketEventsEntityViewController get() {
+        return SELF;
+    }
 
     protected PacketEventsEntityViewController(IntSupplier currentTickSupplier) {
-        this.currentTickSupplier = currentTickSupplier;
-        common = PacketEventsCommonViewController.get(currentTickSupplier);
         this.CURRENT_TICK_SUPPLIER = currentTickSupplier;
+        COMMON = PacketEventsCommonViewController.get(currentTickSupplier);
     }
 
     protected abstract UUID resolveWorldUUID(User user);
@@ -91,7 +103,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         UUID world = ownLocation != null ? ownLocation.world() : resolveWorldUUID(event.getUser());
         int currentTick = CURRENT_TICK_SUPPLIER.getAsInt();
 
-        playerData.runAllNettyTasks();
         handleEntityPackets(event, event.getUser(), playerData, world, currentTick);
 
         if (playerData.entityView().hasPendingTransitions()) {
@@ -118,7 +129,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             case PacketType.Play.Server.SPAWN_ENTITY -> {
                 WrapperPlayServerSpawnEntity packet = new WrapperPlayServerSpawnEntity(event);
                 Logger.debug("Spawning entity for player " + viewer.getUUID() + " entity #" + packet.getEntityId() + " tick=" + currentTick + " type=" + packet.getEntityType().getName());
-                if (handleEntitySpawn(packet, packet.getEntityType().isInstanceOf(EntityTypes.PLAYER), playerData, world, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                if (handleEntitySpawn(packet, packet.getEntityId(), packet.getEntityType().isInstanceOf(EntityTypes.PLAYER), playerData, world, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_ANIMATION -> {
@@ -208,7 +219,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             }
             case PacketType.Play.Server.ATTACH_ENTITY -> {
                 WrapperPlayServerAttachEntity wrapper = new WrapperPlayServerAttachEntity(event);
-                if (handleLeashEntity(wrapper.getAttachedId(), wrapper.getHoldingId(), playerData) == REQUIRE_EVENT_CANCELLATION)
+                if (handleLeashEntity(wrapper.getAttachedId(), wrapper.getHoldingId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             default -> {}
@@ -310,19 +321,11 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
 
     @Override
-    protected void cachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData) {
-        cachePacket(packet, entityID, playerData, DELAYED_CACHE_PACKET_RETRY_COUNT);
-    }
-
-    private void cachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData, int retriesRemaining) {
+    protected void cachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData, int currentTick) {
         NettyEntityLocatable<?,?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
-            if (retriesRemaining > 0) {
-                Logger.error("Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ". Will attempt again.", 6, PacketEventsEntityViewController.class);
-                delayPacketHandling(playerData, () -> cachePacket(packet, entityID, playerData, retriesRemaining - 1));
-                return;
-            }
-            Logger.error("Failed to cache packet after retries, id=" + entityID + " packet=" + packet.getClass().getSimpleName(), 2, PacketEventsEntityViewController.class);
+            Logger.warning("Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
+            playerData.nettyData().addPostEntitySpawnTask(entityID, new PECacheablePacketReconciliationTask(this, playerData, entityID, packet, currentTick));
             return;
         }
         ensureReplayData((PacketEventsEntity) entity).addPacket(packet);
@@ -559,7 +562,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         return entityView.getEntity(entityID);
     }
 
-    private PacketEventsEntityReplayData ensureReplayData(PacketEventsEntity entity) {
+    PacketEventsEntityReplayData ensureReplayData(PacketEventsEntity entity) {
         PacketEventsEntityReplayData replayData = entity.packetReplayData();
         if (replayData == null) {
             replayData = PacketEventsEntityReplayData.create();
