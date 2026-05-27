@@ -3,7 +3,10 @@ package games.cubi.raycastedantiesp.core.utils;
 import games.cubi.logs.Logger;
 import org.jetbrains.annotations.Nullable;
 
-public interface FutureNettyTask extends Runnable {
+/**
+ * For runnable tasks which should be run immediately after an entity is spawned.
+ */
+public interface EntitySpawnTask extends Runnable {
     int TICKS_BEFORE_EVICTION = 3;
 
     int getSubmittedTick();
@@ -15,8 +18,8 @@ public interface FutureNettyTask extends Runnable {
     /**
      * Appends the provided task to the end of this linked task chain.
      */
-    default void appendLinkedTask(FutureNettyTask task) {
-        FutureNettyTask current = this;
+    default void appendLinkedTask(EntitySpawnTask task) {
+        EntitySpawnTask current = this;
         while (current.getNext() != null) {
             current = current.getNext();
         }
@@ -27,11 +30,11 @@ public interface FutureNettyTask extends Runnable {
      * @return the first task in this chain that should not be evicted yet, or null if all tasks should be evicted.
      */
     @Nullable
-    default FutureNettyTask trimExpiredTasks(int currentTick) {
-        FutureNettyTask current = this;
+    default EntitySpawnTask trimExpiredTasks(int currentTick) {
+        EntitySpawnTask current = this;
         while (current != null && current.thisShouldBeEvicted(currentTick)) {
-            Logger.warning("A task was evicted from the Netty task queue due to being too old! This should not happen under normal circumstances and may indicate a problem with the system being overloaded or tasks taking too long to execute. Current tick=" + currentTick + " Task=" + current, 3, FutureNettyTask.class);
-            FutureNettyTask next = current.getNext();
+            Logger.warning("A task was evicted from the Netty task queue due to being too old! This should not happen under normal circumstances and may indicate a problem with the system being overloaded or tasks taking too long to execute. Current tick=" + currentTick + " Task=" + current, 3, EntitySpawnTask.class);
+            EntitySpawnTask next = current.getNext();
             current.setNext(null);
             current.run(); // perhaps the task is salvageable even if we missed the correct caller
             current = next;
@@ -40,14 +43,14 @@ public interface FutureNettyTask extends Runnable {
     }
 
     default void runLinkedTasks() {
-        FutureNettyTask current = this;
+        EntitySpawnTask current = this;
         while (current != null) {
-            FutureNettyTask next = current.getNext();
+            EntitySpawnTask next = current.getNext();
             current.setNext(null);
             try {
                 current.run();
             } catch (Exception e) {
-                Logger.error("Error while running future netty task " + current, e, 3, FutureNettyTask.class);
+                Logger.error("Error while running future netty task " + current, e, 3, EntitySpawnTask.class);
             }
             current = next;
         }
@@ -57,7 +60,7 @@ public interface FutureNettyTask extends Runnable {
      * Allows linking of tasks into lists for each entity, so that when an entity is processed, all pending tasks for that entity can be processed at once.
      * @return the next task in the list, or null if this is the end of the list. Order of tasks is guaranteed to be in ascending order of submitted tick.
      */
-    @Nullable FutureNettyTask getNext();
+    @Nullable EntitySpawnTask getNext();
 
     /**
      * Sets the next task in the linked task chain.
@@ -65,5 +68,5 @@ public interface FutureNettyTask extends Runnable {
      * <p>
      * This should generally not be called directly, use {@link #appendLinkedTask} to link tasks together and let the system handle detaching when necessary.
      */
-    void setNext(@Nullable FutureNettyTask next);
+    void setNext(@Nullable EntitySpawnTask next);
 }
