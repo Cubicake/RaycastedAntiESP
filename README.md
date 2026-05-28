@@ -45,6 +45,19 @@ In addition to the versions for each module, there is also an overall version fo
   - PacketEvents is essential for the functioning of the plugin, as it allows for handling of packets across multiple platforms and Minecraft versions.
 - All contributors to Paper and its upstream projects Spigot and Bukkit, without which none of this would be possible.
 
+### Note about in-game attributions and other (A)GPL requirements:
+The plugin includes the command `/raycastedantiespCredits`, which displays a list of all authors and contributors, the license and a link to the source code. It can be run by all players. This command is intended to satisfy the "preservation of specified reasonable legal notices or author attributions" requirement of the AGPLv3 license in an easily accessible way for all users of the plugin, including players on a multiplayer server. If you fork this repository and remove the command you must include some other easily accessible way for all users of your fork to view the same information, as required by the AGPLv3.
+
+This command has been deliberately named a long and unwieldy name to avoid clashing with any commands your server may wish to add, and does not pose any risks to your server as there is no unfair advantage which can be gained due to knowledge of the plugin's existence on your server.
+
+It is **illegal** to remove the credits without providing an alternative, equally prominent way for users to view the same information. If for some reason crediting people who have worked on a feature for your server for free is a problem for you, you can contact Cubicake on discord (@cubicake) or make an issue to discuss receiving a special commercial/closed licensed version with all attributions, credits, and source code links removed.
+
+Using external software such as a command-hiding plugin to hide the command is **still illegal**, so please do not try to circumvent the requirement to provide attributions, credits, and source code links to users of your server.
+
+Requesting a commercial/closed license is also required if you wish to link (as defined by the AGPL) a closed source project to this project.
+
+An example of a suitable alternative to the command would be a single book-gui or dialog which contains all attributions, licenses, disclaimers, and source code links for all programs used by the server as long as the gui is easily accessible to all users of the server.
+
 ## Contributions:
 Contributions via pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
