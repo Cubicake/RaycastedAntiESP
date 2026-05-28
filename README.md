@@ -47,3 +47,28 @@ In addition to the versions for each module, there is also an overall version fo
 
 ## Contributions:
 Contributions via pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## Forking:
+
+Please see the the [AGPL v3 license](LICENSE.md)—especially section 5, section 7, and section 13—before forking this repository, as there are some specific legal requirements for forks. 
+
+In summary, translated into layman, plugin-specific terms, the most important requirements for forks are as follows:
+1. Forks must not remove any names currently present in the authors/contributors list in the plugin's description, as this falls under the "preservation of specified reasonable legal notices or author attributions".
+2. Forks must not claim to be the original software, as this falls under the "no misrepresentation of the origin of the material".
+3. Per section 5 subsection c, derivative works such as forks must remain licenced under AGPLv3, and must include a copy of the license with the work. To be clear, copying any non-trivial amount of code from this repository into your own repository, whether via making a fork, directly copying and pasting or other means, makes it a derivative work and obligates you to license your derivative work under the AGPL v3. You must then include a copy of the license and make the source code (not decompiled code) accessible to all users of your program, explicitly including players on a multiplayer server as well as the server owners.
+4. "Appropriate Legal Notices" such as the copyright notice, license notice, disclaimer, and link to the source code must be preserved. Currently this is implemented via the /raycastedantiespCredits command, and while you are not obligated to keep this specific implementation, if you remove the command you must provide an equally prominent way for all users of the plugin (including players on a multiplayer server) to easily view the same information.
+
+`games.cubi.raycastedantiesp.paper.commands.Attribution` has been written with forks in mind, and a template has been left for forks to modify so that the AGPLv3 license can be obeyed with minimal effort from forkers.
+
+## Copyright and Disclaimer:
+Copyright © 2025-2026 Cubicake and Contributors
+
+This project is licensed under the GNU Affero General Public License v3.0 only (AGPLv3). You may copy, modify, and redistribute this software only in compliance with the terms of that licence. A copy of the licence is provided in the LICENSE file.
+
+If you modify and deploy this software for remote network interaction, including operating a public multiplayer server, you must make the complete corresponding source code of the modified version available to users interacting with the software over the network, as required by section 13 of the AGPLv3.
+
+Any modified versions must be clearly marked as modified and must not be misrepresented as the original project.
+
+This software is provided “as is”, without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability arising from, out of, or in connection with the software or the use of the software.
+
+The AGPL is the sole license this program is governed by. All statements found in this copyright notice and disclaimer, the above forking guidelines, or anywhere else in this program should be considered merely guidelines and interpretations of the AGPL unless they are direct extracts of the AGPL. If any statement conflicts with the AGPL, the AGPL takes legal precedence over any such statement. However, any such conflicting statements should be taken as good-faith non-binding requests by the authors.
