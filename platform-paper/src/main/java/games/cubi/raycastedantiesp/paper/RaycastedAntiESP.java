@@ -1,6 +1,16 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.paper;
 
 import games.cubi.raycastedantiesp.core.Core;
+import games.cubi.raycastedantiesp.paper.commands.Attribution;
+import games.cubi.raycastedantiesp.paper.commands.AttributionBrigadier;
 import games.cubi.raycastedantiesp.paper.commands.RaycastedAntiESPCommandBrigadier;
 import games.cubi.raycastedantiesp.paper.engine.PaperSimpleEngine;
 import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcessorConfig;
@@ -91,6 +101,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
 
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS.newHandler(event -> {
         RaycastedAntiESPCommandBrigadier.register(event.registrar());
+        AttributionBrigadier.register(event.registrar());
         }));
         //bStats
         metricsCollector =  new MetricsCollector(this, config);
@@ -103,6 +114,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
                 }
             }
         }, 1200, 1200);*/
+        /*Do not delete, this is a legal notice*/Attribution.sendAttributionMessage(Bukkit.getConsoleSender()); // Legal notice as required by AGPLv3, it prominently offers users of this plugin the source code and displays an appropriate copyright notice. If you are a fork developer, do NOT remove this unless you have a thorough understanding of the AGPL and have replaced it with a suitable equivalent notice which is "prominently visible", displays the copyright notice, and includes a link to the source code of your fork which is accessible to all users of the plugin.
     }
 
     private String parseTrackers(Set<Player> trackers) {
