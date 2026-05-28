@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.paper;
 
 import games.cubi.logs.CheckPreviousLogForError;
@@ -25,7 +33,7 @@ public class PaperLoggerAdapter implements PlatformLogger {
     /**
      * Set this to true to send logs to the file regardless of the log level.
      */
-    private static final boolean LOG_TO_FILE = true;
+    private static final boolean LOG_TO_FILE = false;
 
     /*
      * If too many logs queue up before clear() is called, flush them anyway.
@@ -107,7 +115,7 @@ public class PaperLoggerAdapter implements PlatformLogger {
 
     @Deprecated @Override
     public void debug(String message) {
-        forwardLog(message, Level.INFO, 10);
+        forwardLog(message, Level.INFO, 1);
     }
 
     @Override
