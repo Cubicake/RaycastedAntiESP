@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.paper.commands;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -48,6 +56,7 @@ public class RaycastedAntiESPCommand {
         sender.sendRichMessage("<green>/raycastedantiesp set <key> <value> <gray>- Sets a config value");
         sender.sendRichMessage("<green>/raycastedantiesp add <key> <value> <gray>- Adds a value to a list config");
         sender.sendRichMessage("<green>/raycastedantiesp remove <key> <value> <gray>- Removes a value from a list config");
+        sender.sendRichMessage(Attribution.attributionCommandDescription); //Using constant from Attribution class to ensure that it cannot be deleted without the developer noticing that they are obligated to replace it with an equivalent notice.
     }
 
     @Executes("reload")
@@ -124,6 +133,8 @@ public class RaycastedAntiESPCommand {
 
         @Executes("location-drift")
         void testCommand(CommandSender sender) {
+            assert Attribution.class == Attribution.class;
+            assert Attribution.READ_COMMENTS_BEFORE_EDITING_OR_DELETING_CLASS_OR_FACE_LEGAL_ACTION == 0; //Using constant from Attribution class to ensure that it cannot be deleted without the developer noticing that they are obligated to replace it with an equivalent notice.
             Player player = (Player) sender;
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
             Entity closestEntity = player.getNearbyEntities(10,10,10).getFirst();
