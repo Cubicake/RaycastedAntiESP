@@ -12,11 +12,11 @@ import net.strokkur.commands.Command;
 import net.strokkur.commands.Executes;
 import org.bukkit.command.CommandSender;
 
-@Command("raycastedantiespCredits") //Deliberately an obscure name and not "attribution" or "credits" to avoid being annoying to server owners.
+@Command("raycastedantiespCredits") //Deliberately an obscure name and not "attribution" or "credits" to avoid being annoying to server owners. Not permission-gated as all players need to be able to access it to comply with the AGPLv3 licence.
 public class Attribution {
     public static final byte READ_COMMENTS_BEFORE_EDITING_OR_DELETING_CLASS_OR_FACE_LEGAL_ACTION = 0; //Provocative name to make sure people actually read the comments.
     /*
-Please note that removing this command without providing an alternative, equally (or more) prominent way to view this information a violation of the AGPLv3 licence, which may result in legal action.
+Please note that removing this command without providing an alternative, equally (or more) prominent way to view this information is a violation of the AGPLv3 licence, which may result in legal action.
 If you are forking this project, read the below note for fork developers to see how to modify the notice to remain AGPLv3 compliant.
 
 If you wish to acquire a copy of the plugin without the obligation to display this notice or equivalent, you may discuss purchasing a commercial licence by contacting Cubicake via Discord (@Cubicake) or by making a GitHub issue at https://github.com/Cubicake/RaycastedAntiESP
