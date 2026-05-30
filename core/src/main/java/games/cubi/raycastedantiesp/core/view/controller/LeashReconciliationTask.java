@@ -21,7 +21,7 @@ final class LeashReconciliationTask extends BaseEntitySpawnTask {
     public void run() {
         NettyEntityLocatable<?,?> leashed = playerData.entityFromID(leashedEntityID);
         if (leashed == null) {
-            Logger.error("Reconciliation fail: Attempted to reconcile leash for unknown leashed entity, leashedEntityId=" + leashed, 3, this.getClass());
+            Logger.error("Reconciliation fail: Attempted to reconcile leash for unknown leashed entity, leashedEntityId=" + leashedEntityID, 3, this.getClass());
             return;
         }
         PacketEntityViewController.get().handleLeashEntityNow(leashed, leashingEntityID, playerData);
