@@ -28,13 +28,13 @@ final class PassengerReconciliationTask extends BaseEntitySpawnTask {
             Logger.error("Reconciliation fail: Attempted to reconcile passengers for unknown vehicle, queuedEntityId=" + queuedEntityId + " vehicleEntityId=" + vehicleEntityId, 3, this.getClass());
             return;
         }
-        PacketEntityViewController.get().handleEntityPassengersNow(vehicle, passengerIds, playerData, getSubmittedTick());
+        PacketEntityViewController.get().handleEntityPassengersNow(vehicle, passengerIds, playerData, submittedTick);
     }
 
     @Override
     public String toString() {
         return "PassengerReconciliationTask{" +
-                "submittedTick=" + getSubmittedTick() +
+                "submittedTick=" + submittedTick +
                 ", queuedEntityId=" + queuedEntityId +
                 ", vehicleEntityId=" + vehicleEntityId +
                 ", passengerIds=" + Arrays.toString(passengerIds) +

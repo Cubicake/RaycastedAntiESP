@@ -30,7 +30,7 @@ final class LeashReconciliationTask extends BaseEntitySpawnTask {
     @Override
     public String toString() {
         return "LeashReconciliationTask{" +
-                "submittedTick=" + getSubmittedTick() +
+                "submittedTick=" + submittedTick +
                 ", leashedEntityId=" + leashedEntityID +
                 ", leashingEntityId=" + leashingEntityID +
                 ", playerUUID=" + playerData.getPlayerUUID() +

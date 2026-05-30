@@ -4,7 +4,7 @@ import games.cubi.logs.Logger;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class BaseEntitySpawnTask implements EntitySpawnTask {
-    private final int submittedTick;
+    protected final int submittedTick;
     private @Nullable EntitySpawnTask next;
 
     protected BaseEntitySpawnTask(int submittedTick) {

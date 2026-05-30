@@ -32,7 +32,7 @@ final class PECacheablePacketReconciliationTask extends BaseEntitySpawnTask {
     @Override
     public String toString() {
         return "PECacheablePacketReconciliationTask{" +
-                "submittedTick=" + getSubmittedTick() +
+                "submittedTick=" + submittedTick +
                 ", entityID=" + entityID +
                 ", packetType=" + packet.getClass().getSimpleName() +
                 ", playerUUID=" + playerData.getPlayerUUID() +
