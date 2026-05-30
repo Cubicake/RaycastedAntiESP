@@ -194,36 +194,31 @@ public abstract class PacketEntityViewController<P> {
      * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
      */
     protected boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick) {
-        return handleEntityPassengersNow(entityID, passengers, playerData, currentTick, currentTick);
+        NettyEntityLocatable<?,?> entity = playerData.entityFromID(entityID);
+        if (entity == null) {
+            queuePassengerRetry(playerData, entityID, entityID, passengers, currentTick);
+            return false;
+        }
+        return handleEntityPassengersNow(entity, passengers, playerData, currentTick);
     }
 
     //This (and leash handling) leaks some info to the client, as it will receive the passenger packet even if the passengers are auto-hidden once parsed, but as the packet doesn't include any location or type info, this shouldn't be too incriminating.
-    private boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick, int retriesRemaining) {
-        NettyEntityLocatable<?,?> entity = playerData.entityFromID(entityID);
-        if (entity == null) {
-            if (retriesRemaining > 0) {
-                delayPacketHandling(playerData, () -> handleEntityPassengers(entityID, passengers, playerData, currentTick, retriesRemaining - 1));
-                return false;
-            }
-            Logger.error("Found null vehicle when handling entity passengers packet, vehicleID=" + entityID + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
-            return false;
-        }
+    boolean handleEntityPassengersNow(NettyEntityLocatable<?,?> entity, int[] passengers, PlayerData playerData, int currentTick) {
+        int entityID = entity.entityID();
         entity.setPassengerIDs(passengers);
-        boolean shouldRetry = false;
+        int blockingEntityID = NO_VEHICLE;
         for (int passengerID : passengers) {
             NettyEntityLocatable<?,?> passenger = playerData.entityFromID(passengerID);
             if (passenger == null) {
-                if (retriesRemaining > 0) {
-                    shouldRetry = true;
-                    continue;
+                if (blockingEntityID == NO_VEHICLE) {
+                    blockingEntityID = passengerID;
                 }
-                Logger.error("Found null passenger when handling entity passengers packet, passengerID=" + passengerID + " for player: " + playerData.getPlayerUUID(), 2, PacketEntityViewController.class);
                 continue;
             }
             passenger.setVehicleID(entityID);
         }
-        if (shouldRetry) {
-            delayPacketHandling(playerData, () -> handleEntityPassengers(entityID, passengers, playerData, currentTick, retriesRemaining - 1));
+        if (blockingEntityID != NO_VEHICLE) {
+            queuePassengerRetry(playerData, blockingEntityID, entityID, passengers, currentTick);
         }
         checkVehicle(entity, playerData);
         if (cancelIfEnabledAndHidden(entityID, playerData)) return true;
@@ -242,6 +237,10 @@ public abstract class PacketEntityViewController<P> {
             sendEntityPassengerPacket(entityID, visiblePassengers, playerData);
         }
         return passengersNotVisible;
+    }
+
+    private void queuePassengerRetry(PlayerData playerData, int queueEntityID, int vehicleEntityID, int[] passengers, int submittedTick) {
+        playerData.nettyData().addPostEntitySpawnTask(queueEntityID, new PassengerReconciliationTask(playerData, queueEntityID, vehicleEntityID, passengers, submittedTick));
     }
 
     private void checkVehicle(NettyEntityLocatable<?,?> entity, PlayerData playerData) {
