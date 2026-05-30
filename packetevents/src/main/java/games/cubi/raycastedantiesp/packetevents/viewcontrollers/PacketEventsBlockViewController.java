@@ -78,7 +78,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         if (playerData.blockView().hasPendingTransitions()) {
             processTileEntityTransitions(event.getUser(), playerData.blockView());
         }
-        event.getUser().flushPackets();
+        //event.getUser().flushPackets();
     }
 
     private void handleBlockPackets(PacketSendEvent event, User viewer, PlayerData playerData, UUID world, int currentTick) {

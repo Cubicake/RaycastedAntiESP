@@ -106,7 +106,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             processEntityTransitions(viewerUUID, event.getUser(), cast(playerData.playerView()));
         }
         
-        event.getUser().flushPackets();
+        //event.getUser().flushPackets();
         playerData.nettyData().evictPendingPostSpawnTasksIfRequired(currentTick);
     }
 
