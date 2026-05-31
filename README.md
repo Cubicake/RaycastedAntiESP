@@ -23,6 +23,11 @@ The supported versions are 1.21.x PaperMC and Pufferfish. Other server versions 
 ## Known issues:
 - Due to the nature of the plugin, there will be a short delay once an entity should be visible before it appears, causing it to appear like it "popped" into view. This issue is partially resolved by turning engine-mode to 2, and is worse for players with higher ping.
 
+## v2 performance optimisation notes
+- `AbstractBlockView#isBlockOccluding`: the hot path is the `ConcurrentHashMap` lookup with a new `ImmutableChunkSectionLocatable` allocated per ray step. A faster map is feasible only if we can avoid per-lookup allocations and keep thread-safety. Options include a per-world map keyed by a packed `long` for chunk section coords (reducing allocations), or a `ThreadLocal` mutable key for lookups. Fastutil primitive maps are not concurrent, so they would require synchronization or per-world locks that can erase the gains; benchmark before adopting.
+- `AbstractBlockView#getNeedingRecheck`: this is inherently an O(n) scan over tracked tile entities. Avoiding it would require additional state (e.g., a priority queue keyed by next recheck tick) and extra updates whenever visibility/last-checked changes. That design is feasible but significantly more complex and should only be done if profiling shows the scan dominates.
+- `PacketEventsBlockViewController#ingestChunkAndSetTileEntitiesToHiddenBlocks`: most cost comes from `BaseChunk#getBlockId` inside PacketEvents. From this repo we can only shave minor overhead (e.g., reducing allocations), but meaningful wins likely require PacketEvents exposing bulk palette access or faster block-state retrieval.
+
 ## Versioning:
 Note that the following versioning information only applies to v2 and beyond.
 
