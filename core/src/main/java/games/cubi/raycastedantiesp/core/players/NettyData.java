@@ -3,6 +3,7 @@ package games.cubi.raycastedantiesp.core.players;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.utils.*;
 import games.cubi.raycastedantiesp.core.utils.Packet.Packets;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -10,16 +11,18 @@ import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
+import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.NO_VEHICLE;
 
 /**
  * Per-player mutable state intended for Netty-side packet tracking and deferred reconciliation.
  */
 public class NettyData implements Clearable {
+    private static final int DEFAULT_MAP_SIZE = 16;
     //
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // START Leash tracking:
     //
-    private final Int2ObjectArrayMap<int[]> unresolvedLeashedEntityIDsByHolderID = new Int2ObjectArrayMap<>(16); // shot in the dark guess at capacity here. Can't be the more generic Int2ObjectMap because that doesn't expose a fast iterator.
+    private final Int2ObjectArrayMap<int[]> unresolvedLeashedEntityIDsByHolderID = new Int2ObjectArrayMap<>(DEFAULT_MAP_SIZE);
 
     public void addUnresolvedLeash(int holderEntityID, int leashedEntityID) {
         unresolvedLeashedEntityIDsByHolderID.compute(holderEntityID, (ignored, existing) -> {
@@ -52,11 +55,11 @@ public class NettyData implements Clearable {
         while (iterator.hasNext()) {
             Int2ObjectMap.Entry<int @IntArrayListMarker []> entry = iterator.next();
             int[] existing = entry.getValue();
-            if (!IntArrayList.contains(existing, leashedEntityID)) {
+            if (!PrimitiveIntArrayList.contains(existing, leashedEntityID)) {
                 continue;
             }
-            int[] updated = IntArrayList.remove(existing, leashedEntityID);
-            if (IntArrayList.isEmpty(updated)) {
+            int[] updated = PrimitiveIntArrayList.remove(existing, leashedEntityID);
+            if (PrimitiveIntArrayList.isEmpty(updated)) {
                 iterator.remove();
                 continue;
             }
@@ -65,6 +68,98 @@ public class NettyData implements Clearable {
     }
     //
     // END Leash tracking.
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //
+
+    //
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // START Passenger tracking:
+    //
+    /**
+     * Latest unresolved full passenger list for a vehicle.
+     * This is only needed while at least one referenced passenger or the vehicle-side reconciliation has still not been spawned in for the client. The actual client deals with this somehow but we need the entity to have been spawned in before we can register the passenger relationship.
+     */
+    private final Int2ObjectArrayMap<int[]> unresolvedPassengerIDsByVehicleID = new Int2ObjectArrayMap<>(DEFAULT_MAP_SIZE);
+    /**
+     * Reverse lookup for unresolved passenger relationships.
+     * Lets a later passenger spawn discover which vehicle most recently claimed it as a passenger.
+     * This may grow larger than {@link #unresolvedPassengerIDsByVehicleID} if vehicles have several passengers, so it's an open hash map.
+     */
+    private final Int2IntOpenHashMap unresolvedVehicleIDsByPassengerID = new Int2IntOpenHashMap(DEFAULT_MAP_SIZE);
+
+    {
+        unresolvedVehicleIDsByPassengerID.defaultReturnValue(NO_VEHICLE);
+    }
+
+    public int[] getUnresolvedPassengers(int vehicleEntityID) {
+        return PrimitiveIntArrayList.getCopyOrNull(unresolvedPassengerIDsByVehicleID.get(vehicleEntityID));
+    }
+
+    /**
+     * Replaces any previous unresolved passenger state for this vehicle.
+     * The passenger packet is authoritative, so the latest packet wins.
+     */
+    public void setUnresolvedPassengers(int vehicleEntityID, int[] passengerIDs) {
+        consumeUnresolvedPassengers(vehicleEntityID);
+        if (PrimitiveIntArrayList.isEmpty(passengerIDs)) {
+            return;
+        }
+        int[] copiedPassengerIDs = passengerIDs.clone();
+        unresolvedPassengerIDsByVehicleID.put(vehicleEntityID, copiedPassengerIDs);
+        for (int passengerID : copiedPassengerIDs) {
+            int previousVehicleID = unresolvedVehicleIDsByPassengerID.put(passengerID, vehicleEntityID);
+            if (previousVehicleID != NO_VEHICLE && previousVehicleID != vehicleEntityID) {
+                removePassengerFromUnresolvedVehicle(previousVehicleID, passengerID);
+            }
+        }
+    }
+
+    public int[] consumeUnresolvedPassengers(int vehicleEntityID) {
+        int[] existing = unresolvedPassengerIDsByVehicleID.remove(vehicleEntityID);
+        if (PrimitiveIntArrayList.isEmpty(existing)) {
+            return existing;
+        }
+        for (int passengerID : existing) {
+            if (unresolvedVehicleIDsByPassengerID.get(passengerID) == vehicleEntityID) {
+                unresolvedVehicleIDsByPassengerID.remove(passengerID);
+            }
+        }
+        return existing;
+    }
+
+    public int getUnresolvedVehicleForPassenger(int passengerEntityID) {
+        return unresolvedVehicleIDsByPassengerID.get(passengerEntityID);
+    }
+
+    public boolean removeUnresolvedPassengerLink(int passengerEntityID, int vehicleEntityID) {
+        if (unresolvedVehicleIDsByPassengerID.get(passengerEntityID) != vehicleEntityID) {
+            return false;
+        }
+        unresolvedVehicleIDsByPassengerID.remove(passengerEntityID);
+        removePassengerFromUnresolvedVehicle(vehicleEntityID, passengerEntityID);
+        return true;
+    }
+
+    public int consumeUnresolvedVehicleForPassenger(int passengerEntityID) {
+        int vehicleEntityID = unresolvedVehicleIDsByPassengerID.remove(passengerEntityID);
+        if (vehicleEntityID == NO_VEHICLE) {
+            return NO_VEHICLE;
+        }
+        removePassengerFromUnresolvedVehicle(vehicleEntityID, passengerEntityID);
+        return vehicleEntityID;
+    }
+
+    private void removePassengerFromUnresolvedVehicle(int vehicleEntityID, int passengerEntityID) {
+        unresolvedPassengerIDsByVehicleID.computeIfPresent(vehicleEntityID, (ignored, existing) -> {
+            if (!PrimitiveIntArrayList.contains(existing, passengerEntityID)) {
+                return existing;
+            }
+            int[] updated = PrimitiveIntArrayList.remove(existing, passengerEntityID);
+            return PrimitiveIntArrayList.isEmpty(updated) ? null : updated;
+        });
+    }
+    //
+    // END Passenger tracking.
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     //
 
@@ -143,6 +238,8 @@ public class NettyData implements Clearable {
     @Override
     public void clear() {
         unresolvedLeashedEntityIDsByHolderID.clear();
+        unresolvedPassengerIDsByVehicleID.clear();
+        unresolvedVehicleIDsByPassengerID.clear();
         pendingPostEntitySpawnTasksByEntityID.clear();
     }
 }

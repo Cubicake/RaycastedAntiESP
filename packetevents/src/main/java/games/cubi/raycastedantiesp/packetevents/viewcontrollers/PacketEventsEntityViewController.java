@@ -25,6 +25,7 @@ import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
 import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
 import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsEntityReplayData;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -371,13 +372,13 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     @Override
-    protected void sendEntityPassengerPacket(int vehicle, ArrayList<Integer> passengers, PlayerData playerData) {
+    protected void sendEntityPassengerPacket(int vehicle, IntArrayList passengers, PlayerData playerData) {
         NettyEntityLocatable<?,?> entity = playerData.entityFromID(vehicle);
         if (entity == null) {
             Logger.error("Attempted to send passenger packet for unknown entity, id=" + vehicle, 2, PacketEventsEntityViewController.class);
             return;
         }
-        WrapperPlayServerSetPassengers packet = new WrapperPlayServerSetPassengers(vehicle, passengers.stream().mapToInt(Integer::intValue).toArray());
+        WrapperPlayServerSetPassengers packet = new WrapperPlayServerSetPassengers(vehicle, passengers.toIntArray());
         Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(playerData.getPlayerUUID());
         PacketEvents.getAPI().getProtocolManager().getUser(channel).writePacketSilently(packet);
     }
@@ -624,11 +625,15 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     protected void insertEntityToPlayerView(NettyEntityLocatable<?,?> entity, PlayerData playerData) {
         playerData.playerView().insertEntity(entity.cast());
+        // Passenger relationships can arrive before spawn/pairing completes, so resolve them as soon as the entity becomes known.
+        reconcileUnresolvedPassengers(entity, playerData);
         reconcileUnresolvedLeashes(entity, playerData);
     }
 
     protected void insertEntityToEntityView(NettyEntityLocatable<?,?> entity, PlayerData playerData) {
         playerData.entityView().insertEntity(entity.cast()); //todo: no need to put here, move to abstract packet view controller
+        // Passenger relationships can arrive before spawn/pairing completes, so resolve them as soon as the entity becomes known.
+        reconcileUnresolvedPassengers(entity, playerData);
         reconcileUnresolvedLeashes(entity, playerData);
     }
 
