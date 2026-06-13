@@ -67,7 +67,7 @@ public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
                 airs = 0;
                 lastNonAirID = iterator;
                 if (materialToIDMode) {
-                    Logger.debug(blockData.getAsString() + iterator);
+                    Logger.info(blockData.getAsString() + iterator,1);
                 }
             }
 
