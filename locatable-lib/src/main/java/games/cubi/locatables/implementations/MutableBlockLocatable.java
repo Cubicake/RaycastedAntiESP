@@ -91,12 +91,12 @@ public class MutableBlockLocatable implements BlockLocatable, MutableLocatable {
 
     @Override
     public boolean equals(Object o) {
-        return isEqualTo(o);
+        return isEqual(o);
     }
 
     @Override
     public int hashCode() {
-        return makeHash();
+        return blockHash();
     }
 
     @Override
