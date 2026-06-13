@@ -6,6 +6,9 @@ public non-sealed interface MutableLocatable extends Locatable {
     MutableLocatable setX(double x);
     MutableLocatable setY(double y);
     MutableLocatable setZ(double z);
+    MutableLocatable setX(int x);
+    MutableLocatable setY(int y);
+    MutableLocatable setZ(int z);
     MutableLocatable setWorld(UUID world);
 
     /**@return The same Locatable, with the same direction but a length of 1.*/
@@ -50,6 +53,13 @@ public non-sealed interface MutableLocatable extends Locatable {
     }
 
     default MutableLocatable set(double x, double y, double z) {
+        setX(x);
+        setY(y);
+        setZ(z);
+        return this;
+    }
+
+    default MutableLocatable set(int x, int y, int z) {
         setX(x);
         setY(y);
         setZ(z);

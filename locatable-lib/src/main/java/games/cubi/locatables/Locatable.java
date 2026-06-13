@@ -116,6 +116,7 @@ public sealed interface Locatable extends ChunkSectionLocatable, StrictEquality 
                 '}';
     }
 
+    // Does this have a purpose? Remove?
     enum LocatableType {
         ThreadSafe,
         NettyEntity,
@@ -124,6 +125,7 @@ public sealed interface Locatable extends ChunkSectionLocatable, StrictEquality 
         ImmutableBlockLocation,
         Immutable,
         Mutable,
+        MutableBlock,
         // implementations from other modules/projects should use the following
         ExternalMutable,
         ExternalImmutable,

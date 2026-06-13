@@ -271,6 +271,24 @@ public class ThreadSafeLocatable implements MutableLocatable {
     }
 
     @Override
+    public MutableLocatable setX(int x) {
+        withWriteLock(() -> this.x = x);
+        return this;
+    }
+
+    @Override
+    public MutableLocatable setY(int y) {
+        withWriteLock(() -> this.y = y);
+        return this;
+    }
+
+    @Override
+    public MutableLocatable setZ(int z) {
+        withWriteLock(() -> this.z = z);
+        return this;
+    }
+
+    @Override
     public MutableLocatable setWorld(UUID world) {
         this.world = world;
         return this;
@@ -292,6 +310,22 @@ public class ThreadSafeLocatable implements MutableLocatable {
     public MutableLocatable set(double x, double y, double z, UUID world) {
         withWriteLock(() -> {
             this.world = world;
+            this.x = x; this.y = y; this.z = z;
+        });
+        return this;
+    }
+
+    @Override
+    public MutableLocatable set(double x, double y, double z) {
+        withWriteLock(() -> {
+            this.x = x; this.y = y; this.z = z;
+        });
+        return this;
+    }
+
+    @Override
+    public MutableLocatable set(int x, int y, int z) {
+        withWriteLock(() -> {
             this.x = x; this.y = y; this.z = z;
         });
         return this;

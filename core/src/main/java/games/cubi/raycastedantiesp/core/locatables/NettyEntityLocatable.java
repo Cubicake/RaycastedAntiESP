@@ -331,6 +331,24 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     }
 
     @Override
+    public MutableLocatable setX(int x) {
+        this.x = x;
+        return this;
+    }
+
+    @Override
+    public MutableLocatable setY(int y) {
+        this.y = y;
+        return this;
+    }
+
+    @Override
+    public MutableLocatable setZ(int z) {
+        this.z = z;
+        return this;
+    }
+
+    @Override
     public MutableLocatable setWorld(UUID world) {
         this.world = world;
         return this;
@@ -338,6 +356,15 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
 
     @Override
     public MutableLocatable set(double x, double y, double z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        updatePassengerPositions();
+        return this;
+    }
+
+    @Override
+    public MutableLocatable set(int x, int y, int z) {
         this.x = x;
         this.y = y;
         this.z = z;

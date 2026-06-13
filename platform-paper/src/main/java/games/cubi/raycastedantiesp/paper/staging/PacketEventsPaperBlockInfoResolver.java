@@ -10,11 +10,15 @@ import org.bukkit.Material;
 import org.bukkit.block.TileState;
 import org.bukkit.block.data.BlockData;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
     private final boolean[] occlusionArray;
+    /** Raw Bukkit TileState capability, before plugin config overrides. */
+    private final boolean[] rawTileEntityArray;
+    /** Anti-ESP managed tile entity state, after exemptions and force-includes. */
     private final boolean[] tileEntityArray;
 
     public static PacketEventsPaperBlockInfoResolver get;
@@ -23,7 +27,8 @@ public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
         get = this;
         boolean[][] result = iterateBlockIDs(false);
         occlusionArray = result[0];
-        tileEntityArray = result[1];
+        rawTileEntityArray = result[1];
+        tileEntityArray = Arrays.copyOf(rawTileEntityArray, rawTileEntityArray.length);
         PacketEventsBlockProcessorConfig config = RaycastedAntiESP.getConfigManager().getExtensionConfig(PacketEventsBlockProcessorConfig.class);
         if (config != null) {
             for (int blockStateId : config.tileEntityExemptedIds()) {
@@ -67,7 +72,7 @@ public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
                 airs = 0;
                 lastNonAirID = iterator;
                 if (materialToIDMode) {
-                    Logger.debug(blockData.getAsString() + iterator);
+                    Logger.info(blockData.getAsString() + iterator,1);
                 }
             }
 
@@ -107,6 +112,14 @@ public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
             return false; // Default to non-tile-entity for invalid IDs, should be safe since invalid IDs shouldn't exist in the world
         }
         return tileEntityArray[blockStateID];
+    }
+
+    @Override
+    public boolean hasBlockEntityData(int blockStateID) {
+        if (blockStateID < 0 || blockStateID >= rawTileEntityArray.length) {
+            return false; // Default to non-block-entity for invalid IDs, should be safe since invalid IDs shouldn't exist in the world
+        }
+        return rawTileEntityArray[blockStateID];
     }
 
     public boolean[] dumpOcclusionArray() {

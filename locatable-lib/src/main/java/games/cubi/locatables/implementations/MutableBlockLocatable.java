@@ -1,25 +1,25 @@
 package games.cubi.locatables.implementations;
 
+import games.cubi.locatables.BlockLocatable;
 import games.cubi.locatables.MutableLocatable;
 
 import java.util.UUID;
 
-public class MutableLocatableImpl implements MutableLocatable {
-    private double x;
-    private double y;
-    private double z;
+public class MutableBlockLocatable implements BlockLocatable, MutableLocatable {
+    private int x;
+    private int y;
+    private int z;
     private UUID world;
 
-    public MutableLocatableImpl(UUID world, double x, double y, double z) {
+    public MutableBlockLocatable(UUID world) {
+        this.world = world;
+    }
+
+    public MutableBlockLocatable(UUID world, int x, int y, int z) {
         this.world = world;
         this.x = x;
         this.y = y;
         this.z = z;
-    }
-
-    @Override
-    public LocatableType getType() {
-        return LocatableType.Mutable;
     }
 
     @Override
@@ -28,35 +28,40 @@ public class MutableLocatableImpl implements MutableLocatable {
     }
 
     @Override
-    public double x() {
+    public int blockX() {
         return x;
     }
 
     @Override
-    public double y() {
+    public int blockY() {
         return y;
     }
 
     @Override
-    public double z() {
+    public int blockZ() {
         return z;
     }
 
     @Override
+    public LocatableType getType() {
+        return LocatableType.MutableBlock;
+    }
+
+    @Override
     public MutableLocatable setX(double x) {
-        this.x = x;
+        this.x = (int) x;
         return this;
     }
 
     @Override
     public MutableLocatable setY(double y) {
-        this.y = y;
+        this.y = (int) y;
         return this;
     }
 
     @Override
     public MutableLocatable setZ(double z) {
-        this.z = z;
+        this.z = (int) z;
         return this;
     }
 
@@ -78,6 +83,7 @@ public class MutableLocatableImpl implements MutableLocatable {
         return this;
     }
 
+    @Override
     public MutableLocatable setWorld(UUID world) {
         this.world = world;
         return this;
@@ -85,12 +91,12 @@ public class MutableLocatableImpl implements MutableLocatable {
 
     @Override
     public boolean equals(Object o) {
-        return isEqualTo(o);
+        return isEqual(o);
     }
 
     @Override
     public int hashCode() {
-        return makeHash();
+        return blockHash();
     }
 
     @Override
@@ -101,15 +107,15 @@ public class MutableLocatableImpl implements MutableLocatable {
     @Override
     public boolean strictlyEquals(Object other) {
         if (this == other) return true;
-        if (!(other instanceof MutableLocatableImpl that)) return false;
-        if (!(this.world().equals(that.world()))) return false;
+        if (!(other instanceof MutableBlockLocatable that)) return false;
+        if (!(this.world.equals(that.world))) return false;
 
-        if (Double.doubleToLongBits(this.x()) != Double.doubleToLongBits(that.x())) {
+        if (this.x != that.x) {
             return false;
         }
-        if (Double.doubleToLongBits(this.y()) != Double.doubleToLongBits(that.y())) {
+        if (this.y != that.y) {
             return false;
         }
-        return Double.doubleToLongBits(this.z()) == Double.doubleToLongBits(that.z());
+        return this.z == that.z;
     }
 }
