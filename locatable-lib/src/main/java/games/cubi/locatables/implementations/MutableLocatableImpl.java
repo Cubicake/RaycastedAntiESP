@@ -60,6 +60,24 @@ public class MutableLocatableImpl implements MutableLocatable {
         return this;
     }
 
+    @Override
+    public MutableLocatable setX(int x) {
+        this.x = x;
+        return this;
+    }
+
+    @Override
+    public MutableLocatable setY(int y) {
+        this.y = y;
+        return this;
+    }
+
+    @Override
+    public MutableLocatable setZ(int z) {
+        this.z = z;
+        return this;
+    }
+
     public MutableLocatable setWorld(UUID world) {
         this.world = world;
         return this;

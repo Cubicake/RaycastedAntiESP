@@ -132,6 +132,24 @@ public class MutableBlockVector implements BlockLocatable, MutableLocatable {
     }
 
     @Override
+    public MutableLocatable setX(int x) {
+        this.mutableX = x;
+        return this;
+    }
+
+    @Override
+    public MutableLocatable setY(int y) {
+        this.mutableY = y;
+        return this;
+    }
+
+    @Override
+    public MutableLocatable setZ(int z) {
+        this.mutableZ = z;
+        return this;
+    }
+
+    @Override
     public MutableLocatable setWorld(UUID world) {
         this.world = world;
         return this;
