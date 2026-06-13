@@ -43,7 +43,7 @@ block-processor:
     track-all-blocks: false
     packetevents:
         tile-entity-exempted-ids:
-            - 9779
+            #- 9779 - Beacon ID on 1.21.11. To see what the beacon ID is for your server version, run the command "/antiesp print-block-ids". This will dump a massive list of all the block ID to block name mappings in the console. Search your logs for "beacon" (or whatever other tile entity you'd like to exempt) and add the associated ID here
         tile-entity-force-included-ids:
 debug:
     info-level: 5
