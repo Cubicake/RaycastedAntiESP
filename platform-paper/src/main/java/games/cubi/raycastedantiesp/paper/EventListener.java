@@ -90,7 +90,10 @@ public class EventListener extends PaperListener {
 
     @EventHandler(priority = EventPriority.LOWEST) //Runs first
     public void serverTickStartEvent(ServerTickStartEvent event) {
-        Bukkit.getAsyncScheduler().runNow(plugin, task -> engine.tick());
+        // Capture this before async handoff so timing diagnostics can separate scheduler queueing from engine work.
+        int scheduledTick = currentTickSupplier.getAsInt();
+        long scheduledNanos = System.nanoTime();
+        Bukkit.getAsyncScheduler().runNow(plugin, task -> engine.tick(scheduledTick, scheduledNanos));
     }
 
     @EventHandler(priority = EventPriority.MONITOR) //Runs last

@@ -28,9 +28,8 @@ public class PaperSimpleEngine implements Engine {
         //forceEntityLocationUpdate();
     }
 
-    @Override
-    public void tick() {
-        delegate.tick();
+    public void tick(int scheduledTick, long scheduledNanos) {
+        delegate.tick(scheduledTick, scheduledNanos);
     }
 
     //should be folia compatible too
