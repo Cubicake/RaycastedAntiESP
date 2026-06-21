@@ -203,7 +203,6 @@ public abstract class PacketEntityViewController<P> {
      */
     protected boolean handleEntityVelocity(P packet, int entityID, PlayerData playerData, int currentTick) {
         processEntityVelocityPacket(packet, playerData, currentTick);
-        cachePacket(packet, entityID, playerData, currentTick); //todo: may be wrong?
         return cancelIfEnabledAndHidden(entityID, playerData);
     }
     /**
