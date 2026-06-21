@@ -1,5 +1,5 @@
 package games.cubi.raycastedantiesp.core.engine;
 
 public interface Engine {
-    void tick();
+    void tick(int scheduledTick, long scheduledNanos);
 }

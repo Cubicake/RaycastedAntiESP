@@ -90,7 +90,19 @@ public class EventListener extends PaperListener {
 
     @EventHandler(priority = EventPriority.LOWEST) //Runs first
     public void serverTickStartEvent(ServerTickStartEvent event) {
-        Bukkit.getAsyncScheduler().runNow(plugin, task -> engine.tick());
+        if (!engine.markTickRunning()) {
+            Logger.info("Skipped starting tick because previous tick is still running. This likely means the server is overloaded.", 6, EventListener.class);
+            return;
+        }
+        // Capture this before async handoff so timing diagnostics can separate scheduler queueing from engine work.
+        int scheduledTick = currentTickSupplier.getAsInt();
+        long scheduledNanos = System.nanoTime();
+        try {
+            Bukkit.getAsyncScheduler().runNow(plugin, task -> engine.tick(scheduledTick, scheduledNanos));
+        } catch (RuntimeException exception) {
+            engine.cancelPendingTickReservation();
+            Logger.error("Failed to schedule engine tick after reserving it. Cleared the pending reservation so future ticks can continue.", exception, 2, EventListener.class);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR) //Runs last
