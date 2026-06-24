@@ -239,7 +239,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerSpawnEntity packet = (WrapperPlayServerSpawnEntity) packetWrapper;
         if (packet.getUUID().isEmpty()) {
             Logger.errorAndReturn(new RuntimeException("Entity UUID null when handling spawn entity packet, id=" + packet.getEntityId() + " tick=" + currentTick), 2, PacketEventsEntityViewController.class);
-            return null;
+            throw new IllegalStateException("This statement should be unreachable. Logger.errorAndReturn failed to fire.");
         }
         UUID entityUUID = packet.getUUID().get();
 
@@ -432,7 +432,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     private PacketWrapper<?> buildSpawnPacket(PacketEventsEntity entity) {
         if (entity.isSelfEntity()) {
             Logger.errorAndReturn(new RuntimeException("Should not build spawn packet for self entity"), 1, PacketEventsEntityViewController.class);
-            return null;
+            throw new IllegalStateException("This statement should be unreachable. Logger.errorAndReturn failed to fire.");
         }
         return new WrapperPlayServerSpawnEntity(
                     entity.entityID(),
