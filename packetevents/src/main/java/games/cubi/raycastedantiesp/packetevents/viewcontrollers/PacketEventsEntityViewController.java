@@ -326,6 +326,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     @Override
     protected void cachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData, int currentTick) {
+        if (playerData.nettyData().isSelfEntityID(entityID)) {
+            return;
+        }
         NettyEntityLocatable<?,?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.warning("Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
