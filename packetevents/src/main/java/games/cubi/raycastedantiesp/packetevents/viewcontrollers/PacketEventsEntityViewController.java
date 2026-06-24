@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
 import com.github.retrooper.packetevents.PacketEvents;
@@ -14,7 +22,6 @@ import com.github.retrooper.packetevents.util.Vector3d;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.*;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
-import games.cubi.locatables.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
@@ -55,8 +62,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         COMMON = PacketEventsCommonViewController.get(currentTickSupplier);
     }
 
-    protected abstract UUID resolveWorldUUID(User user);
-
     public void removeViewer(UUID viewerUUID) {
     }
 
@@ -76,7 +81,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         if (event.getPacketType() == PacketType.Play.Server.JOIN_GAME) {
             WrapperPlayServerJoinGame packet = new WrapperPlayServerJoinGame(event);
-            handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, CURRENT_TICK_SUPPLIER.getAsInt());
+            int currentTick = CURRENT_TICK_SUPPLIER.getAsInt();
+            handleWorldStatePacket(viewerUUID, packet.getWorldName(), packet.getDimensionType().getMinY(), currentTick);
+            handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, currentTick);
         }
 
         if (playerData == null) {
@@ -93,8 +100,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             hideOnSpawnPlayerDistanceSquared = playerConfig.hideOnSpawnDistance() * playerConfig.hideOnSpawnDistance();
         }
 
-        Locatable ownLocation = playerData.ownLocation();
-        UUID world = ownLocation != null ? ownLocation.world() : resolveWorldUUID(event.getUser());
+        UUID world = COMMON.resolvePacketWorld(playerData, event.getUser());
         int currentTick = CURRENT_TICK_SUPPLIER.getAsInt();
 
         handleEntityPackets(event, event.getUser(), playerData, world, currentTick);
@@ -107,7 +113,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             processEntityTransitions(viewerUUID, event.getUser(), cast(playerData.playerView()));
         }
         
-        event.getUser().flushPackets();
         playerData.nettyData().evictPendingPostSpawnTasksIfRequired(currentTick);
     }
 
@@ -216,6 +221,10 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 WrapperPlayServerAttachEntity wrapper = new WrapperPlayServerAttachEntity(event);
                 if (handleLeashEntity(wrapper.getAttachedId(), wrapper.getHoldingId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
+            }
+            case PacketType.Play.Server.RESPAWN -> {
+                WrapperPlayServerRespawn packet = new WrapperPlayServerRespawn(event);
+                handleWorldStatePacket(viewer.getUUID(), packet.getWorldName().orElse(null), packet.getDimensionType().getMinY(), currentTick);
             }
             default -> {}
         }

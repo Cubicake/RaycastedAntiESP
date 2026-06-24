@@ -156,7 +156,7 @@ public class RaycastedAntiESPCommand {
         void debugCommand(Player player) throws CommandSyntaxException {
             //benchmark raycast speed by generating 1000 locatables normally distributed approx 50 blocks around the player and raycasting to them, then printing the average time taken
 
-            Locatable[] locatables = new Locatable[1000];
+            Locatable[] locatables = new Locatable[10000];
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
             Locatable playerLocatable = playerData.ownLocation();
             MutableLocatable unitDirection = new MutableLocatableImpl(playerLocatable.world(), 0, 0, 0);

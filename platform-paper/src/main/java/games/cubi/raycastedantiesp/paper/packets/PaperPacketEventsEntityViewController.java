@@ -1,56 +1,24 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.paper.packets;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
-import com.github.retrooper.packetevents.protocol.player.User;
 import games.cubi.raycastedantiesp.packetevents.viewcontrollers.PacketEventsEntityViewController;
-import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
-import io.github.retrooper.packetevents.util.SpigotConversionUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.World;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.world.WorldLoadEvent;
-import org.bukkit.event.world.WorldUnloadEvent;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.IntSupplier;
 
 
-public class PaperPacketEventsEntityViewController extends PacketEventsEntityViewController implements Listener {
-    private final Map<NamespacedKey, UUID> worldIdByWorldKey = new ConcurrentHashMap<>();
+public class PaperPacketEventsEntityViewController extends PacketEventsEntityViewController {
 
     public PaperPacketEventsEntityViewController(IntSupplier currentTickSupplier) {
         super(currentTickSupplier);
-        Bukkit.getPluginManager().registerEvents(this, RaycastedAntiESP.get());
-        Bukkit.getWorlds().forEach(this::registerWorld);
         PacketEvents.getAPI().getEventManager().registerListener(this, PacketListenerPriority.HIGHEST);
-    }
-
-    @Override
-    protected UUID resolveWorldUUID(User user) {
-        if (user.getDimensionType() == null || user.getDimensionType().getName() == null) {
-            return null;
-        }
-        NamespacedKey worldKey = NamespacedKey.fromString(user.getDimensionType().getName().toString());
-        return worldKey == null ? null : worldIdByWorldKey.get(worldKey);
-    }
-
-    @EventHandler
-    public void onWorldLoad(WorldLoadEvent event) {
-        registerWorld(event.getWorld());
-    }
-
-    @EventHandler
-    public void onWorldUnload(WorldUnloadEvent event) {
-        worldIdByWorldKey.remove(event.getWorld().getKey());
-    }
-
-    private void registerWorld(World world) {
-        worldIdByWorldKey.put(world.getKey(), world.getUID());
     }
 }

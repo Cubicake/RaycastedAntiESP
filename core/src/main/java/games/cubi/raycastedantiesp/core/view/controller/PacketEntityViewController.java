@@ -1,5 +1,14 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.view.controller;
 
+import games.cubi.locatables.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
@@ -43,6 +52,31 @@ public abstract class PacketEntityViewController<P> {
     protected double hideOnSpawnEntityDistanceSquared = 0;
     protected double hideOnSpawnPlayerDistanceSquared = 0;
 
+    protected void handleWorldStatePacket(UUID player, String world, int minWorldHeight, int currentTick) {
+        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player);
+        if (playerData == null) {
+            Logger.error("Received world state packet for unknown player, uuid=" + player, 2, PacketEntityViewController.class);
+            return;
+        }
+        if (world == null) {
+            Logger.error("Received world state packet without a world name, uuid=" + player, 2, PacketEntityViewController.class);
+            return;
+        }
+
+        String previousWorld = playerData.nettyData().getCurrentWorldName();
+        if (world.equals(previousWorld)) {
+            playerData.nettyData().setCurrentWorldMinHeight(minWorldHeight);
+            return;
+        }
+
+        if (previousWorld != null) {
+            // Not clearing player or entity views because it seems like the server sends destroy packets for them
+            playerData.blockView().clear();
+            playerData.nettyData().clear();
+        }
+        playerData.nettyData().setCurrentWorldName(world).setCurrentWorldMinHeight(minWorldHeight);
+    }
+
     protected void handlePlayPhaseLoginPacket(int entityID, UUID playerUUID, int currentTick) {
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(playerUUID);
         playerData.playerView().insertEntity(createSelfEntity(playerData, entityID, playerUUID).cast());
@@ -73,7 +107,9 @@ public abstract class PacketEntityViewController<P> {
         NettyEntityLocatable<?,?> entity = processEntitySpawn(playerData, packet, world, currentTick);
 
         if ((!isPlayer && entityConfig.enabled()) || isPlayer && playerConfig.enabled()) {
-            double distanceSquared = playerData.ownLocation().distanceSquared(entity);
+            Locatable ownLocation = playerData.ownLocation();
+            boolean staleOwnLocation = ownLocation == null || ownLocation.world() == null || !ownLocation.world().equals(world);
+            double distanceSquared = staleOwnLocation ? Double.POSITIVE_INFINITY : ownLocation.distanceSquared(entity);
             if (distanceSquared > (isPlayer ? hideOnSpawnPlayerDistanceSquared : hideOnSpawnEntityDistanceSquared)) {
                 entity.setVisible(false);
                 entity.setClientVisible(false);
@@ -181,7 +217,6 @@ public abstract class PacketEntityViewController<P> {
      */
     protected boolean handleEntityVelocity(P packet, int entityID, PlayerData playerData, int currentTick) {
         processEntityVelocityPacket(packet, playerData, currentTick);
-        cachePacket(packet, entityID, playerData, currentTick); //todo: may be wrong?
         return cancelIfEnabledAndHidden(entityID, playerData);
     }
     /**

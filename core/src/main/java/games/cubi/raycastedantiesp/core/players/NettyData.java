@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.players;
 
 import games.cubi.logs.Logger;
@@ -7,6 +15,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -232,6 +241,45 @@ public class NettyData implements Clearable {
 
     //
     // END Netty entity spawn task queue.
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //
+
+    //
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // START World tracking:
+    //
+
+    private int currentWorldMinHeight = Integer.MIN_VALUE; // Netty thread access only
+    private String currentWorldName = null; // Netty thread access only
+
+    public int getCurrentWorldMinHeight() {
+        if (currentWorldMinHeight == Integer.MIN_VALUE) {
+            Logger.error(new IllegalStateException("Current world min height was requested before it was set"), 3, NettyData.class);
+            return -64;
+        }
+        return currentWorldMinHeight;
+    }
+
+    public NettyData setCurrentWorldMinHeight(int currentWorldMinHeight) {
+        this.currentWorldMinHeight = currentWorldMinHeight;
+        return this;
+    }
+
+    /**
+     *
+     * @return The current world name, or null if the player is still in the process of joining the server.
+     */
+    public @Nullable String getCurrentWorldName() {
+        return currentWorldName;
+    }
+
+    public NettyData setCurrentWorldName(String currentWorldName) {
+        this.currentWorldName = currentWorldName;
+        return this;
+    }
+
+    //
+    // END World tracking.
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     //
 

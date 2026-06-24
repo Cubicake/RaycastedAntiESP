@@ -17,7 +17,9 @@ import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcesso
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsEntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
+import games.cubi.raycastedantiesp.packetevents.viewcontrollers.PacketEventsCommonViewController;
 import games.cubi.raycastedantiesp.paper.packets.PaperPacketEventsBlockViewController;
+import games.cubi.raycastedantiesp.paper.packets.PaperPacketEventsCommonViewController;
 import games.cubi.raycastedantiesp.paper.packets.PaperPacketEventsEntityViewController;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.paper.bStats.MetricsCollector;
@@ -25,20 +27,17 @@ import games.cubi.logs.Logger;
 
 import games.cubi.raycastedantiesp.paper.utils.FoliaTicker;
 import games.cubi.raycastedantiesp.paper.utils.PaperTicker;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
+
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 
 import org.bukkit.Bukkit;
-import org.bukkit.World;
-import org.bukkit.entity.Entity;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.function.IntSupplier;
 import java.util.List;
@@ -92,6 +91,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
             currentTickSupplier = new PaperTicker();
         }
         ViewRegistry.initialise(PacketEventsBlockView::new, PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
+        PacketEventsCommonViewController.initialise(new PaperPacketEventsCommonViewController(currentTickSupplier));
         packetEventsController = new PaperPacketEventsEntityViewController(currentTickSupplier);
         new PaperPacketEventsBlockViewController(currentTickSupplier);
 

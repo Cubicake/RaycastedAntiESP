@@ -47,8 +47,6 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         common = PacketEventsCommonViewController.get(currentTickSupplier);
     }
 
-    protected abstract UUID resolveWorldUUID(User user);
-
     protected abstract int getHiddenBlockId(int blockY);
 
     public void removeViewer(UUID viewerUUID) {
@@ -71,8 +69,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
             return;
         }
 
-        Locatable ownLocation = playerData.ownLocation();
-        UUID world = ownLocation != null ? ownLocation.world() : resolveWorldUUID(event.getUser());
+        UUID world = common.resolvePacketWorld(playerData, event.getUser());
         int currentTick = currentTickSupplier.getAsInt();
 
         handleBlockPackets(event, event.getUser(), playerData, world, currentTick);
@@ -80,7 +77,6 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         if (playerData.blockView().hasPendingTransitions()) {
             processTileEntityTransitions(event.getUser(), playerData.blockView());
         }
-        event.getUser().flushPackets();
     }
 
     private void handleBlockPackets(PacketSendEvent event, User viewer, PlayerData playerData, UUID world, int currentTick) {
@@ -115,7 +111,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
             }
         } else if (event.getPacketType() == PacketType.Play.Server.CHUNK_DATA) {
             WrapperPlayServerChunkData packet = new WrapperPlayServerChunkData(event);
-            @Nullable Column result = ingestChunkAndSetTileEntitiesToHiddenBlocks(playerData, world, packet.getColumn().getX(), packet.getColumn().getZ(), packet.getColumn(), event.getUser().getMinWorldHeight() >> 4);
+            @Nullable Column result = ingestChunkAndSetTileEntitiesToHiddenBlocks(playerData, world, packet.getColumn().getX(), packet.getColumn().getZ(), packet.getColumn(), playerData.nettyData().getCurrentWorldMinHeight() >> 4);
             if (result != null) {
                 packet.setColumn(result);
                 event.markForReEncode(true);
@@ -142,11 +138,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
             key.set(change.getX(), change.getY(), change.getZ());
             if (tileEntity) {
                 TileEntityLocatable<?> existing = blockView.getTrackedTileEntity(key);
-                boolean visibleIfNew = false;
-                if (existing == null) {
-                    double distanceSquared = key.distanceSquared(playerLocation);
-                    visibleIfNew = (distanceSquared <= hideOnSpawnDistanceSquared) && tileEntityConfig.enabled();
-                }
+                boolean visibleIfNew = existing == null && visibleIfNew(key, playerLocation, world);
                 blockView.updateOrInsertTileEntity(key, blockID, visibleIfNew);
                 if (!blockView.isVisible(key, currentTick)) {
                     change.setBlockId(getHiddenBlockId(key.blockY()));
@@ -195,11 +187,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         playerData.blockView().upsertBlock(world, position.getX(), position.getY(), position.getZ(), occluding);
         if (tileEntity) {
             TileEntityLocatable<?> existing = playerData.blockView().getTrackedTileEntity(location);
-            boolean visibleIfNew = false;
-            if (existing == null) {
-                double distanceSquared = location.distanceSquared(playerData.ownLocation());
-                visibleIfNew = (distanceSquared <= hideOnSpawnDistanceSquared) && tileEntityConfig.enabled();
-            }
+            boolean visibleIfNew = existing == null && visibleIfNew(location, playerData.ownLocation(), world);
             playerData.blockView().updateOrInsertTileEntity(location, blockID, visibleIfNew);
             if (!playerData.blockView().isVisible(location, currentTick)) {
                 event.setCancelled(true);
@@ -432,6 +420,16 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
                 new Vector3i(location.blockX(), location.blockY(), location.blockZ()),
                 getHiddenBlockId(location.blockY())
         ));
+    }
+
+    private boolean visibleIfNew(BlockLocatable location, Locatable playerLocation, UUID packetWorld) {
+        if (!tileEntityConfig.enabled()) {
+            return false;
+        }
+        if (playerLocation == null || playerLocation.world() == null || !playerLocation.world().equals(packetWorld)) {
+            return false;
+        }
+        return location.distanceSquared(playerLocation) <= hideOnSpawnDistanceSquared;
     }
 
     private boolean sameChunk(BlockLocatable location, UUID worldID, int chunkX, int chunkZ) {
