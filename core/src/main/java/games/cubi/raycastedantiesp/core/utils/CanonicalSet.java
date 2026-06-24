@@ -9,8 +9,8 @@ import java.util.function.Function;
 
 /**
  * A Set-like data structure that stores canonical instances of key values.
- * Any compatible key type may be used for lookup, but only canonical values
- * of type {@code V} may be stored.
+ * Any compatible key type with {@code equals} and {@code hashcode} implemented identically to the value type may be used for lookup,
+ * but only canonical values of type {@code V} may be stored.
  *
  * @param <K> key type used for lookup
  * @param <V> stored canonical value type
