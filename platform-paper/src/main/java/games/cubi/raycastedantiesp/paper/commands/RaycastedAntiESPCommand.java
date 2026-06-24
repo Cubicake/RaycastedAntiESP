@@ -24,6 +24,7 @@ import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import games.cubi.raycastedantiesp.paper.UpdateChecker;
 import games.cubi.raycastedantiesp.paper.packets.PacketEventsPaperBlockInfoResolver;
 
+import games.cubi.raycastedantiesp.paper.utils.PaperScheduler;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
@@ -176,8 +177,10 @@ public class RaycastedAntiESPCommand {
                 long endTime = System.nanoTime();
                 long duration = endTime - startTime;
                 double averageTime = duration / (double) locatables.length;
-                player.sendRichMessage("Average raycast time: " + averageTime + " nanoseconds");
-                player.sendRichMessage("Total raycast time: " + duration + " nanoseconds");
+                PaperScheduler.runForAudience(RaycastedAntiESP.get(), player, () -> {
+                    player.sendRichMessage("Average raycast time: " + averageTime + " nanoseconds");
+                    player.sendRichMessage("Total raycast time: " + duration + " nanoseconds");
+                });
             });
         }
 

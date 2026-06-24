@@ -9,6 +9,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.paper.utils.PaperScheduler;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -73,8 +74,7 @@ public class UpdateChecker {
 
     public static void checkForUpdates(RaycastedAntiESP plugin, CommandSender audience) {
         fetchFeaturedVersion(plugin).thenAccept(version -> {
-            // This runs synchronously when the version is fetched
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            PaperScheduler.runForAudience(plugin, audience, () -> {
                 @SuppressWarnings("deprecation")
                 int versionCheck = checkIfLaterThan(plugin.getDescription().getVersion(), version);
 
