@@ -400,7 +400,7 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     @Override
     public void clear() {
         world = null;
-        packetReplayData.clear();
+        if (packetReplayData != null) packetReplayData.clear();
         packetReplayData = null;
 
         vehicleID = NO_VEHICLE;
