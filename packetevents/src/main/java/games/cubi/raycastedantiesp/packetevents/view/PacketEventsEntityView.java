@@ -9,6 +9,7 @@ import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
 
 public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     private final Map<UUID, PacketEventsEntity> entitiesByUUID = new ConcurrentHashMap<>();
@@ -138,15 +139,16 @@ public class PacketEventsEntityView implements EntityView<PacketEventsEntity> {
     }
 
     @Override
-    public Collection<UUID> getNeedingRecheck(int recheckTicks, int currentTick) {
-        List<UUID> needingRecheck = new ArrayList<>();
+    public int forEachNeedingRecheck(int recheckTicks, int currentTick, Consumer<UUID> action) {
+        int processed = 0;
         for (PacketEventsEntity state : entitiesByUUID.values()) {
             if (state.visible() && (recheckTicks < 0 || currentTick - state.lastChecked() < recheckTicks)) {
                 continue;
             }
-            needingRecheck.add(state.entityUUID());
+            action.accept(state.entityUUID());
+            processed++;
         }
-        return needingRecheck;
+        return processed;
     }
 
     @Override
