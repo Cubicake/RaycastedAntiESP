@@ -24,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("1.20.6-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21-R0.1-SNAPSHOT")
     //paperweight.paperDevBundle("26.1.2.build.+")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.0")
     compileOnly("org.spongepowered:configurate-core:4.2.0")
