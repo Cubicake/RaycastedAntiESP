@@ -4,7 +4,7 @@ The latest stable version can currently only be found on Modrinth https://modrin
 
 This is an async plugin for PaperMC and its forks that hides entities (including players) and tile entities (blocks such as chests, banners, signs, etc) from players if they do not have line-of-sight.
 
-The supported versions are 1.20.6+, with MC 26.x support in v2 only. Only Paper and derivative software is supported, not Spigot.
+The supported versions are 1.21.0+, with MC 26.x support in v2 only. Only Paper and derivative software is supported, not Spigot.
 
 ## Use cases:
 
