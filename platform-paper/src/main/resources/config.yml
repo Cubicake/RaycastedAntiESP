@@ -5,23 +5,23 @@ checks:
         hide-sounds-when-hidden: true
         max-occluding-count: 3
         always-show-radius: 8
-        raycast-radius: 64
-        hide-on-spawn-distance: 32
+        raycast-radius: 128
+        hide-on-spawn-distance: 24
         visible-recheck-interval-ticks: 5
     entity:
         enabled: true
         hide-sounds-when-hidden: true
         max-occluding-count: 3
         always-show-radius: 8
-        raycast-radius: 48
-        hide-on-spawn-distance: 32
+        raycast-radius: 92
+        hide-on-spawn-distance: 24
         visible-recheck-interval-ticks: 5
     tile-entity:
         enabled: true
         max-occluding-count: 3
         always-show-radius: 8
-        raycast-radius: 48
-        hide-on-spawn-distance: 32
+        raycast-radius: 64
+        hide-on-spawn-distance: 24
         visible-recheck-interval-ticks: -1
     sound-effects:
         enabled: true
