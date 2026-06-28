@@ -1,3 +1,7 @@
 [submodule "logging"]
 	path = logging
 	url = https://github.com/Cubicake/CubiLogging.git
+[submodule "leafpile"]
+	path = leafpile
+	url = https://github.com/Cubicake/ParallelepipedLeafPile.git
+	branch = java-21-main

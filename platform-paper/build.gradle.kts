@@ -35,6 +35,7 @@ dependencies {
 
     implementation("org.jetbrains:annotations:24.0.1")
 
+    implementation(project(":leafpile"))
     implementation(project(":locatable-lib"))
     implementation(project(":logging"))
     implementation(project(":core"))
@@ -126,7 +127,13 @@ tasks.shadowJar {
         include(project(":locatable-lib"))
         include(project(":core"))
         include(project(":packetevents"))
+
+        include(project(":leafpile"))
     }
+    relocate(
+        "ca.spottedleaf",
+        "games.cubi.libs.raycastedantiesp.spottedleaf"
+    )
     archiveBaseName.set("RaycastedAntiESP")
     archiveClassifier.set("")
 }

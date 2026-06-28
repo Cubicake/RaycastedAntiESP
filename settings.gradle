@@ -1,6 +1,15 @@
 rootProject.name = 'RaycastedAntiESP'
+dependencyResolutionManagement {
+    versionCatalogs {
+        libs {
+            from(files("leafpile/gradle/libs.versions.toml"))
+        }
+    }
+}
+
 include 'locatable-lib'
 include 'logging'
 include 'core'
 include 'platform-paper'
 include 'packetevents'
+include 'leafpile'
