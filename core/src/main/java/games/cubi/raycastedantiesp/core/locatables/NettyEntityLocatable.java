@@ -33,10 +33,10 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     private volatile double velocityY;
     private volatile double velocityZ;
     private volatile boolean onGround = true;
-    private int@IntArrayListMarker[] leashedIDs;
-    private int leasherID = NO_LEASHER;
-    private int[] passengerIDs;
-    private int vehicleID = NO_VEHICLE;
+    private volatile int@IntArrayListMarker[] leashedIDs;
+    private volatile int leasherID = NO_LEASHER;
+    private volatile int[] passengerIDs;
+    private volatile int vehicleID = NO_VEHICLE;
 
 
     private volatile int entityData;
