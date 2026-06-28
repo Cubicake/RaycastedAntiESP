@@ -324,6 +324,9 @@ public abstract class SimpleEngine implements Engine {
                                        boolean debugParticles, int currentTick, TickTimingBatch timings) {
 
         for (PlayerData playerData : playerDataList) {
+            if (!playerData.isConnected()) {
+                continue;
+            }
             playerData.nettyData().markPendingPostSpawnTasksForEviction();
             if (playerData.hasBypassPermission()) {
                 timings.incrementBypassSkippedPlayers();

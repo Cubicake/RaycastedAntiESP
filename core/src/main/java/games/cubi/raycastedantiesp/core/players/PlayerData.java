@@ -15,6 +15,7 @@ public class PlayerData {
     private final UUID playerUUID;
     private final int joinTick;
     private volatile boolean hasBypassPermission;
+    private volatile boolean connected = true;
     private final ThreadSafeLocatable ownLocation;
 
     private final BlockView blockView;
@@ -22,20 +23,22 @@ public class PlayerData {
     private final EntityView<?> playerView;
     private final NettyData nettyData;
 
-    public PlayerData(UUID player, boolean hasBypassPermission, int joinTick) {
-        this(player, joinTick);
-        this.hasBypassPermission = hasBypassPermission;
-    }
-
-    public PlayerData(UUID player, int joinTick) {
+    PlayerData(UUID player, boolean hasBypassPermission, int joinTick, int selfEntityID, PlayerRegistry.SelfEntityCreator selfEntityCreator) {
         this.joinTick = joinTick;
         this.playerUUID = player;
+        this.hasBypassPermission = hasBypassPermission;
 
         blockView = ViewRegistry.createBlockView();
         entityView = ViewRegistry.createEntityView();
         playerView = ViewRegistry.createPlayerEntityView();
-        nettyData = new NettyData();
         ownLocation = new ThreadSafeLocatable(null, 0, 0, 0);
+        NettyEntityLocatable<?, ?> selfEntity = Logger.requireNonNull(
+                selfEntityCreator.createSelfEntity(this, selfEntityID, player),
+                "Self entity creator returned null",
+                3,
+                PlayerData.class
+        );
+        nettyData = new NettyData(selfEntity);
     }
 
     public EntityView<?> entityView() {
@@ -73,6 +76,14 @@ public class PlayerData {
 
     public int getJoinTick() {
         return joinTick;
+    }
+
+    public boolean isConnected() {
+        return connected;
+    }
+
+    public void markDisconnected() {
+        connected = false;
     }
 
     /**
