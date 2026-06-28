@@ -1,6 +1,5 @@
 package games.cubi.raycastedantiesp.core.view;
 
-import ca.spottedleaf.common.function.BiBooleanObjectConsumer;
 import games.cubi.locatables.BlockLocatable;
 import games.cubi.locatables.implementations.ImmutableBlockLocatable;
 import games.cubi.raycastedantiesp.core.locatables.TileEntityLocatable;
