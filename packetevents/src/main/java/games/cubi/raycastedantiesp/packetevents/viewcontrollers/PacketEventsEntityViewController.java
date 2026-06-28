@@ -11,6 +11,7 @@ package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListener;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
+import com.github.retrooper.packetevents.event.UserDisconnectEvent;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
@@ -62,7 +63,10 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         COMMON = PacketEventsCommonViewController.get(currentTickSupplier);
     }
 
-    public void removeViewer(UUID viewerUUID) {
+    @Override
+    public void onUserDisconnect(UserDisconnectEvent event) {
+        UUID viewerUUID = event.getUser().getUUID();
+        handlePlayerDisconnect(viewerUUID);
     }
 
     @Override
@@ -74,16 +78,11 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(viewerUUID);
 
-        if (event.getPacketType() == PacketType.Login.Server.LOGIN_SUCCESS) {
-            handleLoginPhaseLoginPacket(viewerUUID, CURRENT_TICK_SUPPLIER.getAsInt());
-            return;
-        }
-
         if (event.getPacketType() == PacketType.Play.Server.JOIN_GAME) {
             WrapperPlayServerJoinGame packet = new WrapperPlayServerJoinGame(event);
             int currentTick = CURRENT_TICK_SUPPLIER.getAsInt();
+            playerData = handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, currentTick);
             handleWorldStatePacket(viewerUUID, packet.getWorldName(), packet.getDimensionType().getMinY(), currentTick);
-            handlePlayPhaseLoginPacket(packet.getEntityId(), viewerUUID, currentTick);
         }
 
         if (playerData == null) {

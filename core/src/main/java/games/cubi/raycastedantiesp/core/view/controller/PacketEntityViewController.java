@@ -80,17 +80,18 @@ public abstract class PacketEntityViewController<P> {
         nettyData.setCurrentWorldName(world).setCurrentWorldMinHeight(minWorldHeight);
     }
 
-    protected void handlePlayPhaseLoginPacket(int entityID, UUID playerUUID, int currentTick) {
-        PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(playerUUID);
-        playerData.nettyData().setSelfEntity(Logger.requireNonNull(createSelfEntity(playerData, entityID, playerUUID), "createSelfEntity returned null", 3, PacketEntityViewController.class));
-    }
-
-    protected PlayerData handleLoginPhaseLoginPacket(UUID playerUUID, int currentTick) {
-        return PlayerRegistry.getInstance().registerAndGetPlayer(playerUUID, currentTick);
+    protected PlayerData handlePlayPhaseLoginPacket(int entityID, UUID playerUUID, int currentTick) {
+        return PlayerRegistry.getInstance().registerAndGetPlayer(playerUUID, currentTick, entityID, this::createSelfEntity);
     }
 
     protected abstract NettyEntityLocatable<?,?> createSelfEntity(PlayerData ownData, int entityID, UUID playerUUID);
 
+    protected void handlePlayerDisconnect(UUID player) {
+        if (player == null) {
+            return;
+        }
+        PlayerRegistry.getInstance().unregisterPlayer(player);
+    }
     /**
      * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
      */
