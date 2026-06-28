@@ -1,6 +1,8 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
+import games.cubi.locatables.ImmutableLocatable;
 import games.cubi.locatables.MutableLocatable;
+import games.cubi.locatables.implementations.ImmutableLocatableImpl;
 import games.cubi.locatables.implementations.MutableLocatableImpl;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
@@ -284,6 +286,11 @@ public abstract class NettyEntityLocatable<EntityType, PacketReplayData extends 
     public EntityLocatable<?, ?> setPacketReplayData(PacketReplayData packetReplayData) {
         this.packetReplayData = packetReplayData;
         return this;
+    }
+
+    @Override
+    public ImmutableLocatable getOffsetEntityLocation() {
+        return new ImmutableLocatableImpl(world, x, y + 0.5, z); //todo: move away from hardcoded offset
     }
 
     @Override

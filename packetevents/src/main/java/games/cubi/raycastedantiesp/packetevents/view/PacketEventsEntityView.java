@@ -198,6 +198,19 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
+    public int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, Consumer<NettyEntityLocatable<?,?>> action) {
+        int processed = 0;
+        for (PacketEventsEntity entity : entitiesByUUID.values()) {
+            if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
+                continue;
+            }
+            action.accept(entity);
+            processed++;
+        }
+        return processed;
+    }
+
+    @Override
     public boolean hasPendingTransitions() {
         return !transitions.isEmpty();
     }

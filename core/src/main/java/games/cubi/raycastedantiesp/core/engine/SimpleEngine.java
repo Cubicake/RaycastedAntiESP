@@ -1,5 +1,6 @@
 package games.cubi.raycastedantiesp.core.engine;
 
+import games.cubi.locatables.ImmutableLocatable;
 import games.cubi.locatables.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
@@ -363,24 +364,23 @@ public abstract class SimpleEngine implements Engine {
     private void checkEntities(PlayerData player, Locatable playerLocation, EntityConfig entityConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
         EntityView<?> entityView = player.entityView();
 
-        int checked = entityView.forEachNeedingRecheck(entityConfig.getVisibleRecheckIntervalTicks(), currentTick, entityUUID -> {
-            boolean wasVisible = entityView.isVisible(entityUUID);
-            //todo Instead of passing by UUID reference everywhere (attachedToSelf and getLocation) have forEachNeedingRecheck pass the entity reference itself.
-            if (attachedToSelf(player, entityView, entityUUID, currentTick)) {
+        int checked = entityView.forEachNeedingRecheckEntity(entityConfig.getVisibleRecheckIntervalTicks(), currentTick, entity -> {
+            boolean wasVisible = entity.visible();
+            if (attachedToSelf(player, entityView, entity, currentTick)) {
                 return;
             }
-            Locatable entityLocation = entityView.getLocation(entityUUID);
+            ImmutableLocatable entityLocation = entity.getOffsetEntityLocation();
             if (entityLocation == null) {
                 timings.incrementEntityNullTargets();
                 Logger.debug("SimpleEngine.checkEntities skipped-null-location viewer=" + player.getPlayerUUID()
-                        + " target=" + entityUUID
+                        + " target=" + entity.entityUUID()
                         + " wasVisible=" + wasVisible
                         + " tick=" + currentTick);
                 return;
             }
             timings.incrementEntityRaycasts();
             boolean canSee = RaycastUtil.raycast(player, playerLocation, entityLocation, entityConfig.getMaxOccludingCount(), entityConfig.getAlwaysShowRadius(), entityConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
-            entityView.setVisibility(entityUUID, canSee, currentTick);
+            entityView.setVisibility(entity, canSee, currentTick);
         });
         timings.addEntityChecked(checked);
     }
@@ -388,32 +388,28 @@ public abstract class SimpleEngine implements Engine {
     private void checkPlayers(PlayerData player, Locatable playerLocation, PlayerConfig playerConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
         EntityView<?> playerView = player.playerView();
 
-        int checked = playerView.forEachNeedingRecheck(playerConfig.getVisibleRecheckIntervalTicks(), currentTick, otherPlayerUUID -> {
-            boolean wasVisible = playerView.isVisible(otherPlayerUUID);
-            if (attachedToSelf(player, playerView, otherPlayerUUID, currentTick)) {
+        int checked = playerView.forEachNeedingRecheckEntity(playerConfig.getVisibleRecheckIntervalTicks(), currentTick, otherPlayer -> {
+            boolean wasVisible = otherPlayer.visible();
+            if (attachedToSelf(player, playerView, otherPlayer, currentTick)) {
                 return;
             }
-            Locatable otherPlayerLocation = playerView.getLocation(otherPlayerUUID);
+            ImmutableLocatable otherPlayerLocation = otherPlayer.getOffsetEntityLocation();
             if (otherPlayerLocation == null) {
                 timings.incrementPlayerNullTargets();
                 Logger.debug("SimpleEngine.checkPlayers skipped-null-location viewer=" + player.getPlayerUUID()
-                        + " target=" + otherPlayerUUID
+                        + " target=" + otherPlayer.entityUUID()
                         + " wasVisible=" + wasVisible
                         + " tick=" + currentTick);
                 return;
             }
             timings.incrementPlayerRaycasts();
             boolean canSee = RaycastUtil.raycast(player, playerLocation, otherPlayerLocation, playerConfig.getMaxOccludingCount(), playerConfig.getAlwaysShowRadius(), playerConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
-            playerView.setVisibility(otherPlayerUUID, canSee, currentTick);
+            playerView.setVisibility(otherPlayer, canSee, currentTick);
         });
         timings.addPlayerChecked(checked);
     }
 
-    private boolean attachedToSelf(PlayerData player, EntityView<?> view, UUID entityUUID, int currentTick) {
-        if (!(view.getEntity(entityUUID) instanceof NettyEntityLocatable<?, ?> entity)) {
-            Logger.error(new RuntimeException("EntityView returned a non-NettyEntityLocatable for UUID=" + entityUUID + " when checking for self-attachment. This should never happen."), 1, SimpleEngine.class);
-            return false;
-        }
+    private boolean attachedToSelf(PlayerData player, EntityView<?> view, NettyEntityLocatable<?,?> entity, int currentTick) {
         int selfEntityID = player.nettyData().getSelfEntityID();
         if (!player.nettyData().isSelfEntityID(entity.leashingEntity())
                 && !player.nettyData().isSelfEntityID(entity.vehicleID())

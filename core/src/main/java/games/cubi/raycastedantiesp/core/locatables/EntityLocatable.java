@@ -1,5 +1,6 @@
 package games.cubi.raycastedantiesp.core.locatables;
 
+import games.cubi.locatables.ImmutableLocatable;
 import games.cubi.locatables.MutableLocatable;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,6 +62,8 @@ public interface EntityLocatable<EntityType, PacketReplayData> extends MutableLo
 
     PacketReplayData packetReplayData();
     EntityLocatable<?, ?> setPacketReplayData(PacketReplayData packetReplayData);
+
+    ImmutableLocatable getOffsetEntityLocation();
 
     /**
      * For use when the player disconnects, clears all data.
