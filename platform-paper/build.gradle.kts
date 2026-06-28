@@ -50,7 +50,7 @@ val javaToolchainService = project.extensions.getByType(JavaToolchainService::cl
 
 group = "games.cubi.raycastedantiesp.paper"
 
-val platformPaperVersion: String = "0.6.1-SNAPSHOT"
+val platformPaperVersion: String = "0.7.0-SNAPSHOT"
 val coreVersion = project(":core").version.toString()
 
 val commitShort = providers.exec {
