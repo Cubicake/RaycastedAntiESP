@@ -154,16 +154,15 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         for (BlockViewTransition transition : blockView.drainTransitions()) {
             BlockLocatable location = transition.location();
             TileEntityLocatable<PacketEventsTileEntityReplayData> state = getTrackedTileEntity(blockView, location);
-
+            if (state == null || state.blockID() == 0) {
+                continue;
+            }
             switch (transition.type()) {
                 case HIDE -> viewer.writePacketSilently(new WrapperPlayServerBlockChange(
                         new Vector3i(location.blockX(), location.blockY(), location.blockZ()),
                         getHiddenBlockId(location.blockY())
                 ));
                 case SHOW -> {
-                    if (state == null || state.blockID() == 0) {
-                        continue;
-                    }
                     viewer.writePacketSilently(new WrapperPlayServerBlockChange(
                             new Vector3i(location.blockX(), location.blockY(), location.blockZ()),
                             state.blockID()
