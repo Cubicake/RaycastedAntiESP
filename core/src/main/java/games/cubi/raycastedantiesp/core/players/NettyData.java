@@ -28,7 +28,6 @@ import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.N
  */
 public class NettyData implements Clearable {
     private static final int DEFAULT_MAP_SIZE = 16;
-    public static final int NO_SELF_ENTITY_ID = -1;
     //
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // START Leash tracking:
@@ -250,20 +249,16 @@ public class NettyData implements Clearable {
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // START Self entity tracking:
     //
-    private NettyEntityLocatable<?, ?> selfEntity;
-    private int selfEntityID = NO_SELF_ENTITY_ID;
+    private final NettyEntityLocatable<?, ?> selfEntity;
+    private final int selfEntityID;
+
+    public NettyData(NettyEntityLocatable<?, ?> selfEntity) {
+        this.selfEntity = selfEntity;
+        this.selfEntityID = selfEntity.entityID();
+    }
 
     public NettyEntityLocatable<?, ?> getSelfEntity() {
         return selfEntity;
-    }
-
-    public NettyData setSelfEntity(NettyEntityLocatable<?, ?> selfEntity) {
-        if (this.selfEntity != null && this.selfEntity != selfEntity) {
-            this.selfEntity.clear();
-        }
-        this.selfEntity = selfEntity;
-        selfEntityID = selfEntity == null ? NO_SELF_ENTITY_ID : selfEntity.entityID();
-        return this;
     }
 
     public int getSelfEntityID() {
@@ -271,7 +266,7 @@ public class NettyData implements Clearable {
     }
 
     public boolean isSelfEntityID(int entityID) {
-        return selfEntityID != NO_SELF_ENTITY_ID && entityID == selfEntityID;
+        return entityID == selfEntityID;
     }
     //
     // END Self entity tracking.
@@ -360,8 +355,6 @@ public class NettyData implements Clearable {
         if (selfEntity != null) {
             selfEntity.clear();
         }
-        selfEntity = null;
-        selfEntityID = NO_SELF_ENTITY_ID;
         currentWorldMinHeight = Integer.MIN_VALUE;
         currentWorldName = null;
     }
