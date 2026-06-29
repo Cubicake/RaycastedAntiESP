@@ -1,6 +1,7 @@
 package games.cubi.raycastedantiesp.packetevents.view;
 
 import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
+import ca.spottedleaf.concurrentutil.map.SWMRHashTable;
 import games.cubi.locatables.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
@@ -12,11 +13,10 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class PacketEventsEntityView extends SingleThreadedGuard implements EntityView<PacketEventsEntity> {
-    private final Map<UUID, PacketEventsEntity> entitiesByUUID = new ConcurrentHashMap<>();
+    private final SWMRHashTable<UUID, PacketEventsEntity> entitiesByUUID = new SWMRHashTable<>();
     private final Int2ObjectOpenHashMap<UUID> entityUUIDsByID = new Int2ObjectOpenHashMap<>();
     private final MultiThreadedQueue<EntityViewTransition> transitions = new MultiThreadedQueue<>();
     private final boolean isPlayerView;
@@ -168,7 +168,9 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
 
     @Override
     public Collection<UUID> getKnownEntities() {
-        return List.copyOf(entitiesByUUID.keySet());
+        List<UUID> known = new ArrayList<>(entitiesByUUID.size());
+        entitiesByUUID.forEachKey(known::add);
+        return known;
     }
 
     @Override
@@ -201,16 +203,23 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
-    public int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, Consumer<NettyEntityLocatable<?,?>> action) {
-        int processed = 0;
-        for (PacketEventsEntity entity : entitiesByUUID.values()) {
+    public int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, Consumer<NettyEntityLocatable<?,?>> action) {
+        if (countingActuallyNeeded) {
+            return entitiesByUUID.forEachValueCounted( (entity) -> {
+                if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
+                    return false;
+                }
+                action.accept(entity);
+                return true;
+            });
+        }
+        entitiesByUUID.forEachValue( (entity) -> {
             if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
-                continue;
+                return;
             }
             action.accept(entity);
-            processed++;
-        }
-        return processed;
+        });
+        return 0;
     }
 
     @Override

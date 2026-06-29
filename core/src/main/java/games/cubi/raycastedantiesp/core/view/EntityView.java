@@ -56,9 +56,9 @@ public interface EntityView<T extends EntityLocatable<?, ?>>  extends Clearable 
     /**
      * Iterates currently tracked entities that should be visibility-checked.
      *
-     * @return number of entities passed to {@code action}.
+     * @return number of entities passed to {@code action}, or 0 if {@code countingActuallyNeeded} is false.
      */
-    int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, Consumer<NettyEntityLocatable<?,?>> action);
+    int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, Consumer<NettyEntityLocatable<?,?>> action);
 
     boolean hasPendingTransitions();
 

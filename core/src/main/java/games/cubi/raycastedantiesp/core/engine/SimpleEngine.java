@@ -364,7 +364,7 @@ public abstract class SimpleEngine implements Engine {
     private void checkEntities(PlayerData player, Locatable playerLocation, EntityConfig entityConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
         EntityView<?> entityView = player.entityView();
 
-        int checked = entityView.forEachNeedingRecheckEntity(entityConfig.getVisibleRecheckIntervalTicks(), currentTick, entity -> {
+        int checked = entityView.forEachNeedingRecheckEntity(entityConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), entity -> {
             boolean wasVisible = entity.visible();
             if (attachedToSelf(player, entityView, entity, currentTick)) {
                 return;
@@ -388,7 +388,7 @@ public abstract class SimpleEngine implements Engine {
     private void checkPlayers(PlayerData player, Locatable playerLocation, PlayerConfig playerConfig, boolean debugParticles, BlockView blockView, int currentTick, TickTimingBatch timings) {
         EntityView<?> playerView = player.playerView();
 
-        int checked = playerView.forEachNeedingRecheckEntity(playerConfig.getVisibleRecheckIntervalTicks(), currentTick, otherPlayer -> {
+        int checked = playerView.forEachNeedingRecheckEntity(playerConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), otherPlayer -> {
             boolean wasVisible = otherPlayer.visible();
             if (attachedToSelf(player, playerView, otherPlayer, currentTick)) {
                 return;
