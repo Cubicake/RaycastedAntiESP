@@ -6,19 +6,10 @@
  * See README.md for warranty disclaimer and further information.
  */
 
-rootProject.name = 'RaycastedAntiESP'
-dependencyResolutionManagement {
-    versionCatalogs {
-        libs {
-            from(files("leafpile/gradle/libs.versions.toml"))
-        }
-    }
-}
+package games.cubi.raycastedantiesp.velocity;
 
-include 'locatables'
-include 'logging'
-include 'core'
-include 'platform-paper'
-include 'packetevents'
-include 'leafpile'
-include 'platform-velocity'
+// The constants are replaced before compilation
+public class BuildConstants {
+
+    public static final String VERSION = "${version}";
+}

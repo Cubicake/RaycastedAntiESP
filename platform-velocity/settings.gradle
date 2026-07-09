@@ -6,19 +6,4 @@
  * See README.md for warranty disclaimer and further information.
  */
 
-rootProject.name = 'RaycastedAntiESP'
-dependencyResolutionManagement {
-    versionCatalogs {
-        libs {
-            from(files("leafpile/gradle/libs.versions.toml"))
-        }
-    }
-}
-
-include 'locatables'
-include 'logging'
-include 'core'
-include 'platform-paper'
-include 'packetevents'
-include 'leafpile'
-include 'platform-velocity'
+rootProject.name = 'platform-velocity'
