@@ -58,8 +58,10 @@ public class EventListener extends PaperListener {
             checkForUpdates(plugin, player);
         }
 
-        boolean hasBypassPermission = player.hasPermission("raycastedantiesp.bypass");
-        playerData.setBypassPermission(hasBypassPermission);
+        if (player.hasPermission("raycastedantiesp.bypass")) {
+            Logger.warning("Player " + player.getName() + " (" + player.getUniqueId() + ") has the raycastedantiesp.bypass permission, but bypassing checks is disabled.", 3, EventListener.class);
+            player.sendMessage(MiniMessage.miniMessage().deserialize("<red><bold>Warning:</bold> You have the <white>raycastedantiesp.bypass</white> permission, but it no longer bypasses anti-ESP checks.</red>"));
+        }
         updateOwnLocation(playerData, player.getEyeLocation());
     }
 
@@ -122,5 +124,4 @@ public class EventListener extends PaperListener {
         Location eyeLocation = location.clone().add(0, player.getEyeHeight(), 0);
         updateOwnLocation(playerData, eyeLocation);
     }
-
 }
