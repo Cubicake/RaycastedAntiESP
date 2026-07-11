@@ -11,7 +11,7 @@ permissions:
         description: Permission to use the /RaycastedAntiESP command
         default: op
     raycastedantiesp.bypass:
-        description: Permission to bypass all checks. A restart is needed to apply this permission.
+        description: Deprecated permission. It does not bypass anti-ESP checks and holders are warned when they join.
         default: false
     raycastedantiesp.updatecheck:
         description: Permission to check for plugin updates
