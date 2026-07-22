@@ -149,7 +149,7 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
-    public void setVisibility(@NotNull NettyEntity<?,?> entity, boolean visible, int currentTick, int expectedWorldEpoch) {
+    public void setVisibility(@NotNull NettyEntity<?> entity, boolean visible, int currentTick, int expectedWorldEpoch) {
         if (!isCurrentWorldEpoch(expectedWorldEpoch)) {
             return;
         }
@@ -196,7 +196,7 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
-    public int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, int expectedWorldEpoch, Consumer<NettyEntity<?,?>> action) {
+    public int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, int expectedWorldEpoch, Consumer<NettyEntity<?>> action) {
         if (!isCurrentWorldEpoch(expectedWorldEpoch)) {
             return 0;
         }

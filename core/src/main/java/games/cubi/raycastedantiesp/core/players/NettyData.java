@@ -241,15 +241,15 @@ public class NettyData implements Clearable {
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // START Self entity tracking:
     //
-    private final NettyEntity<?, ?> selfEntity;
+    private final NettyEntity<?> selfEntity;
     private final int selfEntityID;
 
-    public NettyData(NettyEntity<?, ?> selfEntity) {
+    public NettyData(NettyEntity<?> selfEntity) {
         this.selfEntity = selfEntity;
         this.selfEntityID = selfEntity.entityID();
     }
 
-    public NettyEntity<?, ?> getSelfEntity() {
+    public NettyEntity<?> getSelfEntity() {
         return selfEntity;
     }
 

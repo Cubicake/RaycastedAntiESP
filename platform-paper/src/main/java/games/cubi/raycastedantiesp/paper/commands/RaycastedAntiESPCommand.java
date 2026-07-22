@@ -271,7 +271,7 @@ public class RaycastedAntiESPCommand {
         private int reportEntityIDMatches(CommandSender sender, PlayerData playerData, EntityView<?> view, String viewName, int entityID) {
             int matches = 0;
             for (UUID entityUUID : view.getKnownEntities()) {
-                TrackedEntity<?, ?> entity = view.getEntity(entityUUID);
+                TrackedEntity<?> entity = view.getEntity(entityUUID);
                 if (entity == null || entity.entityID() != entityID) {
                     continue;
                 }
@@ -287,7 +287,7 @@ public class RaycastedAntiESPCommand {
         }
 
         private int reportEntityUUIDMatch(CommandSender sender, PlayerData playerData, EntityView<?> view, String viewName, UUID entityUUID) {
-            TrackedEntity<?, ?> entity = view.getEntity(entityUUID);
+            TrackedEntity<?> entity = view.getEntity(entityUUID);
             if (entity == null) {
                 return 0;
             }
@@ -295,7 +295,7 @@ public class RaycastedAntiESPCommand {
             return 1;
         }
 
-        private void sendTrackedEntityMatch(CommandSender sender, PlayerData playerData, String viewName, TrackedEntity<?, ?> entity) {
+        private void sendTrackedEntityMatch(CommandSender sender, PlayerData playerData, String viewName, TrackedEntity<?> entity) {
             sender.sendRichMessage("<green>Match for viewer <white>" + describeViewer(playerData.getPlayerUUID()) + "<green> in <white>" + viewName + "<green>:");
             sender.sendRichMessage("<gray>According to PacketEvents: <white>" + entity);
         }

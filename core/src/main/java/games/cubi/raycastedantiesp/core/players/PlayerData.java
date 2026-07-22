@@ -43,7 +43,7 @@ public class PlayerData {
         entityView = ViewRegistry.createEntityView(worldEpochSupplier);
         playerView = ViewRegistry.createPlayerEntityView(worldEpochSupplier);
         ownLocation = new ThreadSafeLocatable(null, 0, 0, 0);
-        NettyEntity<?, ?> selfEntity = Logger.requireNonNull(
+        NettyEntity<?> selfEntity = Logger.requireNonNull(
                 selfEntityCreator.createSelfEntity(this, selfEntityID, player),
                 "Self entity creator returned null",
                 3,
@@ -165,7 +165,7 @@ public class PlayerData {
         return null;
     }
 
-    public NettyEntity<?,?> entityFromID(int entityID) {
+    public NettyEntity<?> entityFromID(int entityID) {
         if (nettyData.isSelfEntityID(entityID)) {
             return nettyData.getSelfEntity();
         }
@@ -173,7 +173,7 @@ public class PlayerData {
         if (entityView == null) {
             return null;
         }
-        return (NettyEntity<?, ?>) entityView.getEntity(entityID);
+        return (NettyEntity<?>) entityView.getEntity(entityID);
     }
 
     public void setBypassPermission(boolean hasBypassPermission) {
