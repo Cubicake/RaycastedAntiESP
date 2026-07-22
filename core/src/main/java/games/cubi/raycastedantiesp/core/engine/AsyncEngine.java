@@ -413,7 +413,7 @@ public abstract class AsyncEngine implements Engine {
         timings.addPlayerChecked(checked);
     }
 
-    private boolean attachedToSelf(PlayerData player, EntityView<?> view, NettyEntity<?,?> entity, int currentTick, int worldEpoch) {
+    private boolean attachedToSelf(PlayerData player, EntityView<?> view, NettyEntity<?> entity, int currentTick, int worldEpoch) {
         int selfEntityID = player.nettyData().getSelfEntityID();
         if (!player.nettyData().isSelfEntityID(entity.leashingEntity())
                 && !player.nettyData().isSelfEntityID(entity.vehicleID())

@@ -17,12 +17,12 @@ import java.util.UUID;
  * Designed for use with netty-based systems, where entity data updates only ever come from one thread, but reads may come from multiple threads. This is however not enforced, and must be kept in mind when using this class.
  * A representation of an entity for a specific player.
  */
-public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable> implements TrackedEntity<EntityType, PacketReplayData> {
+public abstract class NettyEntity<PacketReplayData extends Clearable> implements TrackedEntity<PacketReplayData> {
     // immutable fields
     private final int entityID;
     private final UUID entityUUID;
     private final boolean isSelfEntity;
-    private final EntityType entityType;
+    private final int entityType;
     private final PlayerData owningPlayer;
 
     // Netty mutatable fields. Should NEVER be mutated from the engine thread, but reads are fine.
@@ -56,7 +56,13 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
     // engine thread mutable, reads from netty and engine.
     private volatile boolean visible;
 
-    public NettyEntity(PlayerData owningPlayer, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, EntityType entityType, boolean visible) {
+    // Constants
+
+    public static final int NO_VEHICLE = -1;
+    public static final int NO_LEASHER = -2;
+    public static final int SELF_ENTITY_TYPE = -239;
+
+    public NettyEntity(PlayerData owningPlayer, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, int entityType, boolean visible) {
         X.set(this, x); Y.set(this, y); Z.set(this, z);
 
         this.entityID = entityID;
@@ -75,8 +81,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
         entityUUID = ownUUID;
         owningPlayer = selfData;
         isSelfEntity = true;
-        entityType = null;
-        clientVisible = true;
+        entityType = SELF_ENTITY_TYPE;
         visible = true;
     }
 
@@ -99,7 +104,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
      * Wherever possible, effort should be made to only call this from the engine thread, for thread safety reasons.
      */
     @Override
-    public TrackedEntity<?, ?> setVisible(boolean visible) {
+    public TrackedEntity<?> setVisible(boolean visible) {
         this.visible = visible;
         return this;
     }
@@ -110,7 +115,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
     }
 // todo it may be that this is only ever set by the engine thread? If so, just volatile annotation may be safe enough, as no two engine threads should update a single player at the same time (add guard lock for this)
     @Override
-    public TrackedEntity<?, ?> setLastChecked(int lastChecked) {
+    public TrackedEntity<?> setLastChecked(int lastChecked) {
         LAST_CHECKED.setOpaque(this, lastChecked);
         return this;
     }
@@ -121,7 +126,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
     }
 
     @Override
-    public TrackedEntity<?, ?> setClientVisible(boolean clientVisible) {
+    public TrackedEntity<?> setClientVisible(boolean clientVisible) {
         this.clientVisible = clientVisible;
         return this;
     }
@@ -140,7 +145,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public TrackedEntity<?, ?> setYaw(float yaw) {
+    public TrackedEntity<?> setYaw(float yaw) {
         this.yaw = yaw;
         return this;
     }
@@ -154,7 +159,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public TrackedEntity<?, ?> setPitch(float pitch) {
+    public TrackedEntity<?> setPitch(float pitch) {
         this.pitch = pitch;
         return this;
     }
@@ -168,7 +173,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public TrackedEntity<?, ?> setHeadYaw(float headYaw) {
+    public TrackedEntity<?> setHeadYaw(float headYaw) {
         this.headYaw = headYaw;
         return this;
     }
@@ -192,7 +197,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public TrackedEntity<?, ?> setVelocity(double velocityX, double velocityY, double velocityZ) {
+    public TrackedEntity<?> setVelocity(double velocityX, double velocityY, double velocityZ) {
         this.velocityX = velocityX;
         this.velocityY = velocityY;
         this.velocityZ = velocityZ;
@@ -208,13 +213,12 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
      * THIS METHOD IS ONLY SAFE TO CALL FROM THE PLAYER's NETTY THREAD
      */
     @Override
-    public TrackedEntity<?, ?> setOnGround(boolean onGround) {
+    public TrackedEntity<?> setOnGround(boolean onGround) {
         this.onGround = onGround;
         return this;
     }
 
-    @Override
-    public EntityType entityType() {
+    public int entityType() {
         return entityType;
     }
 
@@ -224,7 +228,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
     }
 
     @Override
-    public TrackedEntity<?, ?> setEntityData(int entityData) {
+    public TrackedEntity<?> setEntityData(int entityData) {
         this.entityData = entityData;
         return this;
     }
@@ -236,7 +240,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
     }
 
     @Override
-    public TrackedEntity<?, ?> setPassengerIDs(int[] passengerIDs) {
+    public TrackedEntity<?> setPassengerIDs(int[] passengerIDs) {
         PASSENGER_IDS.setRelease(this, passengerIDs == null ? new int[0] : passengerIDs.clone());
         return this;
     }
@@ -265,9 +269,6 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
         return PrimitiveIntArrayList.getCopyOrNull(leashedIDs);
     }
 
-    public static final int NO_VEHICLE = -1;
-    public static final int NO_LEASHER = -2;
-
     @Override
     public int leashingEntity() {
         return (int) LEASHER_ID.getOpaque(this);
@@ -284,7 +285,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
     }
 
     @Override
-    public TrackedEntity<?, ?> setPacketReplayData(PacketReplayData packetReplayData) {
+    public TrackedEntity<?> setPacketReplayData(PacketReplayData packetReplayData) {
         this.packetReplayData = packetReplayData;
         return this;
     }
@@ -353,7 +354,7 @@ public abstract class NettyEntity<EntityType, PacketReplayData extends Clearable
         double currentY = y();
         double currentZ = z();
         for (int passengerID : currentPassengerIDs) {
-            NettyEntity<?, ?> passenger = owningPlayer.entityFromID(passengerID);
+            NettyEntity<?> passenger = owningPlayer.entityFromID(passengerID);
             if (passenger != null) {
                 passenger.setVehicleID(entityID);
                 passenger.setX(currentX);

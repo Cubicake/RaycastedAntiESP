@@ -19,7 +19,7 @@ final class LeashReconciliationTask extends BaseEntitySpawnTask {
 
     @Override
     public void run() {
-        NettyEntity<?,?> leashed = playerData.entityFromID(leashedEntityID);
+        NettyEntity<?> leashed = playerData.entityFromID(leashedEntityID);
         if (leashed == null) {
             Logger.error("Reconciliation fail: Attempted to reconcile leash for unknown leashed entity, leashedEntityId=" + leashedEntityID, 3, this.getClass());
             return;
