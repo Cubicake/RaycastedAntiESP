@@ -4,6 +4,7 @@ import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
 import ca.spottedleaf.concurrentutil.map.SWMRHashTable;
 import games.cubi.locatables.api.Spatial;
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.config.raycast.EntityTypeExclusions;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.SingleThreadedGuard;
@@ -201,7 +202,10 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
             return 0;
         }
         if (countingActuallyNeeded) {
-            return entitiesByUUID.forEachValueCounted( (entity) -> {
+            return entitiesByUUID.forEachValueCounted(entity -> {
+                if (keepExcludedEntityVisible(entity, currentTick, expectedWorldEpoch)) {
+                    return false;
+                }
                 if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
                     return false;
                 }
@@ -209,13 +213,28 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
                 return true;
             });
         }
-        entitiesByUUID.forEachValue( (entity) -> {
+        entitiesByUUID.forEachValue(entity -> {
+            if (keepExcludedEntityVisible(entity, currentTick, expectedWorldEpoch)) {
+                return;
+            }
             if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
                 return;
             }
             action.accept(entity);
         });
         return 0;
+    }
+
+    private boolean keepExcludedEntityVisible(PacketEventsEntity entity, int currentTick, int expectedWorldEpoch) {
+        if (isPlayerView || !EntityTypeExclusions.excludes(entity.entityType())) {
+            return false;
+        }
+        if (entity.visible()) {
+            entity.setLastChecked(currentTick);
+        } else {
+            setVisibility(entity, true, currentTick, expectedWorldEpoch);
+        }
+        return true;
     }
 
     @Override
