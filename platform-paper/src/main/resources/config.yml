@@ -18,6 +18,7 @@ checks:
         hide-on-spawn-distance: 24
         visible-recheck-interval-ticks: 5
         keep-client-entity-when-hidden: true
+        excluded-types: []
     tile-entity:
         enabled: true
         max-occluding-count: 3
