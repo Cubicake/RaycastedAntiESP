@@ -1,0 +1,29 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
+package games.cubi.raycastedantiesp.core.entity;
+
+import games.cubi.raycastedantiesp.core.utils.AppendingMTIntSet;
+
+/**
+ * Global append-only registry of entity IDs which RaycastedAntiESP must ignore.
+ */
+public final class EntityBypassRegistry {
+    private static final AppendingMTIntSet BYPASSED_ENTITY_IDS = AppendingMTIntSet.get();
+
+    private EntityBypassRegistry() {
+    }
+
+    public static AppendingMTIntSet bypassedEntityIDs() {
+        return BYPASSED_ENTITY_IDS;
+    }
+
+    public static boolean isBypassed(int entityID) {
+        return BYPASSED_ENTITY_IDS.contains(entityID);
+    }
+}
