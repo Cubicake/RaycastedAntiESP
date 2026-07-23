@@ -10,15 +10,14 @@ package games.cubi.raycastedantiesp.paper.packets;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
-import com.github.retrooper.packetevents.wrapper.PacketWrapper;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSpawnEntity;
-import games.cubi.logs.Logger;
+import com.github.retrooper.packetevents.event.PacketSendEvent;
+import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.wrapper.play.server.*;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityTypeExclusions;
-import games.cubi.raycastedantiesp.core.players.PlayerData;
-import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
+import games.cubi.raycastedantiesp.core.entity.EntityBypassRegistry;
 import games.cubi.raycastedantiesp.packetevents.viewcontrollers.PacketEventsEntityViewController;
 
-import java.util.UUID;
 import java.util.function.IntSupplier;
 
 public class PaperPacketEventsEntityViewController extends PacketEventsEntityViewController {
@@ -29,31 +28,72 @@ public class PaperPacketEventsEntityViewController extends PacketEventsEntityVie
     }
 
     @Override
-    protected boolean handleEntitySpawn(PacketWrapper<?> packet, int entityID, boolean isPlayer,
-                                        PlayerData playerData, UUID world, int currentTick) {
-        if (isPlayer || world == null) {
-            return super.handleEntitySpawn(packet, entityID, isPlayer, playerData, world, currentTick);
+    public void onPacketSend(PacketSendEvent event) {
+        if (shouldBypass(event)) {
+            return;
         }
+        super.onPacketSend(event);
+    }
 
-        WrapperPlayServerSpawnEntity spawnPacket = (WrapperPlayServerSpawnEntity) packet;
-        int entityType = spawnPacket.getEntityType().getId(
+    private boolean shouldBypass(PacketSendEvent event) {
+        return switch (event.getPacketType()) {
+            case PacketType.Play.Server.SPAWN_ENTITY -> shouldBypassSpawn(new WrapperPlayServerSpawnEntity(event));
+            case PacketType.Play.Server.ENTITY_ANIMATION -> isBypassed(new WrapperPlayServerEntityAnimation(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_STATUS -> isBypassed(new WrapperPlayServerEntityStatus(event).getEntityId());
+            case PacketType.Play.Server.HURT_ANIMATION -> isBypassed(new WrapperPlayServerHurtAnimation(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_RELATIVE_MOVE -> isBypassed(new WrapperPlayServerEntityRelativeMove(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_RELATIVE_MOVE_AND_ROTATION -> isBypassed(new WrapperPlayServerEntityRelativeMoveAndRotation(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_TELEPORT -> isBypassed(new WrapperPlayServerEntityTeleport(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_POSITION_SYNC -> isBypassed(new WrapperPlayServerEntityPositionSync(event).getId());
+            case PacketType.Play.Server.ENTITY_ROTATION -> isBypassed(new WrapperPlayServerEntityRotation(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_HEAD_LOOK -> isBypassed(new WrapperPlayServerEntityHeadLook(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_METADATA -> isBypassed(new WrapperPlayServerEntityMetadata(event).getEntityId());
+            case PacketType.Play.Server.REMOVE_ENTITY_EFFECT -> isBypassed(new WrapperPlayServerRemoveEntityEffect(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_EQUIPMENT -> isBypassed(new WrapperPlayServerEntityEquipment(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_VELOCITY -> isBypassed(new WrapperPlayServerEntityVelocity(event).getEntityId());
+            case PacketType.Play.Server.ENTITY_EFFECT -> isBypassed(new WrapperPlayServerEntityEffect(event).getEntityId());
+            case PacketType.Play.Server.UPDATE_ATTRIBUTES -> isBypassed(new WrapperPlayServerUpdateAttributes(event).getEntityId());
+            case PacketType.Play.Server.SET_PASSENGERS -> {
+                WrapperPlayServerSetPassengers packet = new WrapperPlayServerSetPassengers(event);
+                yield isBypassed(packet.getEntityId()) || containsBypassed(packet.getPassengers());
+            }
+            case PacketType.Play.Server.ATTACH_ENTITY -> {
+                WrapperPlayServerAttachEntity packet = new WrapperPlayServerAttachEntity(event);
+                yield isBypassed(packet.getAttachedId()) || isBypassed(packet.getHoldingId());
+            }
+            case PacketType.Play.Server.DESTROY_ENTITIES -> containsBypassed(new WrapperPlayServerDestroyEntities(event).getEntityIds());
+            default -> false;
+        };
+    }
+
+    private boolean shouldBypassSpawn(WrapperPlayServerSpawnEntity packet) {
+        int entityID = packet.getEntityId();
+        if (isBypassed(entityID)) {
+            return true;
+        }
+        if (packet.getEntityType().isInstanceOf(EntityTypes.PLAYER)) {
+            return false;
+        }
+        int entityType = packet.getEntityType().getId(
                 PacketEvents.getAPI().getServerManager().getVersion().toClientVersion()
         );
         if (!EntityTypeExclusions.excludes(entityType)) {
-            return super.handleEntitySpawn(packet, entityID, false, playerData, world, currentTick);
+            return false;
         }
+        EntityBypassRegistry.bypassedEntityIDs().add(entityID);
+        return true;
+    }
 
-        NettyEntity<?> entity = Logger.requireNonNull(
-                processEntitySpawn(playerData, packet, world, currentTick),
-                "processEntitySpawn returned null",
-                3,
-                PaperPacketEventsEntityViewController.class
-        );
-        entity.setVisible(true);
-        entity.setClientVisible(true);
-        entity.setLastChecked(currentTick);
-        insertEntityToEntityView(entity, playerData, world);
-        playerData.nettyData().runPendingPostSpawnTaskForEntity(entityID);
+    private static boolean isBypassed(int entityID) {
+        return EntityBypassRegistry.isBypassed(entityID);
+    }
+
+    private static boolean containsBypassed(int[] entityIDs) {
+        for (int entityID : entityIDs) {
+            if (isBypassed(entityID)) {
+                return true;
+            }
+        }
         return false;
     }
 }
