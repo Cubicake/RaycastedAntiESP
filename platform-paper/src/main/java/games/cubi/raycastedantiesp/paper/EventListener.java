@@ -3,6 +3,7 @@ package games.cubi.raycastedantiesp.paper;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import com.destroystokyo.paper.event.server.ServerTickStartEvent;
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
@@ -53,7 +54,9 @@ public class EventListener extends PaperListener {
             return;
         }
 
-        if (player.hasPermission("raycastedantiesp.updatecheck") && (playerData.getJoinTick() - currentTickSupplier.getAsInt() < 10)) { //todo: centralise permission strings to prevent issues when perm names are changed
+        if (ConfigManager.get().getUpdateConfig().notifyIngame()
+                && player.hasPermission("raycastedantiesp.updatecheck")
+                && (playerData.getJoinTick() - currentTickSupplier.getAsInt() < 10)) { //todo: centralise permission strings to prevent issues when perm names are changed
             checkForUpdates(plugin, player);
         }
 

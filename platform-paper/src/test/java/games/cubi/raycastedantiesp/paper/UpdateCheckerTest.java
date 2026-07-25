@@ -47,6 +47,7 @@ class UpdateCheckerTest {
             version("17.41.263"),
             version("12.0.103"),
             List.of(entry("17.41.264-Paper-12.0.103", UpdateChecker.UpdateChannel.STABLE)),
+            true,
             false,
             false
         );
@@ -60,6 +61,7 @@ class UpdateCheckerTest {
             version("17.41.264"),
             version("12.0.102"),
             List.of(entry("17.41.264-Paper-12.0.103", UpdateChecker.UpdateChannel.STABLE)),
+            true,
             false,
             false
         );
@@ -73,6 +75,7 @@ class UpdateCheckerTest {
             version("17.41.265"),
             version("12.0.102"),
             List.of(entry("17.41.264-Paper-12.0.103", UpdateChecker.UpdateChannel.STABLE)),
+            true,
             false,
             false
         );
@@ -130,6 +133,7 @@ class UpdateCheckerTest {
             version("17.41.264"),
             version("12.0.103"),
             List.of(entry("1.6.5", UpdateChecker.UpdateChannel.STABLE)),
+            true,
             false,
             false
         );
@@ -144,6 +148,7 @@ class UpdateCheckerTest {
             version("17.41.264"),
             version("12.0.103"),
             List.of(entry("17.41.264-Paper-12.0.104-SNAPSHOT+build-2026-07-08+git-abcdef12", UpdateChecker.UpdateChannel.STABLE)),
+            true,
             false,
             false
         );
@@ -152,26 +157,34 @@ class UpdateCheckerTest {
     }
 
     @Test
-    void betaAndAlphaCanBeDisabledIndependently() {
+    void channelsCanBeDisabledIndependently() {
         List<UpdateChecker.VersionEntry> entries = List.of(
             entry("17.41.264-Paper-12.0.104", UpdateChecker.UpdateChannel.BETA),
             entry("17.41.264-Paper-12.0.105", UpdateChecker.UpdateChannel.ALPHA),
             entry("17.41.264-Paper-12.0.103", UpdateChecker.UpdateChannel.STABLE)
         );
 
-        UpdateChecker.UpdateCheckReport alphaOnly = UpdateChecker.checkVersions(version("17.41.264"), version("12.0.103"), entries, false, true);
+        UpdateChecker.UpdateCheckReport alphaOnly = UpdateChecker.checkVersions(version("17.41.264"), version("12.0.103"), entries, true, false, true);
         assertEquals(2, alphaOnly.results().size());
         assertResult(alphaOnly, 0, UpdateChecker.UpdateStatus.UP_TO_DATE, UpdateChecker.UpdateChannel.STABLE);
         assertResult(alphaOnly, 1, UpdateChecker.UpdateStatus.BEHIND, UpdateChecker.UpdateChannel.ALPHA);
 
-        UpdateChecker.UpdateCheckReport betaOnly = UpdateChecker.checkVersions(version("17.41.264"), version("12.0.103"), entries, true, false);
+        UpdateChecker.UpdateCheckReport betaOnly = UpdateChecker.checkVersions(version("17.41.264"), version("12.0.103"), entries, true, true, false);
         assertEquals(2, betaOnly.results().size());
         assertResult(betaOnly, 0, UpdateChecker.UpdateStatus.UP_TO_DATE, UpdateChecker.UpdateChannel.STABLE);
         assertResult(betaOnly, 1, UpdateChecker.UpdateStatus.BEHIND, UpdateChecker.UpdateChannel.BETA);
 
-        UpdateChecker.UpdateCheckReport stableOnly = UpdateChecker.checkVersions(version("17.41.264"), version("12.0.103"), entries, false, false);
+        UpdateChecker.UpdateCheckReport stableOnly = UpdateChecker.checkVersions(version("17.41.264"), version("12.0.103"), entries, true, false, false);
         assertEquals(1, stableOnly.results().size());
         assertResult(stableOnly, 0, UpdateChecker.UpdateStatus.UP_TO_DATE, UpdateChecker.UpdateChannel.STABLE);
+
+        UpdateChecker.UpdateCheckReport prereleaseOnly = UpdateChecker.checkVersions(version("17.41.264"), version("12.0.103"), entries, false, true, true);
+        assertEquals(2, prereleaseOnly.results().size());
+        assertResult(prereleaseOnly, 0, UpdateChecker.UpdateStatus.BEHIND, UpdateChecker.UpdateChannel.BETA);
+        assertResult(prereleaseOnly, 1, UpdateChecker.UpdateStatus.BEHIND, UpdateChecker.UpdateChannel.ALPHA);
+
+        UpdateChecker.UpdateCheckReport none = UpdateChecker.checkVersions(version("17.41.264"), version("12.0.103"), entries, false, false, false);
+        assertEquals(0, none.results().size());
     }
 
     @Test
@@ -180,6 +193,7 @@ class UpdateCheckerTest {
             version("17.41.265"),
             version("12.0.103"),
             List.of(entry("17.41.264-Paper-12.0.103", UpdateChecker.UpdateChannel.STABLE)),
+            true,
             false,
             false
         );
