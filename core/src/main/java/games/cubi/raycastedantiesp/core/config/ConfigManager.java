@@ -191,6 +191,10 @@ public class ConfigManager {
         return current == null ? null : current.debugConfig();
     }
 
+    public UpdateConfig getUpdateConfig() {
+        return activeConfig().updateConfig();
+    }
+
     public EngineConfig getEngineConfig() {
         return activeConfig().engineConfig();
     }
@@ -227,6 +231,7 @@ public class ConfigManager {
         EngineConfig engineConfig = EngineConfig.load(loaded);
         BlockProcessorConfig blockProcessorConfig = BlockProcessorConfig.load(loaded);
         DebugConfig debugConfig = DebugConfig.load(loaded);
+        UpdateConfig updateConfig = UpdateConfig.load(loaded);
         Map<Class<? extends Config>, Config> extensionConfigs = new LinkedHashMap<>();
         for (ConfigExtension<? extends Config> extension : extensions) {
             extensionConfigs.put(extension.type(), extension.load(loaded, blockProcessorConfig));
@@ -236,7 +241,7 @@ public class ConfigManager {
             throw new ConfigLoadException("checks.chunk-section.enabled must be false when block-processor.track-all-blocks is false");
         }
 
-        return new RootConfig(version, checksConfig, engineConfig, blockProcessorConfig, debugConfig, Map.copyOf(extensionConfigs));
+        return new RootConfig(version, checksConfig, engineConfig, blockProcessorConfig, debugConfig, updateConfig, Map.copyOf(extensionConfigs));
     }
 
     private void validateReload(RootConfig next) {
