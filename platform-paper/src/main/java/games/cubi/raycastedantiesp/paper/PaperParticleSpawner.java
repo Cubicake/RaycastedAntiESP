@@ -18,6 +18,7 @@ public class PaperParticleSpawner implements ParticleSpawner {
         Objects.requireNonNull(Bukkit.getWorld(locatable.world())).spawnParticle(Particle.DUST, locatable.x(), locatable.y(), locatable.z(), 0, toBukkitDust(colour));
     }
 
+    //While not strictly-speaking thread-safe since bukkit player data is accessed, this effectively just dispatches a packet and should not cause any issues when called async.
     public void spawnParticleAt(UUID worldUUID, Spatial spatial, Colour colour) {
         World world = Logger.requireNonNull(LocatableAdapterUtils.getWorld(worldUUID), "UUID resolved to nonexistent world", 2, PaperParticleSpawner.class);
         world.spawnParticle(Particle.DUST, spatial.x(), spatial.y(), spatial.z(), 0, toBukkitDust(colour));

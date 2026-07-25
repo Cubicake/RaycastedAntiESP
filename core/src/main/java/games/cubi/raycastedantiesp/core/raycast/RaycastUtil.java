@@ -9,7 +9,10 @@ import games.cubi.raycastedantiesp.core.view.BlockView;
 
 public class RaycastUtil {
 
-//True: Has line-of-sight
+    //True: Has line-of-sight
+    //This is deliberately a ray-stepping algorithm rather than DDA as it is much faster (2x in benchmarking)
+    //Missing blocks is acceptable, as it will be assumed the player can see past those corners.
+    //While this uses objects, JHM and in-game profiling have both shown that all objects used here are consistently scalarised by the JVM.
     public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, int stepSize, ParticleSpawner particleSpawner) {
         MutableFloatingSpatial clonedEnd = end.cloneAndIfBlockThenCentre();
         double total = start.distance(clonedEnd) - stepSize; //benchmarking shows that calling distance() is faster than distanceSquared() then checking distanceSquared < stepSize*stepSize every time despite the latter replacing a square root with multiplication
