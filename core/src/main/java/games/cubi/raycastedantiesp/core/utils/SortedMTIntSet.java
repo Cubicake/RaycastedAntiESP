@@ -11,8 +11,12 @@ package games.cubi.raycastedantiesp.core.utils;
 import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 
-public class IncrementingMTIntSet implements AppendingMTIntSet {
-    private volatile int[] values = new int[0]; private static final VarHandle VALUES = VarHandler.get(IncrementingMTIntSet.class, "values", int[].class);
+/**
+ * A thread-safe copy-on-write int set where values are stored in ascending order.
+ * Designed for highly concurrent reads and rare writes.
+ */
+public class SortedMTIntSet implements CopyOnWriteMTIntSet {
+    private volatile int[] values = new int[0]; private static final VarHandle VALUES = VarHandler.get(SortedMTIntSet.class, "values", int[].class);
 
     public boolean contains(int value) {
         int[] valueSnapshot = (int[]) VALUES.getAcquire(this);
