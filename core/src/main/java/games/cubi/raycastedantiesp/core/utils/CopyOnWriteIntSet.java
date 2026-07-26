@@ -38,4 +38,17 @@ public class CopyOnWriteIntSet implements AppendingMTIntSet {
             if (success) return;
         }
     }
+
+    public boolean remove(int value) {
+        while (true) {
+            IntOpenHashSet oldSet = (IntOpenHashSet) BACKING_SET.getAcquire(this);
+            if (!oldSet.contains(value)) return false;
+
+            IntOpenHashSet newSet = oldSet.clone();
+            boolean setSuccess = newSet.remove(value);
+            boolean casSuccess = BACKING_SET.weakCompareAndSetRelease(this, oldSet, newSet);
+            if (!setSuccess) throw new IllegalStateException("Backing set was mutated after publication");
+            if (casSuccess) return true;
+        }
+    }
 }

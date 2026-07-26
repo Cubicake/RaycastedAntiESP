@@ -37,4 +37,20 @@ public class IncrementingMTIntSet implements AppendingMTIntSet {
             if (success) return;
         }
     }
+
+    public boolean remove(int value) {
+        while (true) {
+            int[] oldValues = (int[]) VALUES.getAcquire(this);
+            int result = Arrays.binarySearch(oldValues, value);
+
+            if (result < 0) return false; //not in array
+            int[] newValues = new int[oldValues.length - 1];
+
+            System.arraycopy(oldValues, 0, newValues, 0, result);
+            System.arraycopy(oldValues, result + 1, newValues, result, oldValues.length - result - 1);
+
+            boolean success = VALUES.weakCompareAndSetRelease(this, oldValues, newValues);
+            if (success) return true;
+        }
+    }
 }
