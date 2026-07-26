@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.engine;
 
 import games.cubi.locatables.api.ImmutableSpatial;
@@ -8,6 +16,7 @@ import games.cubi.raycastedantiesp.core.config.DebugConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.TileEntityConfig;
+import games.cubi.raycastedantiesp.core.entity.EntityBypassRegistry;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
@@ -370,7 +379,7 @@ public abstract class AsyncEngine implements Engine {
 
         int checked = entityView.forEachNeedingRecheckEntity(entityConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), worldEpoch, entity -> {
             boolean wasVisible = entity.visible();
-            if (attachedToSelf(player, entityView, entity, currentTick, worldEpoch)) {
+            if (attachedToAlwaysVisibleEntityOrSelf(player, entityView, entity, currentTick, worldEpoch)) {
                 return;
             }
             ImmutableSpatial entityLocation = entity.getOffsetPosition();
@@ -394,7 +403,7 @@ public abstract class AsyncEngine implements Engine {
 
         int checked = playerView.forEachNeedingRecheckEntity(playerConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), worldEpoch, otherPlayer -> {
             boolean wasVisible = otherPlayer.visible();
-            if (attachedToSelf(player, playerView, otherPlayer, currentTick, worldEpoch)) {
+            if (attachedToAlwaysVisibleEntityOrSelf(player, playerView, otherPlayer, currentTick, worldEpoch)) {
                 return;
             }
             ImmutableSpatial otherPlayerLocation = otherPlayer.getOffsetPosition();
@@ -413,10 +422,11 @@ public abstract class AsyncEngine implements Engine {
         timings.addPlayerChecked(checked);
     }
 
-    private boolean attachedToSelf(PlayerData player, EntityView<?> view, NettyEntity<?> entity, int currentTick, int worldEpoch) {
+    private boolean attachedToAlwaysVisibleEntityOrSelf(PlayerData player, EntityView<?> view, NettyEntity<?> entity, int currentTick, int worldEpoch) {
         int selfEntityID = player.nettyData().getSelfEntityID();
         if (!player.nettyData().isSelfEntityID(entity.leashingEntity())
                 && !player.nettyData().isSelfEntityID(entity.vehicleID())
+                && !EntityBypassRegistry.isBypassed(entity.vehicleID())
                 && !PrimitiveIntArrayList.contains(entity.passengerIDs(), selfEntityID)) {
             return false;
         }
