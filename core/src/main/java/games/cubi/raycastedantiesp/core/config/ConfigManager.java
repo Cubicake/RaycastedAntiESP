@@ -244,16 +244,16 @@ public class ConfigManager {
             return;
         }
         if (next.engineConfig().mode() != startupConfig.engineConfig().mode()) {
-            throw new RestartRequiredException("engine.mode cannot be changed without a restart");
+            throw new RestartRequiredException("engine.mode cannot be changed without a restart.");
         }
         if (!next.blockProcessorConfig().equals(startupConfig.blockProcessorConfig())) {
-            throw new RestartRequiredException("block-processor cannot be changed without a restart");
+            throw new RestartRequiredException("block-processor cannot be changed without a restart.");
         }
         if (!next.checksConfig().entityConfig().excludedTypes().equals(startupConfig.checksConfig().entityConfig().excludedTypes())) {
-            throw new RestartRequiredException("excluded entity types cannot be changed without a restart");
+            throw new RestartRequiredException("excluded entity types cannot be changed without a restart.");
         }
         if (next.checksConfig().hasEnabledStatusChanges(startupConfig.checksConfig())) {
-            throw new RestartRequiredException("player and entity checks cannot be enabled or disabled without a restart");
+            throw new RestartRequiredException("player and entity checks cannot be enabled or disabled without a restart.");
         }
         for (ConfigExtension<? extends Config> extension : extensions) {
             validateExtensionReload(extension, next);
