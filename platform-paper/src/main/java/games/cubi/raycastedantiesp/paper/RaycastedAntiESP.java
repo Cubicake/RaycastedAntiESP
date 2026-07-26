@@ -12,6 +12,7 @@ import games.cubi.raycastedantiesp.core.Core;
 import games.cubi.raycastedantiesp.paper.commands.Attribution;
 import games.cubi.raycastedantiesp.paper.commands.AttributionBrigadier;
 import games.cubi.raycastedantiesp.paper.commands.RaycastedAntiESPCommandBrigadier;
+import games.cubi.raycastedantiesp.paper.config.PaperEntityTypeExclusionResolver;
 import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
 import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcessorConfig;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
@@ -91,6 +92,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
         else {
             currentTickSupplier = new PaperTicker();
         }
+        PaperEntityTypeExclusionResolver.resolveAndInitialise(config.getEntityConfig().excludedTypes());
         PacketEventsPaperBlockInfoResolver blockInfoResolver = new PacketEventsPaperBlockInfoResolver();
         boolean trackAllBlocks = config.getBlockProcessorConfig().trackAllBlocks();
         ViewRegistry.initialise(worldEpoch -> new PacketEventsBlockView(blockInfoResolver, trackAllBlocks, worldEpoch), PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
