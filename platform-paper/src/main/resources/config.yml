@@ -53,6 +53,11 @@ checks:
             - minecraft:item_display
             - minecraft:interaction
             - minecraft:mannequin
+            # Falling blocks are often used in custom mechanics, especially by plugins made before display entities were added to the game.
+            # Therefore, exempting them can make sense. However, falling blocks also occur in regular gameplay,
+            # and can provide insight about players which are not visible.
+            # Therefore, falling blocks are not exempted by default.
+            #- minecraft:falling_block
 
             # You can add more excluded types using the name for the entity which would be used by the /summon <entity> command, adding "- <entity>" to the list above.
     tile-entity:
