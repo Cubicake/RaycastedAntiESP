@@ -1,5 +1,5 @@
-RaycastedAntiESP is a packet-based plugin for Paper, Folia, and its forks that hides entities (including players) and tile entities (blocks such as chests, banners, signs, etc) from players if they would not be visible to a legitimate player.
-This limits the usefulness of unfair advantages such as cheat clients, freecam, xray, or pie-ray.
+RaycastedAntiESP is a packet-based plugin for Paper, Folia, and its forks that hides entities (including players) and tile entities (blocks such as chests, banners, signs, etc) from players if they would not be visible to a legitimate player. It is **unbypassable** by design, as packets sent by the server are blocked from reaching the client unless the block/entity has been confirmed to be visible.
+This limits the usefulness of unfair advantages such as cheat clients, freecam, and x-ray, and completely blocks pie-ray.
 
 ### Supported Versions
 While the current "stable" plugin version is v1.6.5, it is strongly recommended that you use the [alpha-channel builds](https://modrinth.com/plugin/raycasted-anti-esp/versions?c=alpha) instead. Since v1.6.5, RaycastedAntiESP has been:
@@ -11,19 +11,19 @@ The supported minecraft versions are 1.21.4+. Only Paper and derivative software
 ## Use cases:
 
 - Prevent cheating (anti-esp hacks)
-  - Block usage of pie-ray to locate underground bases
+  - Block usage of pie-ray to locate underground bases or farms
   - Prevent mods such as mini-maps or cheat clients from displaying the locations of hidden entities
 - Increase client-side performance for low-end devices
   - Massive megabases containing hundreds of armour stands, item frames, banners etc can cause performance issues on low-end devices unable to process so many entities. Raycasted AntiESP will cull those entities for the client, reducing the number of entities to process.
 - Hide nametags behind walls
-  - Yes, this plugin is a bit overkill for doing that, yes you can do it anyways.
+  - Yes, this plugin is overkill for doing that, yes you can do it anyways.
  
 ## Dependencies:
 - Packetevents
   - Required for all features, as packets are intercepted and rewritten to make sure that clients never learn about anything they should not be able to see.
 
 ## Known issues:
-- Due to the nature of the plugin, there will be a short delay once an entity should be visible before it appears, causing it to appear like it "popped" into view.
+- There will be a short delay once an entity should be visible before it appears, causing it to appear like it "popped" into view. Various config options exist to partially address this issue, though all such options necessarily weaken the plugin's ability to block cheaters.
 
 ## Versioning:
 Note that the following versioning information only applies to v2 and beyond, and alpha versions of v2 start with a major version number of 0 rather than 2.
