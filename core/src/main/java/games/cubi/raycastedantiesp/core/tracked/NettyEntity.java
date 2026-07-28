@@ -27,7 +27,7 @@ import java.util.UUID;
  */
 public abstract class NettyEntity<PacketReplayData extends Clearable> implements TrackedEntity<PacketReplayData> {
     // immutable fields
-    private final int entityID;
+    private final int entityID; // Note that, while rare, entity ids will be negative once the entity id counter overflows.
     private final UUID entityUUID;
     private final boolean isSelfEntity;
     private final int entityType;
