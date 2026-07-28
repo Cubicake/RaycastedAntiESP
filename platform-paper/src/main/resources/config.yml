@@ -103,4 +103,4 @@ updates:
     check-release: true
     check-beta: true
     check-alpha: true
-    notify-ingame: true # When false, update checks only notify the console (and the check-for-updates command)
+    notify-ingame: true # When false, update checks only notify the console
