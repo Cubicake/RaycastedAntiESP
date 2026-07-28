@@ -15,7 +15,9 @@ import games.cubi.raycastedantiesp.core.utils.CopyOnWriteMTIntSet;
  */
 public final class EntityBypassRegistry {
     private static final CopyOnWriteMTIntSet BYPASSED_ENTITY_IDS = CopyOnWriteMTIntSet.get();
-
+    // Technically, (26.2+) Minecraft only guarantees that an entity ID corresponds to one-and-only-one entity within a single world, and entities in different worlds can have the same ID.
+    //              (26.1.2-) Minecraft does not guarantee that an entity ID is unique.
+    // However, this requires the int id counter to overflow from Integer.MAX_VALUE all the way back to 0. This is unlikely to occur, and even if it does occur, it is unlikely that the original entities are still alive.
     private EntityBypassRegistry() {
     }
 
