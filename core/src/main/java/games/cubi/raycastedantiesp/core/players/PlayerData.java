@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.players;
 
 import games.cubi.locatables.api.Locatable;
@@ -9,6 +17,7 @@ import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
 import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.VarHandle;
 import java.util.Objects;
@@ -165,7 +174,7 @@ public class PlayerData {
         return null;
     }
 
-    public NettyEntity<?> entityFromID(int entityID) {
+    public @Nullable NettyEntity<?> entityFromID(int entityID) {
         if (nettyData.isSelfEntityID(entityID)) {
             return nettyData.getSelfEntity();
         }
