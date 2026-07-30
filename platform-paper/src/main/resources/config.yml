@@ -38,6 +38,7 @@ checks:
             - minecraft:area_effect_cloud
             - minecraft:lingering_potion
             - minecraft:splash_potion
+            - minecraft:potion # Note: the "potion" entity was removed in 1.21.5 and replaced with "splash_potion" and "lingering_potion". If you are on 1.21.4, you can comment out the above two entry. If you are on 1.21.5+ you should instead comment out this entry.
 
             # Lightning is short-lived and expected to be visible to people who cannot see the block being struck.
             - minecraft:lightning_bolt
