@@ -13,6 +13,7 @@ import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.RaycastConfig;
+import games.cubi.raycastedantiesp.core.entity.EntityBypassRegistry;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.NettyData;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
@@ -243,7 +244,8 @@ public abstract class PacketEntityViewController<P> {
      * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
      */
     protected boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick) {
-        NettyEntity<?> vehicle = playerData.entityFromID(entityID);
+        boolean bypassedVehicle = EntityBypassRegistry.isBypassed(entityID);
+        NettyEntity<?> vehicle = bypassedVehicle ? null : playerData.entityFromID(entityID);
         int[] previousPassengers = getPreviousPassengerState(entityID, vehicle, playerData);
         playerData.nettyData().consumeUnresolvedPassengers(entityID); // throw away any unresolved passengers as this new packet will have the correct passenger list
         // "Stale" passengers are passengers that the previous authoritative state said were mounted,
@@ -251,6 +253,16 @@ public abstract class PacketEntityViewController<P> {
         clearStalePassengerReferences(entityID, previousPassengers, passengers, playerData);
         if (vehicle == null) {
             playerData.nettyData().setUnresolvedPassengers(entityID, passengers);
+            if (bypassedVehicle) {
+                for (int passengerID : passengers) {
+                    NettyEntity<?> passenger = playerData.entityFromID(passengerID);
+                    if (passenger == null) {
+                        continue;
+                    }
+                    passenger.setVehicleID(entityID);
+                    forceVisibleBecauseAttached(passenger, playerData, currentTick, "bypassed vehicle passenger");
+                }
+            }
             return false;
         }
         return handleEntityPassengersNow(vehicle, passengers, playerData, currentTick);
@@ -275,7 +287,7 @@ public abstract class PacketEntityViewController<P> {
         }
         playerData.nettyData().setUnresolvedPassengers(entityID, unresolvedPassengers);
         checkVehicle(entity, playerData);
-        boolean cancelForForcedVehicleShow = selfIsPassenger && forceVisibleBecauseAttachedToSelf(entity, playerData, currentTick, "self-passenger vehicle");
+        boolean cancelForForcedVehicleShow = selfIsPassenger && forceVisibleBecauseAttached(entity, playerData, currentTick, "self-passenger vehicle");
         if (cancelForForcedVehicleShow) {
             return true;
         }
@@ -283,21 +295,26 @@ public abstract class PacketEntityViewController<P> {
         boolean passengersNotVisible = false;
         IntArrayList visiblePassengers = new IntArrayList(passengers.length);
         for (int passengerID : passengers) {
-            NettyEntity<?> passenger = playerData.entityFromID(passengerID);
-            if (passenger == null) {
+            if (EntityBypassRegistry.isBypassed(passengerID)) {
                 visiblePassengers.add(passengerID);
-            }
-            else if (entity.isSelfEntity() && forceVisibleBecauseAttachedToSelf(passenger, playerData, currentTick, "self-vehicle passenger")) {
-                passengersNotVisible = true;
-            }
-            else if (entity.isSelfEntity() || passenger.isSelfEntity()) {
-                visiblePassengers.add(passengerID);
-            }
-            else if (cancelIfEnabledAndHidden(passenger, playerData)) {
-                passengersNotVisible = true;
             }
             else {
-                visiblePassengers.add(passengerID);
+                NettyEntity<?> passenger = playerData.entityFromID(passengerID);
+                if (passenger == null) {
+                    visiblePassengers.add(passengerID);
+                }
+                else if (entity.isSelfEntity() && forceVisibleBecauseAttached(passenger, playerData, currentTick, "self-vehicle passenger")) {
+                    passengersNotVisible = true;
+                }
+                else if (entity.isSelfEntity() || passenger.isSelfEntity()) {
+                    visiblePassengers.add(passengerID);
+                }
+                else if (cancelIfEnabledAndHidden(passenger, playerData)) {
+                    passengersNotVisible = true;
+                }
+                else {
+                    visiblePassengers.add(passengerID);
+                }
             }
         }
         if (passengersNotVisible) {
@@ -338,7 +355,7 @@ public abstract class PacketEntityViewController<P> {
 
     private void checkVehicle(NettyEntity<?> entity, PlayerData playerData) {
         int vehicleID = entity.vehicleID();
-        if (vehicleID < 0) {
+        if (vehicleID == NO_VEHICLE) {
             return;
         }
         NettyEntity<?> vehicle = playerData.entityFromID(vehicleID);
@@ -357,8 +374,7 @@ public abstract class PacketEntityViewController<P> {
                 continue;
             }
             clearPassengerReferencesForDestroyedEntity(entityID, playerData);
-            clearPendingHolderReference(entityID, playerData);
-            playerData.nettyData().removeUnresolvedLeashedEntityFromAll(entityID);
+            clearLeashReferencesForDestroyedEntity(entityID, playerData);
             playerData.nettyData().clearPendingPostSpawnTasksForEntity(entityID);
             EntityView<?> view = playerData.viewFromEntityID(entityID);
             if (view == null) continue;
@@ -424,16 +440,53 @@ public abstract class PacketEntityViewController<P> {
         entity.setVehicleID(NO_VEHICLE);
     }
 
-    private void clearPendingHolderReference(int holderEntityID, PlayerData playerData) {
-        int[] pendingLeashedEntityIDs = playerData.nettyData().consumeUnresolvedLeashes(holderEntityID);
-        if (PrimitiveIntArrayList.isEmpty(pendingLeashedEntityIDs)) {
+    /**
+     * Clears both sides of resolved and unresolved leash relationships so a reused entity ID
+     * cannot inherit relationships belonging to the destroyed entity.
+     */
+    private void clearLeashReferencesForDestroyedEntity(int entityID, PlayerData playerData) {
+        // Deferred relationships are indexed by both endpoints, so clear the cases where this ID
+        // was the holder and where it was the leashed entity.
+        int[] pendingLeashedEntityIDs = playerData.nettyData().consumeUnresolvedLeashes(entityID);
+        if (!PrimitiveIntArrayList.isEmpty(pendingLeashedEntityIDs)) {
+            for (int leashedEntityID : pendingLeashedEntityIDs) {
+                NettyEntity<?> leashedEntity = playerData.entityFromID(leashedEntityID);
+                if (leashedEntity != null && leashedEntity.leashingEntity() == entityID) {
+                    leashedEntity.setLeashingEntity(NO_LEASHER);
+                }
+            }
+        }
+
+        int pendingHolderEntityID = playerData.nettyData().consumeUnresolvedHolderForLeashedEntity(entityID);
+        if (pendingHolderEntityID != NO_LEASHER) {
+            NettyEntity<?> pendingHolder = playerData.entityFromID(pendingHolderEntityID);
+            if (pendingHolder != null) {
+                pendingHolder.removeLeashedEntity(entityID);
+            }
+        }
+
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
+        if (entity == null) {
             return;
         }
-        for (int leashedEntityID : pendingLeashedEntityIDs) {
-            NettyEntity<?> leashedEntity = playerData.entityFromID(leashedEntityID);
-            if (leashedEntity != null && leashedEntity.leashingEntity() == holderEntityID) {
-                leashedEntity.setLeashingEntity(NO_LEASHER);
+
+        // A tracked entity owns the same two relationship directions in its resolved state.
+        int[] currentLeashedEntityIDs = entity.leashedEntityIDsOrNull();
+        if (!PrimitiveIntArrayList.isEmpty(currentLeashedEntityIDs)) {
+            for (int leashedEntityID : currentLeashedEntityIDs) {
+                NettyEntity<?> leashedEntity = playerData.entityFromID(leashedEntityID);
+                if (leashedEntity != null && leashedEntity.leashingEntity() == entityID) {
+                    leashedEntity.setLeashingEntity(NO_LEASHER);
+                }
             }
+        }
+        int holderEntityID = entity.leashingEntity();
+        if (holderEntityID != NO_LEASHER) {
+            NettyEntity<?> holder = playerData.entityFromID(holderEntityID);
+            if (holder != null) {
+                holder.removeLeashedEntity(entityID);
+            }
+            entity.setLeashingEntity(NO_LEASHER);
         }
     }
 
@@ -449,74 +502,66 @@ public abstract class PacketEntityViewController<P> {
      * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
      */
     @Packet(Packet.Packets.LEASH_ENTITY)
-    protected boolean handleLeashEntity(int leashedEntity, int leashingEntity, PlayerData playerData, int currentTick) {
-        if (playerData.nettyData().isSelfEntityID(leashedEntity) && playerData.nettyData().isSelfEntityID(leashingEntity)) {
+    protected boolean handleLeashEntity(int leashedEntityID, int holderEntityID, PlayerData playerData, int currentTick) {
+        if (playerData.nettyData().isSelfEntityID(leashedEntityID) && playerData.nettyData().isSelfEntityID(holderEntityID)) {
             return false;
         }
-        NettyEntity<?> leashed = playerData.entityFromID(leashedEntity);
-        if (leashed == null) {
-            playerData.nettyData().addPostEntitySpawnTask(leashedEntity, new LeashReconciliationTask(playerData, leashedEntity, leashingEntity, currentTick));
-            return false;
+        NettyEntity<?> leashedEntity = playerData.entityFromID(leashedEntityID);
+        removeExistingLeashReference(leashedEntityID, leashedEntity, playerData);
+
+        if (holderEntityID == NO_LEASHER) {
+            return leashedEntity != null && cancelIfEnabledAndHidden(leashedEntity, playerData);
         }
-        return handleLeashEntityNow(leashed, leashingEntity, playerData, currentTick);
+
+        NettyEntity<?> holderEntity = playerData.entityFromID(holderEntityID);
+        if (leashedEntity != null) {
+            leashedEntity.setLeashingEntity(holderEntityID);
+        }
+        if (holderEntity != null) {
+            holderEntity.addLeashedEntity(leashedEntityID);
+        }
+        if (leashedEntity == null || holderEntity == null) {
+            playerData.nettyData().addUnresolvedLeash(holderEntityID, leashedEntityID);
+        }
+
+        if (holderEntity != null && holderEntity.isSelfEntity() && leashedEntity != null
+                && forceVisibleBecauseAttached(leashedEntity, playerData, currentTick, "self-held leash")) {
+            return true; // The visibility update repairs leash state, so suppress the packet to avoid sending it twice and before the client is aware of the entity.
+        }
+        return leashedEntity != null && cancelIfEnabledAndHidden(leashedEntity, playerData)
+                || holderEntity != null && cancelIfEnabledAndHidden(holderEntity, playerData);
     }
 
-    boolean handleLeashEntityNow(NettyEntity<?> leashedEntity, int leashingEntity, PlayerData playerData, int currentTick) {
-        //Note, leashing entity ID will be -1 to unleash. From testing it sometimes seems to be 0?
-        removeExistingLeashReference(leashedEntity.entityID(), leashedEntity, playerData);
-        if (leashingEntity == -1 || leashingEntity == 0) {
-            if (leashedEntity.leashingEntity() == NO_LEASHER) {
-                Logger.warning("Entity was already unleashing when handling leash entity packet, leashedEntityID=" + leashedEntity + " for player: " + playerData.getPlayerUUID(), 4, PacketEntityViewController.class);
-                return false;
-            }
-            leashedEntity.setLeashingEntity(NO_LEASHER);
-            return cancelIfEnabledAndHidden(leashedEntity, playerData);
-        }
-        else {
-            leashedEntity.setLeashingEntity(leashingEntity);
-            NettyEntity<?> leashing = playerData.entityFromID(leashingEntity);
-            if (leashing == null) {
-                playerData.nettyData().addUnresolvedLeash(leashingEntity, leashedEntity.entityID());
-                return cancelIfEnabledAndHidden(leashedEntity, playerData);
-            }
-            else {
-                leashing.addLeashedEntity(leashedEntity.entityID());
-                if (leashing.isSelfEntity()) {
-                    return forceVisibleBecauseAttachedToSelf(leashedEntity, playerData, currentTick, "self-held leash"); // This schedules a visibility update, which repairs leash state, so suppressing the packet avoids sending it twice (and before the client is aware of the entity)
-                }
-                return cancelIfEnabledAndHidden(leashedEntity, playerData) || cancelIfEnabledAndHidden(leashingEntity, playerData);
-            }
-        }
-    }
-
-    private boolean forceVisibleBecauseAttachedToSelf(NettyEntity<?> entity, PlayerData self, int currentTick, String reason) {
+    private boolean forceVisibleBecauseAttached(NettyEntity<?> entity, PlayerData self, int currentTick, String reason) {
         if (entity.isSelfEntity()) {
             return false;
         }
         boolean wasClientVisible = entity.clientVisible();
         EntityView<?> view = self.viewFromEntityID(entity.entityID());
         if (view == null) {
-            Logger.warning("Could not find owning view while forcing self-attached entity visible, id=" + entity.entityID() + " player=" + self.getPlayerUUID() + " reason=" + reason, 4, PacketEntityViewController.class);
+            Logger.warning("Could not find owning view while forcing attached entity visible, id=" + entity.entityID() + " player=" + self.getPlayerUUID() + " reason=" + reason, 6, PacketEntityViewController.class);
+            // Note that this path can fire when a vehicle is bypassed, so its log level must be higher than default.
             return false;
         }
         view.setVisibility(entity, true, currentTick, self.acquireWorldEpoch());
         return !wasClientVisible;
     }
 
-    private void removeExistingLeashReference(int leashedEntityID, NettyEntity<?> leashed, PlayerData playerData) {
-        int previousLeashingEntityID = leashed.leashingEntity();
+    private void removeExistingLeashReference(int leashedEntityID, NettyEntity<?> leashedEntity, PlayerData playerData) {
+        int previousLeashingEntityID = leashedEntity == null
+                ? playerData.nettyData().getUnresolvedHolderForLeashedEntity(leashedEntityID)
+                : leashedEntity.leashingEntity();
         if (previousLeashingEntityID == NO_LEASHER) {
             return;
         }
-        if (playerData.nettyData().removeUnresolvedLeash(previousLeashingEntityID, leashedEntityID)) {
-            return;
+        playerData.nettyData().removeUnresolvedLeash(previousLeashingEntityID, leashedEntityID);
+        NettyEntity<?> previousHolder = playerData.entityFromID(previousLeashingEntityID);
+        if (previousHolder != null) {
+            previousHolder.removeLeashedEntity(leashedEntityID);
         }
-        NettyEntity<?> previouslyLeashing = playerData.entityFromID(previousLeashingEntityID);
-        if (previouslyLeashing == null) {
-            Logger.warning("Found null previously leashing entity when handling leash entity packet, previouslyLeashingEntityID=" + previousLeashingEntityID + " for player: " + playerData.getPlayerUUID(), 5, PacketEntityViewController.class);
-            return;
+        if (leashedEntity != null) {
+            leashedEntity.setLeashingEntity(NO_LEASHER);
         }
-        previouslyLeashing.removeLeashedEntity(leashedEntityID);
     }
 
     protected RaycastConfig getCorrectConfig(EntityView<?> entityView) {
@@ -572,11 +617,15 @@ public abstract class PacketEntityViewController<P> {
         if (!PrimitiveIntArrayList.isEmpty(pendingPassengers)) {
             playerData.nettyData().consumeUnresolvedPassengers(insertedEntity.entityID());
             handleEntityPassengersNow(insertedEntity, pendingPassengers, playerData, insertedEntity.lastChecked());
-            resendPassengerStateIfClientVisible(insertedEntity, playerData);
         }
 
         int unresolvedVehicleID = playerData.nettyData().getUnresolvedVehicleForPassenger(insertedEntity.entityID());
         if (unresolvedVehicleID == NO_VEHICLE) {
+            return;
+        }
+        if (EntityBypassRegistry.isBypassed(unresolvedVehicleID)) {
+            insertedEntity.setVehicleID(unresolvedVehicleID);
+            forceVisibleBecauseAttached(insertedEntity, playerData, insertedEntity.lastChecked(), "bypassed vehicle unresolved passenger");
             return;
         }
         NettyEntity<?> vehicle = playerData.entityFromID(unresolvedVehicleID);
@@ -585,10 +634,88 @@ public abstract class PacketEntityViewController<P> {
         }
         insertedEntity.setVehicleID(unresolvedVehicleID);
         playerData.nettyData().removeUnresolvedPassengerLink(insertedEntity.entityID(), unresolvedVehicleID);
-        if (vehicle.isSelfEntity() && forceVisibleBecauseAttachedToSelf(insertedEntity, playerData, insertedEntity.lastChecked(), "self-vehicle unresolved passenger")) {
+        if (vehicle.isSelfEntity() && forceVisibleBecauseAttached(insertedEntity, playerData, insertedEntity.lastChecked(), "self-vehicle unresolved passenger")) {
             return;
         }
-        resendPassengerStateIfClientVisible(vehicle, playerData);
+    }
+
+    /**
+     * Reconciles relationship state which arrived before this entity was identified as bypassed.
+     * The pending records are retained because a bypassed entity will never have a tracked entity
+     * to own the authoritative relationship state.
+     */
+    protected void handleBypassedEntitySpawn(int entityID, PlayerData playerData, int currentTick) {
+        // Vanilla may send entity state before its spawn packet, and those packets were already
+        // forwarded to the client. Discard deferred tracking work rather than replaying duplicates.
+        playerData.nettyData().clearPendingPostSpawnTasksForEntity(entityID);
+        int[] pendingPassengers = playerData.nettyData().getUnresolvedPassengers(entityID);
+        if (!PrimitiveIntArrayList.isEmpty(pendingPassengers)) {
+            for (int passengerID : pendingPassengers) {
+                NettyEntity<?> passenger = playerData.entityFromID(passengerID);
+                if (passenger == null) {
+                    continue;
+                }
+                passenger.setVehicleID(entityID);
+                forceVisibleBecauseAttached(passenger, playerData, currentTick, "bypassed vehicle passenger");
+            }
+        }
+
+        int holderEntityID = playerData.nettyData().getUnresolvedHolderForLeashedEntity(entityID);
+        if (holderEntityID != NO_LEASHER) {
+            NettyEntity<?> holder = playerData.entityFromID(holderEntityID);
+            if (holder != null) {
+                holder.addLeashedEntity(entityID);
+            }
+        }
+        int[] pendingLeashedEntityIDs = playerData.nettyData().getUnresolvedLeashes(entityID);
+        if (!PrimitiveIntArrayList.isEmpty(pendingLeashedEntityIDs)) {
+            for (int leashedEntityID : pendingLeashedEntityIDs) {
+                NettyEntity<?> leashedEntity = playerData.entityFromID(leashedEntityID);
+                if (leashedEntity != null) {
+                    leashedEntity.setLeashingEntity(entityID);
+                }
+            }
+        }
+    }
+
+    /**
+     * Moves deferred leash state into a newly tracked entity while retaining relationships whose
+     * other endpoint is still untracked or permanently bypassed.
+     */
+    protected void reconcileUnresolvedLeashes(NettyEntity<?> insertedEntity, PlayerData playerData) {
+        int entityID = insertedEntity.entityID();
+        int pendingHolderEntityID = playerData.nettyData().getUnresolvedHolderForLeashedEntity(entityID);
+        if (pendingHolderEntityID != NO_LEASHER) {
+            insertedEntity.setLeashingEntity(pendingHolderEntityID);
+            NettyEntity<?> holder = playerData.entityFromID(pendingHolderEntityID);
+            if (holder != null) {
+                holder.addLeashedEntity(entityID);
+                playerData.nettyData().removeUnresolvedLeash(pendingHolderEntityID, entityID);
+                if (holder.isSelfEntity()) {
+                    forceVisibleBecauseAttached(insertedEntity, playerData, insertedEntity.lastChecked(), "self-held unresolved leash");
+                }
+            }
+        }
+
+        int[] pendingLeashedEntityIDs = playerData.nettyData().getUnresolvedLeashes(entityID);
+        if (PrimitiveIntArrayList.isEmpty(pendingLeashedEntityIDs)) {
+            return;
+        }
+        for (int leashedEntityID : pendingLeashedEntityIDs) {
+            NettyEntity<?> leashedEntity = playerData.entityFromID(leashedEntityID);
+            if (leashedEntity == null) {
+                if (EntityBypassRegistry.isBypassed(leashedEntityID)) {
+                    insertedEntity.addLeashedEntity(leashedEntityID);
+                }
+                continue;
+            }
+            leashedEntity.setLeashingEntity(entityID);
+            insertedEntity.addLeashedEntity(leashedEntityID);
+            playerData.nettyData().removeUnresolvedLeash(entityID, leashedEntityID);
+            if (insertedEntity.isSelfEntity()) {
+                forceVisibleBecauseAttached(leashedEntity, playerData, leashedEntity.lastChecked(), "self-held unresolved leash");
+            }
+        }
     }
 
     private boolean keepingClientEntityWhenHidden(NettyEntity<?> entity, PlayerData data) {
@@ -607,8 +734,8 @@ public abstract class PacketEntityViewController<P> {
     }
 
     protected IntArrayList collectClientVisiblePassengers(int[] passengerIDs, PlayerData playerData) {
-        // Integer.MIN_VALUE cannot be a valid tracked entity ID, so this disables the exception.
-        return collectClientVisiblePassengers(passengerIDs, playerData, Integer.MIN_VALUE);
+        // HackyEntityIDGuard reserves -1, so it cannot accidentally match an entity being shown.
+        return collectClientVisiblePassengers(passengerIDs, playerData, -1);
     }
 
     protected IntArrayList collectClientVisiblePassengers(int[] passengerIDs, PlayerData playerData, int entityBeingShownID) {
@@ -618,6 +745,10 @@ public abstract class PacketEntityViewController<P> {
             return visiblePassengers;
         }
         for (int passengerID : passengerIDs) {
+            if (EntityBypassRegistry.isBypassed(passengerID)) {
+                visiblePassengers.add(passengerID);
+                continue;
+            }
             NettyEntity<?> passenger = playerData.entityFromID(passengerID);
             if (passenger != null && ((passenger.clientVisible() && (!keepingClientEntityWhenHidden(passenger, playerData) || passenger.visible())) || passenger.entityID() == entityBeingShownID)) {
                 visiblePassengers.add(passengerID);

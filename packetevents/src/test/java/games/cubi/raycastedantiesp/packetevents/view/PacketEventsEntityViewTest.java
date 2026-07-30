@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.packetevents.view;
 
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
@@ -42,6 +50,30 @@ class PacketEventsEntityViewTest {
         view.removeEntity(visible.entityID());
         assertEquals(1, view.size());
         view.removeEntity(hidden.entityID());
+        assertEquals(0, view.size());
+    }
+
+    @Test
+    void negativeEntityIDsSupportLookupAndRemoval() {
+        AtomicInteger worldEpoch = new AtomicInteger(2);
+        PacketEventsEntityView view = PacketEventsEntityView.createEntityView(worldEpoch::getAcquire);
+        UUID world = UUID.randomUUID();
+        PacketEventsEntity negative = entity(-3, UUID.randomUUID());
+        PacketEventsEntity minimum = entity(Integer.MIN_VALUE, UUID.randomUUID());
+
+        view.insertEntity(world, negative);
+        view.insertEntity(world, minimum);
+
+        assertSame(negative, view.getEntity(-3));
+        assertSame(minimum, view.getEntity(Integer.MIN_VALUE));
+        assertTrue(view.exists(-3));
+        assertTrue(view.exists(Integer.MIN_VALUE));
+
+        view.removeEntity(-3);
+        view.removeEntity(Integer.MIN_VALUE);
+
+        assertFalse(view.exists(-3));
+        assertFalse(view.exists(Integer.MIN_VALUE));
         assertEquals(0, view.size());
     }
 
@@ -199,6 +231,6 @@ class PacketEventsEntityViewTest {
     }
 
     private static PacketEventsEntity entity(int entityID, UUID entityUUID) {
-        return new PacketEventsEntity(null, 1, 2, 3, entityID, entityUUID, false, null, true);
+        return new PacketEventsEntity(null, 1, 2, 3, entityID, entityUUID, false, 0, true);
     }
 }
