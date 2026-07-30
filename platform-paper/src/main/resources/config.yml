@@ -99,3 +99,8 @@ debug:
     error-exempted-classes:
     particles: false
     timings: false
+updates:
+    check-release: true
+    check-beta: true
+    check-alpha: true
+    notify-ingame: true # When false, update checks only notify the console
