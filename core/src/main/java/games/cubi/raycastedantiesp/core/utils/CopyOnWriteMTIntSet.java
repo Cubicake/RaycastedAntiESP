@@ -9,15 +9,20 @@
 package games.cubi.raycastedantiesp.core.utils;
 
 /**
- * Thread-safe int sets which cannot shrink in size. Hashcode and equals are not implemented.
+ * Thread-safe int sets. Hashcode and equals are not implemented.
  */
-public interface AppendingMTIntSet {
+public interface CopyOnWriteMTIntSet {
     boolean contains(int value);
 
     void add(int value);
 
+    /**
+     * @return whether the value was removed
+     */
+    boolean remove(int value);
+
     // testing both impls by changing this factory method
-    static AppendingMTIntSet get() {
-        return new IncrementingMTIntSet();
+    static CopyOnWriteMTIntSet get() {
+        return new SortedMTIntSet();
     }
 }

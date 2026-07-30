@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.config;
 
 import games.cubi.logs.Logger;
@@ -236,13 +244,16 @@ public class ConfigManager {
             return;
         }
         if (next.engineConfig().mode() != startupConfig.engineConfig().mode()) {
-            throw new RestartRequiredException("engine.mode cannot be changed without a restart");
+            throw new RestartRequiredException("engine.mode cannot be changed without a restart.");
         }
         if (!next.blockProcessorConfig().equals(startupConfig.blockProcessorConfig())) {
-            throw new RestartRequiredException("block-processor cannot be changed without a restart");
+            throw new RestartRequiredException("block-processor cannot be changed without a restart.");
         }
-        if (next.checksConfig().hasRestartOnlyChanges(startupConfig.checksConfig())) {
-            throw new RestartRequiredException("checks cannot be enabled or disabled without a restart");
+        if (!next.checksConfig().entityConfig().excludedTypes().equals(startupConfig.checksConfig().entityConfig().excludedTypes())) {
+            throw new RestartRequiredException("excluded entity types cannot be changed without a restart.");
+        }
+        if (next.checksConfig().hasEnabledStatusChanges(startupConfig.checksConfig())) {
+            throw new RestartRequiredException("player and entity checks cannot be enabled or disabled without a restart.");
         }
         for (ConfigExtension<? extends Config> extension : extensions) {
             validateExtensionReload(extension, next);

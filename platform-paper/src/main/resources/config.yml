@@ -18,6 +18,49 @@ checks:
         hide-on-spawn-distance: 24
         visible-recheck-interval-ticks: 5
         keep-client-entity-when-hidden: true
+        excluded-types:
+            # Projectiles move very quickly, giving limited time for the raycast engine to process them. This could cause the player not to have enough time to dodge the projectile, so they are always visible by default.
+            - minecraft:arrow
+            - minecraft:spectral_arrow
+            - minecraft:fireball
+            - minecraft:dragon_fireball
+            - minecraft:small_fireball
+            - minecraft:firework_rocket
+            - minecraft:wither_skull
+            - minecraft:breeze_wind_charge
+            - minecraft:wind_charge
+            - minecraft:ender_pearl
+            - minecraft:evoker_fangs
+            - minecraft:shulker_bullet
+
+            # Potions and area effect clouds can damage players even if not visible. A reasonable always-show-radius mitigates these issues, so exempting these entities is not necessary.
+            # If your server relies on potion pvp where knowing the exact number of potions someone else has used is an unfair advantage, you may want to un-exempt these entities.
+            - minecraft:area_effect_cloud
+            - minecraft:lingering_potion
+            - minecraft:splash_potion
+            - minecraft:potion # Note: the "potion" entity was removed in 1.21.5 and replaced with "splash_potion" and "lingering_potion". If you are on 1.21.4, you can comment out the above two entry. If you are on 1.21.5+ you should instead comment out this entry.
+
+            # Lightning is short-lived and expected to be visible to people who cannot see the block being struck.
+            - minecraft:lightning_bolt
+
+            - minecraft:ender_dragon
+            - minecraft:wither
+            - minecraft:warden
+
+            # These entities are not seen in normal gameplay, and are usually part of custom mechanics.
+            # If you un-exempt these entities, it is likely that other plugins (such as hologram or NPC plugins) will break.
+            - minecraft:block_display
+            - minecraft:text_display
+            - minecraft:item_display
+            - minecraft:interaction
+            - minecraft:mannequin
+            # Falling blocks are often used in custom mechanics, especially by plugins made before display entities were added to the game.
+            # Therefore, exempting them can make sense. However, falling blocks also occur in regular gameplay,
+            # and can provide insight about players which are not visible.
+            # Therefore, falling blocks are not exempted by default.
+            #- minecraft:falling_block
+
+            # You can add more excluded types using the name for the entity which would be used by the /summon <entity> command, adding "- <entity>" to the list above.
     tile-entity:
         enabled: true
         max-occluding-count: 3

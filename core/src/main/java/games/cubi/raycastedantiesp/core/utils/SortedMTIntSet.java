@@ -11,8 +11,12 @@ package games.cubi.raycastedantiesp.core.utils;
 import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 
-public class IncrementingMTIntSet implements AppendingMTIntSet {
-    private volatile int[] values = new int[0]; private static final VarHandle VALUES = VarHandler.get(IncrementingMTIntSet.class, "values", int[].class);
+/**
+ * A thread-safe copy-on-write int set where values are stored in ascending order.
+ * Designed for highly concurrent reads and rare writes.
+ */
+public class SortedMTIntSet implements CopyOnWriteMTIntSet {
+    private volatile int[] values = new int[0]; private static final VarHandle VALUES = VarHandler.get(SortedMTIntSet.class, "values", int[].class);
 
     public boolean contains(int value) {
         int[] valueSnapshot = (int[]) VALUES.getAcquire(this);
@@ -35,6 +39,22 @@ public class IncrementingMTIntSet implements AppendingMTIntSet {
 
             boolean success = VALUES.weakCompareAndSetRelease(this, oldValues, newValues);
             if (success) return;
+        }
+    }
+
+    public boolean remove(int value) {
+        while (true) {
+            int[] oldValues = (int[]) VALUES.getAcquire(this);
+            int result = Arrays.binarySearch(oldValues, value);
+
+            if (result < 0) return false; //not in array
+            int[] newValues = new int[oldValues.length - 1];
+
+            System.arraycopy(oldValues, 0, newValues, 0, result);
+            System.arraycopy(oldValues, result + 1, newValues, result, oldValues.length - result - 1);
+
+            boolean success = VALUES.weakCompareAndSetRelease(this, oldValues, newValues);
+            if (success) return true;
         }
     }
 }

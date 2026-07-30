@@ -10,7 +10,7 @@ public class PlayerRegistry {
 
     @FunctionalInterface
     public interface SelfEntityCreator {
-        NettyEntity<?, ?> createSelfEntity(PlayerData playerData, int selfEntityID, UUID playerUUID);
+        NettyEntity<?> createSelfEntity(PlayerData playerData, int selfEntityID, UUID playerUUID);
     }
 
     private static PlayerRegistry instance;

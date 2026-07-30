@@ -12,6 +12,7 @@ import games.cubi.raycastedantiesp.core.Core;
 import games.cubi.raycastedantiesp.paper.commands.Attribution;
 import games.cubi.raycastedantiesp.paper.commands.AttributionBrigadier;
 import games.cubi.raycastedantiesp.paper.commands.RaycastedAntiESPCommandBrigadier;
+import games.cubi.raycastedantiesp.paper.config.PaperEntityTypeExclusionResolver;
 import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
 import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcessorConfig;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
@@ -91,6 +92,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
         else {
             currentTickSupplier = new PaperTicker();
         }
+        PaperEntityTypeExclusionResolver.resolveAndInitialise(config.getEntityConfig().excludedTypes());
         PacketEventsPaperBlockInfoResolver blockInfoResolver = new PacketEventsPaperBlockInfoResolver();
         boolean trackAllBlocks = config.getBlockProcessorConfig().trackAllBlocks();
         ViewRegistry.initialise(worldEpoch -> new PacketEventsBlockView(blockInfoResolver, trackAllBlocks, worldEpoch), PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
@@ -118,6 +120,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
             }
         }, 1200, 1200);*/
         /*Do not delete, this is a legal notice*/Attribution.sendAttributionMessage(Bukkit.getConsoleSender()); // Legal notice as required by AGPLv3, it prominently offers users of this plugin the source code and displays an appropriate copyright notice. If you are a fork developer, do NOT remove this unless you have a thorough understanding of the AGPL and have replaced it with a suitable equivalent notice which is "prominently visible", displays the copyright notice, and includes a link to the source code of your fork which is accessible to all users of the plugin.
+        new FancyCompatibility();
     }
 
     private String parseTrackers(Set<Player> trackers) {

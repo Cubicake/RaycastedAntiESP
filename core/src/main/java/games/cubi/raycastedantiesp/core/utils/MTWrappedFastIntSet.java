@@ -13,13 +13,13 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import java.lang.invoke.VarHandle;
 
 /**
- * An append-only multithreaded int set backed by an open-addressing int hash set.
- * Designed for highly multithreaded reads and rare writes.
+ * A thread-safe copy-on-write int set backed by an open-addressing int hash set from fastutil.
+ * Designed for highly concurrent reads and rare writes.
  */
-public class CopyOnWriteIntSet implements AppendingMTIntSet {
-    private volatile IntOpenHashSet backingSet; private static final VarHandle BACKING_SET = VarHandler.get(CopyOnWriteIntSet.class, "backingSet", IntOpenHashSet.class);
+public class MTWrappedFastIntSet implements CopyOnWriteMTIntSet {
+    private volatile IntOpenHashSet backingSet; private static final VarHandle BACKING_SET = VarHandler.get(MTWrappedFastIntSet.class, "backingSet", IntOpenHashSet.class);
 
-    public CopyOnWriteIntSet() {
+    public MTWrappedFastIntSet() {
         backingSet = new IntOpenHashSet();
     }
 
@@ -36,6 +36,19 @@ public class CopyOnWriteIntSet implements AppendingMTIntSet {
             newSet.add(value);
             boolean success = BACKING_SET.weakCompareAndSetRelease(this, oldSet, newSet);
             if (success) return;
+        }
+    }
+
+    public boolean remove(int value) {
+        while (true) {
+            IntOpenHashSet oldSet = (IntOpenHashSet) BACKING_SET.getAcquire(this);
+            if (!oldSet.contains(value)) return false;
+
+            IntOpenHashSet newSet = oldSet.clone();
+            boolean setSuccess = newSet.remove(value);
+            boolean casSuccess = BACKING_SET.weakCompareAndSetRelease(this, oldSet, newSet);
+            if (!setSuccess) throw new IllegalStateException("Backing set was mutated after publication");
+            if (casSuccess) return true;
         }
     }
 }

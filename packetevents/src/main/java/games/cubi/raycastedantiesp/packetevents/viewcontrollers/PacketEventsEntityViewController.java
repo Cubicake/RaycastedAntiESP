@@ -17,14 +17,16 @@ import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.player.Equipment;
 import com.github.retrooper.packetevents.protocol.player.User;
-import com.github.retrooper.packetevents.protocol.teleport.RelativeFlag;
 import com.github.retrooper.packetevents.util.Vector3d;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.*;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.config.raycast.EntityTypeExclusions;
+import games.cubi.raycastedantiesp.core.entity.EntityBypassRegistry;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
@@ -47,6 +49,7 @@ import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_LEASHER;
 import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_VEHICLE;
 
 public abstract class PacketEventsEntityViewController extends PacketEntityViewController<PacketWrapper<?>> implements PacketListener {
+    private static final int NO_ENTITY = -1; // HackyEntityIDGuard prevents -1 from ever being assigned to a real entity.
     enum ClientTransitionAction {
         NONE,
         DESTROY,
@@ -145,20 +148,32 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             }
             case PacketType.Play.Server.SPAWN_ENTITY -> {
                 WrapperPlayServerSpawnEntity packet = new WrapperPlayServerSpawnEntity(event);
+                boolean isPlayer = packet.getEntityType().isInstanceOf(EntityTypes.PLAYER);
+                if (shouldBypassSpawn(packet, isPlayer)) {
+                    int entityID = packet.getEntityId();
+                    handleBypassedEntitySpawn(entityID, playerData, currentTick);
+                    event.getTasksAfterSend().add(() -> replayBypassedEntityRelationships(viewer, playerData, entityID));
+                    return;
+                }
                 Logger.debug("Spawning entity for player " + viewer.getUUID() + " entity #" + packet.getEntityId() + " tick=" + currentTick + " type=" + packet.getEntityType().getName());
-                if (handleEntitySpawn(packet, packet.getEntityId(), packet.getEntityType().isInstanceOf(EntityTypes.PLAYER), playerData, world, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                int entityID = packet.getEntityId();
+                if (handleEntitySpawn(packet, entityID, isPlayer, playerData, world, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
+                event.getTasksAfterSend().add(() -> replayTrackedEntityRelationships(viewer, playerData, entityID));
             }
             case PacketType.Play.Server.ENTITY_ANIMATION -> {
-                if (handleEntityAnimation(new WrapperPlayServerEntityAnimation(event).getEntityId(), playerData) == REQUIRE_EVENT_CANCELLATION)
+                WrapperPlayServerEntityAnimation packet = new WrapperPlayServerEntityAnimation(event);
+                if (!isBypassed(packet.getEntityId()) && handleEntityAnimation(packet.getEntityId(), playerData) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_STATUS -> {
-                if (handleEntityEvent(new WrapperPlayServerEntityStatus(event).getEntityId(), playerData) == REQUIRE_EVENT_CANCELLATION)
+                WrapperPlayServerEntityStatus packet = new WrapperPlayServerEntityStatus(event);
+                if (!isBypassed(packet.getEntityId()) && handleEntityEvent(packet.getEntityId(), playerData) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.HURT_ANIMATION -> {
-                if (handleHurtAnimation(new WrapperPlayServerHurtAnimation(event).getEntityId(), playerData) == REQUIRE_EVENT_CANCELLATION)
+                WrapperPlayServerHurtAnimation packet = new WrapperPlayServerHurtAnimation(event);
+                if (!isBypassed(packet.getEntityId()) && handleHurtAnimation(packet.getEntityId(), playerData) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.SPAWN_PAINTING -> {
@@ -173,52 +188,58 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 //    event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_RELATIVE_MOVE -> {
-                if (handleRelativeMove(new WrapperPlayServerEntityRelativeMove(event), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                WrapperPlayServerEntityRelativeMove packet = new WrapperPlayServerEntityRelativeMove(event);
+                if (!isBypassed(packet.getEntityId()) && handleRelativeMove(packet, playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_RELATIVE_MOVE_AND_ROTATION -> {
-                if (handleRelativeMoveAndRotation(new WrapperPlayServerEntityRelativeMoveAndRotation(event), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                WrapperPlayServerEntityRelativeMoveAndRotation packet = new WrapperPlayServerEntityRelativeMoveAndRotation(event);
+                if (!isBypassed(packet.getEntityId()) && handleRelativeMoveAndRotation(packet, playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_TELEPORT -> {
-                if (handleTeleport(new WrapperPlayServerEntityTeleport(event), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                WrapperPlayServerEntityTeleport packet = new WrapperPlayServerEntityTeleport(event);
+                if (!isBypassed(packet.getEntityId()) && handleTeleport(packet, playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_POSITION_SYNC -> {
-                if (handlePositionSync(new WrapperPlayServerEntityPositionSync(event), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                WrapperPlayServerEntityPositionSync packet = new WrapperPlayServerEntityPositionSync(event);
+                if (!isBypassed(packet.getId()) && handlePositionSync(packet, playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_ROTATION -> {
-                if (handleEntityRotation(new WrapperPlayServerEntityRotation(event), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                WrapperPlayServerEntityRotation packet = new WrapperPlayServerEntityRotation(event);
+                if (!isBypassed(packet.getEntityId()) && handleEntityRotation(packet, playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_HEAD_LOOK -> {
-                if (handleEntityHeadLook(new WrapperPlayServerEntityHeadLook(event), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                WrapperPlayServerEntityHeadLook packet = new WrapperPlayServerEntityHeadLook(event);
+                if (!isBypassed(packet.getEntityId()) && handleEntityHeadLook(packet, playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_METADATA -> {
                 WrapperPlayServerEntityMetadata packet = new WrapperPlayServerEntityMetadata(event);
-                if (handleEntityMetadata(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                if (!isBypassed(packet.getEntityId()) && handleEntityMetadata(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.REMOVE_ENTITY_EFFECT -> {
                 WrapperPlayServerRemoveEntityEffect packet = new WrapperPlayServerRemoveEntityEffect(event);
-                if (handleRemoveEntityEffect(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                if (!isBypassed(packet.getEntityId()) && handleRemoveEntityEffect(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_EQUIPMENT -> {
                 WrapperPlayServerEntityEquipment packet = new WrapperPlayServerEntityEquipment(event);
-                if (handleEntityEquipment(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                if (!isBypassed(packet.getEntityId()) && handleEntityEquipment(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_VELOCITY -> {
                 WrapperPlayServerEntityVelocity packet = new WrapperPlayServerEntityVelocity(event);
-                if (handleEntityVelocity(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                if (!isBypassed(packet.getEntityId()) && handleEntityVelocity(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ENTITY_EFFECT -> {
                 WrapperPlayServerEntityEffect packet = new WrapperPlayServerEntityEffect(event);
-                if (handleEntityEffect(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                if (!isBypassed(packet.getEntityId()) && handleEntityEffect(packet, packet.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.SET_PASSENGERS -> {
@@ -227,16 +248,18 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.DESTROY_ENTITIES -> {
-                handleDestroyEntities(new WrapperPlayServerDestroyEntities(event).getEntityIds(), playerData, currentTick);
+                WrapperPlayServerDestroyEntities packet = new WrapperPlayServerDestroyEntities(event);
+                handleDestroyEntities(packet.getEntityIds(), playerData, currentTick);
             }
             case PacketType.Play.Server.UPDATE_ATTRIBUTES -> {
                 WrapperPlayServerUpdateAttributes wrapper = new WrapperPlayServerUpdateAttributes(event);
-                if (handleAttributeUpdate(wrapper, wrapper.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                if (!isBypassed(wrapper.getEntityId()) && handleAttributeUpdate(wrapper, wrapper.getEntityId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.ATTACH_ENTITY -> {
                 WrapperPlayServerAttachEntity wrapper = new WrapperPlayServerAttachEntity(event);
-                if (handleLeashEntity(wrapper.getAttachedId(), wrapper.getHoldingId(), playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
+                int holderEntityID = normalizeLeashHolderEntityID(wrapper.getHoldingId());
+                if (handleLeashEntity(wrapper.getAttachedId(), holderEntityID, playerData, currentTick) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
             case PacketType.Play.Server.RESPAWN -> {
@@ -248,12 +271,34 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         }
     }
 
-    protected NettyEntity<?,?> createSelfEntity(PlayerData ownData, int entityID, UUID playerUUID) {
+    static int normalizeLeashHolderEntityID(int holderEntityID) {
+        // Vanilla writes 0 when the holder is null:
+        // https://mcsrc.dev/1/26.2/net/minecraft/network/protocol/game/ClientboundSetEntityLinkPacket#L19
+        return holderEntityID == 0 || holderEntityID == -1 ? NO_LEASHER : holderEntityID;
+    }
+
+    private boolean shouldBypassSpawn(WrapperPlayServerSpawnEntity packet, boolean isPlayer) {
+        int entityID = packet.getEntityId();
+        if (isBypassed(entityID)) {
+            return true;
+        }
+        if (isPlayer || !EntityTypeExclusions.excludes(getPrimitiveEntityType(packet.getEntityType()))) {
+            return false;
+        }
+        EntityBypassRegistry.addEntity(entityID);
+        return true;
+    }
+
+    private static boolean isBypassed(int entityID) {
+        return EntityBypassRegistry.isBypassed(entityID);
+    }
+
+    protected NettyEntity<?> createSelfEntity(PlayerData ownData, int entityID, UUID playerUUID) {
         return PacketEventsEntity.createSelfEntity(ownData, entityID, playerUUID);
     }
 
     @Override
-    protected @NotNull NettyEntity<?,?> processEntitySpawn(PlayerData playerData, PacketWrapper<?> packetWrapper, UUID world, int currentTick) {
+    protected @NotNull NettyEntity<?> processEntitySpawn(PlayerData playerData, PacketWrapper<?> packetWrapper, UUID world, int currentTick) {
         WrapperPlayServerSpawnEntity packet = (WrapperPlayServerSpawnEntity) packetWrapper;
         if (packet.getUUID().isEmpty()) {
             Logger.errorAndReturn(new RuntimeException("Entity UUID null when handling spawn entity packet, id=" + packet.getEntityId() + " tick=" + currentTick), 2, PacketEventsEntityViewController.class);
@@ -277,7 +322,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerEntityRelativeMove packet = (WrapperPlayServerEntityRelativeMove) packetWrapper;
         int entityID = packet.getEntityId();
 
-        NettyEntity<?,?> entity = playerData.entityFromID(entityID);
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.error("Received relative move packet for unknown entity, id=" + entityID, 2, PacketEventsEntityViewController.class);
             return entityID;
@@ -293,7 +338,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerEntityRelativeMoveAndRotation packetWrapper = (WrapperPlayServerEntityRelativeMoveAndRotation) packet;
         int entityID = packetWrapper.getEntityId();
 
-        NettyEntity<?,?> entity = playerData.entityFromID(entityID);
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.error("Received relative move and rotation packet for unknown entity, id=" + entityID, 2, PacketEventsEntityViewController.class);
             return entityID;
@@ -309,7 +354,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerEntityTeleport packetWrapper = (WrapperPlayServerEntityTeleport) packet;
         int entityID = packetWrapper.getEntityId();
 
-        NettyEntity<?,?> entity = playerData.entityFromID(entityID);
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.error("Received teleport packet for unknown entity, id=" + entityID, 2, PacketEventsEntityViewController.class);
             return entityID;
@@ -327,7 +372,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerEntityPositionSync packetWrapper = (WrapperPlayServerEntityPositionSync) packet;
         int entityID = packetWrapper.getId();
 
-        NettyEntity<?,?> entity = playerData.entityFromID(entityID);
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.error("Received position sync packet for unknown entity, id=" + entityID, 2, PacketEventsEntityViewController.class);
             return entityID;
@@ -347,7 +392,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         if (playerData.nettyData().isSelfEntityID(entityID)) {
             return;
         }
-        NettyEntity<?,?> entity = playerData.entityFromID(entityID);
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.warning("Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
             playerData.nettyData().addPostEntitySpawnTask(entityID, new PECacheablePacketReconciliationTask(this, playerData, entityID, packet, currentTick));
@@ -361,7 +406,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerEntityRotation packetWrapper = (WrapperPlayServerEntityRotation) packet;
         int entityID = packetWrapper.getEntityId();
 
-        NettyEntity<?,?> entity = playerData.entityFromID(entityID);
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.error("Received rotation packet for unknown entity, id=" + entityID, 2, PacketEventsEntityViewController.class);
             return entityID;
@@ -376,7 +421,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerEntityHeadLook packetWrapper = (WrapperPlayServerEntityHeadLook) packet;
         int entityID = packetWrapper.getEntityId();
 
-        NettyEntity<?,?> entity = playerData.entityFromID(entityID);
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.error("Received head look packet for unknown entity, id=" + entityID, 2, PacketEventsEntityViewController.class);
             return entityID;
@@ -391,7 +436,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         WrapperPlayServerEntityVelocity packetWrapper = (WrapperPlayServerEntityVelocity) packet;
         int entityID = packetWrapper.getEntityId();
 
-        NettyEntity<?,?> entity = playerData.entityFromID(entityID);
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.error("Received velocity packet for unknown entity, id=" + entityID, 2, PacketEventsEntityViewController.class);
             return entityID;
@@ -403,7 +448,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     @Override
     protected void sendEntityPassengerPacket(int vehicle, IntArrayList passengers, PlayerData playerData) {
-        NettyEntity<?,?> entity = playerData.entityFromID(vehicle);
+        NettyEntity<?> entity = playerData.entityFromID(vehicle);
         if (entity == null) {
             Logger.error("Attempted to send passenger packet for unknown entity, id=" + vehicle, 2, PacketEventsEntityViewController.class);
             return;
@@ -414,8 +459,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     private PacketEventsEntity trackEntitySpawn(PlayerData playerData, UUID entityUUID, int entityID, UUID world, double x, double y, double z, EntityType entityType) {
-
-        PacketEventsEntity entity = new PacketEventsEntity(playerData, x, y, z, entityID, entityUUID, false, entityType, true /*default value as this is handled in PacketEntityViewController*/);
+        PacketEventsEntity entity = new PacketEventsEntity(playerData, x, y, z, entityID, entityUUID, false, getPrimitiveEntityType(entityType), true /*default value as this is handled in PacketEntityViewController*/);
         ensureReplayData(entity);
         return entity;
     }
@@ -445,10 +489,8 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             );
             switch (action) {
                 case DESTROY -> {
-                    if (entity.entityID() >= 0) {
-                        viewer.writePacketSilently(new WrapperPlayServerDestroyEntities(entity.entityID()));
-                        entity.setClientVisible(false);
-                    }
+                    viewer.writePacketSilently(new WrapperPlayServerDestroyEntities(entity.entityID()));
+                    entity.setClientVisible(false);
                 }
                 case SPAWN_AND_SYNC, SYNC -> {
                     PacketEventsEntityReplayData replayData = ensureReplayData(entity);
@@ -485,7 +527,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         return new WrapperPlayServerSpawnEntity(
                     entity.entityID(),
                     Optional.of(entity.entityUUID()),
-                    entity.entityType(),
+                    getObjectEntityType(entity.entityType()),
                     new Vector3d(entity.x(), entity.y(), entity.z()),
                     entity.pitch(),
                     entity.yaw(),
@@ -495,7 +537,17 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             );
     }
 
-    private WrapperPlayServerSetPassengers buildPassengersPacket(@Nullable NettyEntity<?,?> entity, PlayerData playerData, int entityBeingShownID) {
+    private final ClientVersion version = PacketEvents.getAPI().getServerManager().getVersion().toClientVersion();
+
+    private int getPrimitiveEntityType(EntityType entityType) {
+        return entityType.getId(version);
+    }
+
+    private EntityType getObjectEntityType(int entityType) {
+        return EntityTypes.getById(version, entityType);
+    }
+
+    private WrapperPlayServerSetPassengers buildPassengersPacket(@Nullable NettyEntity<?> entity, PlayerData playerData, int entityBeingShownID) {
         if (entity == null) {
             return null;
         }
@@ -509,9 +561,62 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         return new WrapperPlayServerSetPassengers(entity.entityID(), collectClientVisiblePassengers(passengerIDs, playerData, entityBeingShownID).toIntArray());
     }
 
-    private @Nullable WrapperPlayServerAttachEntity[] buildLeashPackets(PacketEventsEntity entity, PlayerData playerData) {
-        // Integer.MIN_VALUE cannot be a valid tracked entity ID, so this disables the exception.
-        return buildLeashPackets(entity, playerData, Integer.MIN_VALUE);
+    /**
+     * Builds passenger state for a vehicle which intentionally has no tracked entity. Its retained
+     * unresolved state is the only authoritative passenger list available to the packet layer.
+     */
+    private WrapperPlayServerSetPassengers buildBypassedVehiclePassengersPacket(int vehicleID, PlayerData playerData, int entityBeingShownID) {
+        if (!isBypassed(vehicleID)) {
+            return null;
+        }
+        int[] passengerIDs = playerData.nettyData().getUnresolvedPassengers(vehicleID);
+        if (PrimitiveIntArrayList.isEmpty(passengerIDs)) {
+            return null;
+        }
+        return new WrapperPlayServerSetPassengers(vehicleID, collectClientVisiblePassengers(passengerIDs, playerData, entityBeingShownID).toIntArray());
+    }
+
+    /**
+     * Replays relationships in which the newly spawned bypassed entity may be either endpoint.
+     * Earlier relationship packets may have been ignored by the client while that endpoint did
+     * not exist.
+     */
+    private void replayBypassedEntityRelationships(User viewer, PlayerData playerData, int entityID) {
+        // Rebuild mount state for both possible roles: first as the vehicle, then as a passenger.
+        COMMON.writeIfPresent(viewer, buildBypassedVehiclePassengersPacket(entityID, playerData, NO_ENTITY));
+
+        int vehicleID = playerData.nettyData().getUnresolvedVehicleForPassenger(entityID);
+        if (vehicleID != NO_VEHICLE && vehicleID != entityID) {
+            WrapperPlayServerSetPassengers vehiclePassengers = isBypassed(vehicleID)
+                    ? buildBypassedVehiclePassengersPacket(vehicleID, playerData, NO_ENTITY)
+                    : buildPassengersPacket(playerData.entityFromID(vehicleID), playerData, NO_ENTITY);
+            COMMON.writeIfPresent(viewer, vehiclePassengers);
+        }
+
+        // Likewise, the bypassed entity may be either the leashed entity or the leash holder.
+        int holderEntityID = playerData.nettyData().getUnresolvedHolderForLeashedEntity(entityID);
+        if (holderEntityID != NO_LEASHER && relationshipEndpointIsVisible(holderEntityID, playerData)) {
+            viewer.writePacketSilently(new WrapperPlayServerAttachEntity(entityID, holderEntityID, true));
+        }
+        int[] leashedEntityIDs = playerData.nettyData().getUnresolvedLeashes(entityID);
+        if (!PrimitiveIntArrayList.isEmpty(leashedEntityIDs)) {
+            for (int leashedEntityID : leashedEntityIDs) {
+                if (relationshipEndpointIsVisible(leashedEntityID, playerData)) {
+                    viewer.writePacketSilently(new WrapperPlayServerAttachEntity(leashedEntityID, entityID, true));
+                }
+            }
+        }
+        // All relationship repairs are silent writes, so release the batch explicitly.
+        viewer.flushPackets();
+    }
+
+    private boolean relationshipEndpointIsVisible(int entityID, PlayerData playerData) {
+        if (isBypassed(entityID)) {
+            // Bypassed entities are forwarded untouched, so they have no tracked visibility state.
+            return true;
+        }
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
+        return entity != null && clientAndEngineVisibleOrBeingShown(entity, null);
     }
 
     private @Nullable WrapperPlayServerAttachEntity[] buildLeashPackets(PacketEventsEntity entity, PlayerData playerData, int entityBeingShownID) {
@@ -519,8 +624,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         int leashingID = entity.leashingEntity();
         WrapperPlayServerAttachEntity leashingShow = null;
         if (leashingID != NO_LEASHER) {
-            NettyEntity<?,?> leashHolder = playerData.entityFromID(leashingID);
-            if (leashHolder != null && clientAndEngineVisibleOrBeingShown(leashHolder, entityBeingShownID)) {
+            NettyEntity<?> leashHolder = playerData.entityFromID(leashingID);
+            if (isBypassed(leashingID)
+                    || leashHolder != null && clientAndEngineVisibleOrBeingShown(leashHolder, entityBeingShownID)) {
                 leashingShow = new WrapperPlayServerAttachEntity(entity.entityID(), leashingID, true);
             }
         }
@@ -534,8 +640,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             index = 1;
         }
         for (int leashedID : leashedIDs) {
-            NettyEntity<?,?> leashedEntity = playerData.entityFromID(leashedID);
-            if (leashedEntity != null && clientAndEngineVisibleOrBeingShown(leashedEntity, entityBeingShownID)) {
+            NettyEntity<?> leashedEntity = playerData.entityFromID(leashedID);
+            if (isBypassed(leashedID)
+                    || leashedEntity != null && clientAndEngineVisibleOrBeingShown(leashedEntity, entityBeingShownID)) {
                 packets[index] = new WrapperPlayServerAttachEntity(leashedID, entity.entityID(), true);
                 index++;
             }
@@ -543,8 +650,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         return packets;
     }
 
-    private boolean clientAndEngineVisibleOrBeingShown(NettyEntity<?,?> entity, int entityBeingShownID) {
-        return (entity.clientVisible() && entity.visible()) || entity.entityID() == entityBeingShownID;
+    private boolean clientAndEngineVisibleOrBeingShown(NettyEntity<?> entity, @Nullable Integer entityBeingShownID) {
+        return (entity.clientVisible() && entity.visible())
+                || entityBeingShownID != null && entity.entityID() == entityBeingShownID;
     }
 
     private WrapperPlayServerEntityEffect copyEffectPacket(WrapperPlayServerEntityEffect effect) {
@@ -639,35 +747,38 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         sendEntityAbsoluteCorrection(viewer, entity);
 
         for (PacketWrapper<?> cachedPacket : replayData.getPackets()) {
-
             if (cachedPacket.getClass() == WrapperPlayServerEntityMetadata.class) {
-                WrapperPlayServerEntityMetadata metadataPacket = copyEntityMetadataPacket((WrapperPlayServerEntityMetadata) cachedPacket);
-                viewer.writePacketSilently(metadataPacket);
+                viewer.writePacketSilently(copyEntityMetadataPacket((WrapperPlayServerEntityMetadata) cachedPacket));
             } else if (cachedPacket.getClass() == WrapperPlayServerEntityEquipment.class) {
-                WrapperPlayServerEntityEquipment equipmentPacket = copyEntityEquipmentPacket((WrapperPlayServerEntityEquipment) cachedPacket);
-                viewer.writePacketSilently(equipmentPacket);
+                viewer.writePacketSilently(copyEntityEquipmentPacket((WrapperPlayServerEntityEquipment) cachedPacket));
             } else if (cachedPacket.getClass() == WrapperPlayServerEntityVelocity.class) {
-                WrapperPlayServerEntityVelocity velocityPacket = copyEntityVelocityPacket((WrapperPlayServerEntityVelocity) cachedPacket);
-                viewer.writePacketSilently(velocityPacket);
+                viewer.writePacketSilently(copyEntityVelocityPacket((WrapperPlayServerEntityVelocity) cachedPacket));
             } else if (cachedPacket.getClass() == WrapperPlayServerEntityEffect.class) {
                 viewer.writePacketSilently(copyEffectPacket((WrapperPlayServerEntityEffect) cachedPacket));
             } else if (cachedPacket.getClass() == WrapperPlayServerRemoveEntityEffect.class) {
                 viewer.writePacketSilently(copyRemoveEntityEffectPacket((WrapperPlayServerRemoveEntityEffect) cachedPacket));
             } else if (cachedPacket.getClass() == WrapperPlayServerUpdateAttributes.class) {
                 WrapperPlayServerUpdateAttributes existing = (WrapperPlayServerUpdateAttributes) cachedPacket;
-                WrapperPlayServerUpdateAttributes copy = new WrapperPlayServerUpdateAttributes(existing.getEntityId(), existing.getProperties());
-                viewer.writePacketSilently(copy);
-            }
-            else {
+                viewer.writePacketSilently(new WrapperPlayServerUpdateAttributes(existing.getEntityId(), existing.getProperties()));
+            } else {
                 Logger.warning("Unsupported cached packet type for replay: " + cachedPacket.getClass().getName(), 2, PacketEventsEntityViewController.class);
             }
         }
-        COMMON.writeIfPresent(viewer, buildPassengersPacket(entity, data, entity.entityID()));
-        if (entity.vehicleID() != NO_VEHICLE) {
-            COMMON.writeIfPresent(viewer, buildPassengersPacket(data.entityFromID(entity.vehicleID()), data, entity.entityID()));
+        writeEntityRelationships(viewer, data, entity, entity.entityID());
+    }
+
+    private void writeEntityRelationships(User viewer, PlayerData data, PacketEventsEntity entity, int entityBeingShownID) {
+        COMMON.writeIfPresent(viewer, buildPassengersPacket(entity, data, entityBeingShownID));
+        int vehicleID = entity.vehicleID();
+        if (vehicleID != NO_VEHICLE) {
+            COMMON.writeIfPresent(viewer, isBypassed(vehicleID)
+                    ? buildBypassedVehiclePassengersPacket(vehicleID, data, entityBeingShownID)
+                    : buildPassengersPacket(data.entityFromID(vehicleID), data, entityBeingShownID));
         }
-        WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, data, entity.entityID());
-        if (leashPackets == null) return;
+        WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets(entity, data, entityBeingShownID);
+        if (leashPackets == null) {
+            return;
+        }
         for (WrapperPlayServerAttachEntity leashPacket : leashPackets) {
             if (leashPacket != null) {
                 viewer.writePacketSilently(leashPacket);
@@ -676,9 +787,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     private void sendEntityAbsoluteCorrection(User viewer, PacketEventsEntity entity) {
-        if (entity.entityID() < 0) {
-            return;
-        }
         viewer.writePacketSilently(new WrapperPlayServerEntityPositionSync(
                 entity.entityID(),
                 new EntityPositionData(
@@ -692,45 +800,28 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         viewer.writePacketSilently(new WrapperPlayServerEntityHeadLook(entity.entityID(), entity.headYaw()));
     }
 
-    protected void insertEntityToPlayerView(NettyEntity<?,?> entity, PlayerData playerData, UUID world) {
+    protected void insertEntityToPlayerView(NettyEntity<?> entity, PlayerData playerData, UUID world) {
         playerData.playerView().insertEntity(world, entity.cast());
         // Passenger relationships can arrive before spawn/pairing completes, so resolve them as soon as the entity becomes known.
         reconcileUnresolvedPassengers(entity, playerData);
         reconcileUnresolvedLeashes(entity, playerData);
     }
 
-    protected void insertEntityToEntityView(NettyEntity<?,?> entity, PlayerData playerData, UUID world) {
+    protected void insertEntityToEntityView(NettyEntity<?> entity, PlayerData playerData, UUID world) {
         playerData.entityView().insertEntity(world, entity.cast()); //todo: no need to put here, move to abstract packet view controller
         // Passenger relationships can arrive before spawn/pairing completes, so resolve them as soon as the entity becomes known.
         reconcileUnresolvedPassengers(entity, playerData);
         reconcileUnresolvedLeashes(entity, playerData);
     }
 
-    private void reconcileUnresolvedLeashes(NettyEntity<?,?> insertedEntity, PlayerData playerData) {
-        int[] pendingLeashedEntityIDs = playerData.nettyData().consumeUnresolvedLeashes(insertedEntity.entityID());
-        if (PrimitiveIntArrayList.isEmpty(pendingLeashedEntityIDs)) {
+    private void replayTrackedEntityRelationships(User viewer, PlayerData playerData, int entityID) {
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
+        if (!(entity instanceof PacketEventsEntity packetEntity)
+                || !entity.clientVisible()
+                || !entity.visible()) {
             return;
         }
-        for (int leashedEntityID : pendingLeashedEntityIDs) {
-            NettyEntity<?,?> leashedEntity = playerData.entityFromID(leashedEntityID);
-            if (leashedEntity == null || leashedEntity.leashingEntity() != insertedEntity.entityID()) {
-                continue;
-            }
-            insertedEntity.addLeashedEntity(leashedEntityID);
-        }
-        if (!insertedEntity.clientVisible() || !insertedEntity.visible()) {
-            return;
-        }
-        WrapperPlayServerAttachEntity[] leashPackets = buildLeashPackets((PacketEventsEntity) insertedEntity, playerData);
-        if (leashPackets == null) {
-            return;
-        }
-        Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(playerData.getPlayerUUID());
-        User viewer = PacketEvents.getAPI().getProtocolManager().getUser(channel);
-        for (WrapperPlayServerAttachEntity leashPacket : leashPackets) {
-            if (leashPacket != null) {
-                viewer.writePacketSilently(leashPacket);
-            }
-        }
+        writeEntityRelationships(viewer, playerData, packetEntity, NO_ENTITY);
+        viewer.flushPackets();
     }
 }

@@ -21,7 +21,7 @@ final class PECacheablePacketReconciliationTask extends BaseEntitySpawnTask {
 
     @Override
     public void run() {
-        NettyEntity<?,?> entity = playerData.entityFromID(entityID);
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.error("Reconciliation fail: Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ".", 3, this.getClass());
             return;

@@ -9,54 +9,52 @@ import java.util.UUID;
 /**
  * Per-player platform-independent representation of an entity
  */
-public interface TrackedEntity<EntityType, PacketReplayData> extends MutableFloatingSpatial {
+public interface TrackedEntity<PacketReplayData> extends MutableFloatingSpatial {
 
     int entityID();
 
     UUID entityUUID();
 
     boolean visible();
-    TrackedEntity<?, ?> setVisible(boolean visible);
+    TrackedEntity<?> setVisible(boolean visible);
 
     int lastChecked();
-    TrackedEntity<?, ?> setLastChecked(int lastChecked);
+    TrackedEntity<?> setLastChecked(int lastChecked);
 
     /** Packet-thread-only client state. */
     boolean clientVisible();
-    TrackedEntity<?, ?> setClientVisible(boolean clientVisible);
+    TrackedEntity<?> setClientVisible(boolean clientVisible);
 
     boolean isSelfEntity();
 
     /** Packet-thread-only replay state. */
     float yaw();
-    TrackedEntity<?, ?> setYaw(float yaw);
+    TrackedEntity<?> setYaw(float yaw);
 
     /** Packet-thread-only replay state. */
     float pitch();
-    TrackedEntity<?, ?> setPitch(float pitch);
+    TrackedEntity<?> setPitch(float pitch);
 
     /** Packet-thread-only replay state. */
     float headYaw();
-    TrackedEntity<?, ?> setHeadYaw(float headYaw);
+    TrackedEntity<?> setHeadYaw(float headYaw);
 
     /** Packet-thread-only replay state. */
     double velocityX();
     double velocityY();
     double velocityZ();
-    TrackedEntity<?, ?> setVelocity(double velocityX, double velocityY, double velocityZ);
+    TrackedEntity<?> setVelocity(double velocityX, double velocityY, double velocityZ);
 
     /** Packet-thread-only replay state. */
     boolean onGround();
-    TrackedEntity<?, ?> setOnGround(boolean onGround);
-
-    EntityType entityType();
+    TrackedEntity<?> setOnGround(boolean onGround);
 
     /** Packet-thread-only replay state. */
     int entityData();
-    TrackedEntity<?, ?> setEntityData(int entityData);
+    TrackedEntity<?> setEntityData(int entityData);
 
     int[] passengerIDs();
-    TrackedEntity<?, ?> setPassengerIDs(int[] passengerIDs);
+    TrackedEntity<?> setPassengerIDs(int[] passengerIDs);
 
     void setVehicleID(int vehicleID);
     int vehicleID();
@@ -70,7 +68,7 @@ public interface TrackedEntity<EntityType, PacketReplayData> extends MutableFloa
 
     /** Packet-thread-only cached packet state. */
     PacketReplayData packetReplayData();
-    TrackedEntity<?, ?> setPacketReplayData(PacketReplayData packetReplayData);
+    TrackedEntity<?> setPacketReplayData(PacketReplayData packetReplayData);
 
     ImmutableSpatial getOffsetPosition();
 
