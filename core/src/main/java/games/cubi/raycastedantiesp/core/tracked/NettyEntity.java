@@ -68,7 +68,7 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
 
     public static final int NO_VEHICLE = -1;
     public static final int NO_LEASHER = -2;
-    public static final int SELF_ENTITY_TYPE = -239;
+    public static final int SELF_ENTITY_TYPE = -29;
 
     public NettyEntity(PlayerData owningPlayer, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, int entityType, boolean visible) {
         X.set(this, x); Y.set(this, y); Z.set(this, z);
