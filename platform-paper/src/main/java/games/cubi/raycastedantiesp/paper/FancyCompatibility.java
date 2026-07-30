@@ -38,19 +38,16 @@ public class FancyCompatibility {
 
         @EventHandler(priority = EventPriority.MONITOR)
         public void npcLoad(NpcSpawnEvent event) {
-            Logger.info("Spawn", 1);
             EntityBypassRegistry.addEntity(event.getNpc().getEntityId());
         }
 
         @EventHandler(priority = EventPriority.MONITOR)
         public void npcLoad(NpcCreateEvent event) {
-            Logger.info("create", 1);
             EntityBypassRegistry.addEntity(event.getNpc().getEntityId());
         }
 
         @EventHandler(priority = EventPriority.MONITOR)
         public void npcLoad(NpcModifyEvent event) {
-            Logger.info("modify", 1);
             EntityBypassRegistry.addEntity(event.getNpc().getEntityId());
         }
     }
