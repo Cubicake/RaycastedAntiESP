@@ -25,6 +25,8 @@ import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.*;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.config.raycast.EntityTypeExclusions;
+import games.cubi.raycastedantiesp.core.entity.EntityBypassRegistry;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
@@ -246,6 +248,22 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             }
             default -> {}
         }
+    }
+
+    private boolean shouldBypassSpawn(WrapperPlayServerSpawnEntity packet, boolean isPlayer) {
+        int entityID = packet.getEntityId();
+        if (isBypassed(entityID)) {
+            return true;
+        }
+        if (isPlayer || !EntityTypeExclusions.excludes(getPrimitiveEntityType(packet.getEntityType()))) {
+            return false;
+        }
+        EntityBypassRegistry.addEntity(entityID);
+        return true;
+    }
+
+    private static boolean isBypassed(int entityID) {
+        return EntityBypassRegistry.isBypassed(entityID);
     }
 
     protected NettyEntity<?> createSelfEntity(PlayerData ownData, int entityID, UUID playerUUID) {
