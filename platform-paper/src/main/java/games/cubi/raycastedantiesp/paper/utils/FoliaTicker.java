@@ -8,26 +8,28 @@
 
 package games.cubi.raycastedantiesp.paper.utils;
 
+import games.cubi.raycastedantiesp.core.utils.VarHandler;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
 
+import java.lang.invoke.VarHandle;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 
 public class FoliaTicker implements IntSupplier {
-    private final AtomicInteger tick = new AtomicInteger(0);
+    private volatile int currentTick; private static final VarHandle CURRENT_TICK = VarHandler.get(FoliaTicker.class, "currentTick", int.class);
 
     public FoliaTicker() {
         Bukkit.getGlobalRegionScheduler().runAtFixedRate(RaycastedAntiESP.get(), this::increment, 1L, 1L); //Is this guaranteed to be a specific thread?
     }
 
     private void increment(ScheduledTask scheduledTask) {
-        tick.incrementAndGet();
+        CURRENT_TICK.getAndAdd(this, 1);
     }
 
     @Override
     public int getAsInt() {
-        return tick.get();
+        return (int) CURRENT_TICK.getOpaque(this);
     }
 }
