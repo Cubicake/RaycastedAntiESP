@@ -36,34 +36,34 @@ public class FancyCompatibility {
 
     static class NPCs extends PaperListener {
 
-        @EventHandler(priority = EventPriority.MONITOR)
+        @EventHandler(priority = EventPriority.LOWEST)
         public void npcLoad(NpcSpawnEvent event) {
             EntityBypassRegistry.addEntity(event.getNpc().getEntityId());
         }
 
-        @EventHandler(priority = EventPriority.MONITOR)
+        @EventHandler(priority = EventPriority.LOWEST)
         public void npcLoad(NpcCreateEvent event) {
             EntityBypassRegistry.addEntity(event.getNpc().getEntityId());
         }
 
-        @EventHandler(priority = EventPriority.MONITOR)
+        @EventHandler(priority = EventPriority.LOWEST)
         public void npcLoad(NpcModifyEvent event) {
             EntityBypassRegistry.addEntity(event.getNpc().getEntityId());
         }
     }
 
     static class Holograms extends PaperListener {
-        @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+        @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
         public void onHologramCreate(HologramCreateEvent event) {
             add(event.getHologram());
         }
 
-        @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+        @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
         public void onHologramShow(HologramShowEvent event) {
             add(event.getHologram());
         }
 
-        @EventHandler(priority = EventPriority.MONITOR)
+        @EventHandler(priority = EventPriority.LOWEST)
         public void onHologramsLoaded(HologramsLoadedEvent event) {
             event.getManager().forEach(this::add);
         }
