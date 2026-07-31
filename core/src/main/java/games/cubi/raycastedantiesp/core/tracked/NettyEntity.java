@@ -302,8 +302,8 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
     }
 
     @Override
-    public ImmutableSpatial getOffsetPosition() {
-        return new ImmutableSpatialImpl(x(), y() + 0.5, z()); //todo: move away from hardcoded offset
+    public float getYOffset() {
+        return 0.5f; //todo: move away from hardcoded offset
     }
 
     @Override

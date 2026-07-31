@@ -138,8 +138,7 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
 
     @Override
     public Spatial getPosition(UUID entityUUID) {
-        PacketEventsEntity entity = entitiesByUUID.get(entityUUID);
-        return entity == null ? null : entity.getOffsetPosition();
+        return entitiesByUUID.get(entityUUID);
     }
 
     @Override

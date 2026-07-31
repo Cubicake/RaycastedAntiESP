@@ -19,11 +19,9 @@ final class TickTimings {
 
     private int entityChecked;
     private int entityRaycasts;
-    private int entityNullTargets;
 
     private int playerChecked;
     private int playerRaycasts;
-    private int playerNullTargets;
 
     private int tileChecked;
     private int tileRaycasts;
@@ -52,11 +50,9 @@ final class TickTimings {
 
         entityChecked += batch.entityChecked;
         entityRaycasts += batch.entityRaycasts;
-        entityNullTargets += batch.entityNullTargets;
 
         playerChecked += batch.playerChecked;
         playerRaycasts += batch.playerRaycasts;
-        playerNullTargets += batch.playerNullTargets;
 
         tileChecked += batch.tileChecked;
         tileRaycasts += batch.tileRaycasts;
@@ -82,10 +78,8 @@ final class TickTimings {
                 nullLocationSkippedPlayers,
                 entityChecked,
                 entityRaycasts,
-                entityNullTargets,
                 playerChecked,
                 playerRaycasts,
-                playerNullTargets,
                 tileChecked,
                 tileRaycasts,
                 tileWorldSkipped,

@@ -382,17 +382,9 @@ public abstract class AsyncEngine implements Engine {
             if (attachedToAlwaysVisibleEntityOrSelf(player, entityView, entity, currentTick, worldEpoch)) {
                 return;
             }
-            ImmutableSpatial entityLocation = entity.getOffsetPosition();
-            if (entityLocation == null) {
-                timings.incrementEntityNullTargets();
-                Logger.debug("checkEntities skipped-null-location viewer=" + player.getPlayerUUID()
-                        + " target=" + entity.entityUUID()
-                        + " wasVisible=" + wasVisible
-                        + " tick=" + currentTick);
-                return;
-            }
+
             timings.incrementEntityRaycasts();
-            boolean canSee = RaycastUtil.raycast(playerLocation, entityLocation, entityConfig.getMaxOccludingCount(), entityConfig.getAlwaysShowRadius(), entityConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
+            boolean canSee = RaycastUtil.raycast(playerLocation, entity, entityConfig.getMaxOccludingCount(), entityConfig.getAlwaysShowRadius(), entityConfig.getRaycastRadius(), debugParticles, blockView, entity.getYOffset(), 1, particleSpawner);
             entityView.setVisibility(entity, canSee, currentTick, worldEpoch);
         });
         timings.addEntityChecked(checked);
@@ -406,17 +398,8 @@ public abstract class AsyncEngine implements Engine {
             if (attachedToAlwaysVisibleEntityOrSelf(player, playerView, otherPlayer, currentTick, worldEpoch)) {
                 return;
             }
-            ImmutableSpatial otherPlayerLocation = otherPlayer.getOffsetPosition();
-            if (otherPlayerLocation == null) {
-                timings.incrementPlayerNullTargets();
-                Logger.debug("checkPlayers skipped-null-location viewer=" + player.getPlayerUUID()
-                        + " target=" + otherPlayer.entityUUID()
-                        + " wasVisible=" + wasVisible
-                        + " tick=" + currentTick);
-                return;
-            }
             timings.incrementPlayerRaycasts();
-            boolean canSee = RaycastUtil.raycast(playerLocation, otherPlayerLocation, playerConfig.getMaxOccludingCount(), playerConfig.getAlwaysShowRadius(), playerConfig.getRaycastRadius(), debugParticles, blockView, 1, particleSpawner);
+            boolean canSee = RaycastUtil.raycast(playerLocation, otherPlayer, playerConfig.getMaxOccludingCount(), playerConfig.getAlwaysShowRadius(), playerConfig.getRaycastRadius(), debugParticles, blockView, 1.5f, 1, particleSpawner);
             playerView.setVisibility(otherPlayer, canSee, currentTick, worldEpoch);
         });
         timings.addPlayerChecked(checked);

@@ -70,7 +70,7 @@ public interface TrackedEntity<PacketReplayData> extends MutableFloatingSpatial 
     PacketReplayData packetReplayData();
     TrackedEntity<?> setPacketReplayData(PacketReplayData packetReplayData);
 
-    ImmutableSpatial getOffsetPosition();
+    float getYOffset();
 
     /**
      * For use when the player disconnects, clears all data.
