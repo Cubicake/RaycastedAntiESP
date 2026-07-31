@@ -6,7 +6,7 @@
  * See README.md for warranty disclaimer and further information.
  */
 
-package games.cubi.raycastedantiesp.paper.utils;
+package games.cubi.raycastedantiesp.paper.internals;
 
 import games.cubi.logs.Logger;
 
@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Entity IDs -1 and -2 are used as sentinel values, however they can be created by the Minecraft server if the entity id counter overflows.
+ * Minecraft uses IDs -1 and 0 as sentinel values, but does not guard against them existing naturally.
  * This class guards against that by jumping from ID -2000 to 1.
  * Yes, this is unhinged.
  */

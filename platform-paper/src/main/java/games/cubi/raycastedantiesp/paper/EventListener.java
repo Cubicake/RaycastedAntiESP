@@ -16,7 +16,7 @@ import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
-import games.cubi.raycastedantiesp.paper.utils.HackyEntityIDGuard;
+import games.cubi.raycastedantiesp.paper.internals.HackyEntityIDGuard;
 import games.cubi.raycastedantiesp.paper.utils.PaperListener;
 import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
