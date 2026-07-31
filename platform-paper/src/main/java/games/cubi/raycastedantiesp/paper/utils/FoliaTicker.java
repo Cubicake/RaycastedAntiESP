@@ -8,8 +8,13 @@
 
 package games.cubi.raycastedantiesp.paper.utils;
 
+import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.Ticker;
+import games.cubi.raycastedantiesp.core.engine.AsyncEngine;
 import games.cubi.raycastedantiesp.core.utils.VarHandler;
+import games.cubi.raycastedantiesp.paper.EventListener;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
+import games.cubi.raycastedantiesp.paper.internals.HackyEntityIDGuard;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
 
@@ -17,15 +22,33 @@ import java.lang.invoke.VarHandle;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 
-public class FoliaTicker implements IntSupplier {
+public class FoliaTicker implements Ticker {
     private volatile int currentTick; private static final VarHandle CURRENT_TICK = VarHandler.get(FoliaTicker.class, "currentTick", int.class);
+    private final HackyEntityIDGuard entityIDGuard = new HackyEntityIDGuard();
 
     public FoliaTicker() {
         Bukkit.getGlobalRegionScheduler().runAtFixedRate(RaycastedAntiESP.get(), this::increment, 1L, 1L); //Is this guaranteed to be a specific thread?
     }
 
     private void increment(ScheduledTask scheduledTask) {
-        CURRENT_TICK.getAndAdd(this, 1);
+        int previous = (int) CURRENT_TICK.getAndAdd(this, 1);
+
+        int newTick = previous + 1;
+
+        entityIDGuard.tick(newTick);
+        AsyncEngine engine = RaycastedAntiESP.getEngine();
+        if (!engine.markTickRunning()) {
+            Logger.info("Skipped starting tick because previous tick is still running. This likely means the server is overloaded.", 6, EventListener.class);
+            return;
+        }
+        // Capture this before async handoff so timing diagnostics can separate scheduler queueing from engine work.
+        long scheduledNanos = System.nanoTime();
+        try {
+            Bukkit.getAsyncScheduler().runNow(RaycastedAntiESP.get(), task -> engine.tick(newTick, scheduledNanos));
+        } catch (RuntimeException exception) {
+            engine.cancelPendingTickReservation();
+            Logger.error("Failed to schedule engine tick after reserving it. Cleared the pending reservation so future ticks can continue.", exception, 2, EventListener.class);
+        }
     }
 
     @Override

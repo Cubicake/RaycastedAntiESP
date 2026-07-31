@@ -16,7 +16,6 @@ import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
-import games.cubi.raycastedantiesp.paper.internals.HackyEntityIDGuard;
 import games.cubi.raycastedantiesp.paper.utils.PaperListener;
 import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -39,8 +38,6 @@ public class EventListener extends PaperListener {
     private final RaycastedAntiESP plugin;
     private final PaperAsyncEngine engine;
     private final IntSupplier currentTickSupplier;
-    private final HackyEntityIDGuard entityIDGuard = new HackyEntityIDGuard();
-
     private static EventListener instance = null;
 
     private EventListener(RaycastedAntiESP plugin, PaperAsyncEngine engine, IntSupplier currentTickSupplier) {
@@ -107,20 +104,7 @@ public class EventListener extends PaperListener {
 
     @EventHandler(priority = EventPriority.LOWEST) //Runs first
     public void serverTickStartEvent(ServerTickStartEvent event) {
-        // Capture this before async handoff so timing diagnostics can separate scheduler queueing from engine work.
-        int scheduledTick = currentTickSupplier.getAsInt();
-        entityIDGuard.tick(scheduledTick);
-        if (!engine.markTickRunning()) {
-            Logger.info("Skipped starting tick because previous tick is still running. This likely means the server is overloaded.", 6, EventListener.class);
-            return;
-        }
-        long scheduledNanos = System.nanoTime();
-        try {
-            Bukkit.getAsyncScheduler().runNow(plugin, task -> engine.tick(scheduledTick, scheduledNanos));
-        } catch (RuntimeException exception) {
-            engine.cancelPendingTickReservation();
-            Logger.error("Failed to schedule engine tick after reserving it. Cleared the pending reservation so future ticks can continue.", exception, 2, EventListener.class);
-        }
+
     }
 
     @EventHandler(priority = EventPriority.MONITOR) //Runs last
