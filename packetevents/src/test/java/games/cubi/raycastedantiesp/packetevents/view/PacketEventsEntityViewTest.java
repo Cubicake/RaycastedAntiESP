@@ -9,7 +9,7 @@
 package games.cubi.raycastedantiesp.packetevents.view;
 
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
-import games.cubi.raycastedantiesp.packetevents.locatables.PacketEventsEntity;
+import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsEntityReplayData;
 import org.junit.jupiter.api.Test;
 
