@@ -47,6 +47,13 @@ public interface EntityView<T extends TrackedEntity<?>>  extends Clearable {
 
     void setVisibility(NettyEntity<?> entity, boolean visible, int currentTick, int expectedWorldEpoch);
 
+    /**
+     * Applies visibility from the Netty structural writer without publishing an engine transition.
+     *
+     * @return whether the entity and epoch were current and the visibility was applied
+     */
+    boolean recordDirectVisibility(NettyEntity<?> entity, boolean visible, int currentTick, int expectedWorldEpoch);
+
     Collection<UUID> getKnownEntities();
 
     int[] getKnownEntityIDs();

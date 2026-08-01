@@ -96,6 +96,9 @@ public abstract class PacketEntityViewController<P> {
 
     protected abstract NettyEntity<?> createSelfEntity(PlayerData ownData, int entityID, UUID playerUUID);
 
+    /** Applies a SHOW transition immediately on the Netty thread without publishing it to the engine SPSC queue. */
+    protected abstract void processDirectEntityShow(PlayerData playerData, EntityView<?> view, NettyEntity<?> entity, int worldEpoch);
+
     protected void handlePlayerDisconnect(UUID player) {
         if (player == null) {
             return;

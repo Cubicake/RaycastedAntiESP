@@ -298,6 +298,13 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     @Override
+    protected void processDirectEntityShow(PlayerData playerData, EntityView<?> view, NettyEntity<?> entity, int worldEpoch) {
+        Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(playerData.getPlayerUUID());
+        User viewer = PacketEvents.getAPI().getProtocolManager().getUser(channel);
+        processEntityTransition(playerData, viewer, cast(view), worldEpoch, EntityViewTransition.Type.SHOW, entity, worldEpoch);
+    }
+
+    @Override
     protected @NotNull NettyEntity<?> processEntitySpawn(PlayerData playerData, PacketWrapper<?> packetWrapper, UUID world, int currentTick) {
         WrapperPlayServerSpawnEntity packet = (WrapperPlayServerSpawnEntity) packetWrapper;
         if (packet.getUUID().isEmpty()) {
