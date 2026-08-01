@@ -232,6 +232,9 @@ class PacketEntityViewControllerTest {
         }
 
         @Override
+        protected void processTrackedMetadata(Void packet, NettyEntity<?> entity) {}
+
+        @Override
         protected void cachePacket(Void packet, int entityID, PlayerData playerData, int currentTick) {}
 
         @Override
