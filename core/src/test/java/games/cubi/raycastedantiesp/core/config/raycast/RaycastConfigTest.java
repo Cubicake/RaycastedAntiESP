@@ -15,7 +15,18 @@ class RaycastConfigTest {
         EntityConfig entityConfig = EntityConfig.load(entityNode(false), "checks.entity");
 
         assertTrue(playerConfig.keepClientEntityWhenHidden());
+        assertFalse(playerConfig.onlyCheckSneaking());
         assertFalse(entityConfig.keepClientEntityWhenHidden());
+    }
+
+    @Test
+    void playerSneakingOnlySettingLoadsIndependently() throws SerializationException {
+        ConfigurationNode node = entityNode(true);
+        node.node("only-check-sneaking").set(true);
+
+        PlayerConfig playerConfig = PlayerConfig.load(node, "checks.player");
+
+        assertTrue(playerConfig.onlyCheckSneaking());
     }
 
     @Test
@@ -38,6 +49,7 @@ class RaycastConfigTest {
         ConfigurationNode node = baseNode();
         node.node("hide-sounds-when-hidden").set(true);
         node.node("keep-client-entity-when-hidden").set(keepClientEntityWhenHidden);
+        node.node("only-check-sneaking").set(false);
         return node;
     }
 
