@@ -62,14 +62,14 @@ public interface EntityView<T extends TrackedEntity<?>>  extends Clearable {
      *
      * @return number of entities passed to {@code action}.
      */
-    int forEachNeedingRecheck(int recheckTicks, int currentTick, Consumer<UUID> action);
+    int forEachNeedingRecheck(int visibleRecheckTicks, int currentTick, Consumer<UUID> action);
 
     /**
      * Iterates currently tracked entities that should be visibility-checked.
      *
      * @return number of entities passed to {@code action}, or 0 if {@code countingActuallyNeeded} is false.
      */
-    int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, int expectedWorldEpoch, Consumer<NettyEntity<?>> action);
+    int forEachNeedingRecheckEntity(int visibleRecheckTicks, int currentTick, boolean countingActuallyNeeded, int expectedWorldEpoch, Consumer<NettyEntity<?>> action);
 
     boolean hasPendingTransitions();
 

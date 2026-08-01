@@ -260,7 +260,7 @@ class PacketEventsEntityViewTest {
     }
 
     @Test
-    void trackedStateChangeRequestsCheckWhenPeriodicVisibleRechecksAreDisabled() {
+    void trackedStateChangeDoesNotOverrideDisabledVisibleRechecks() {
         AtomicInteger worldEpoch = new AtomicInteger(2);
         PacketEventsEntityView view = PacketEventsEntityView.createEntityView(worldEpoch::getAcquire);
         PacketEventsEntity entity = entity(1, UUID.randomUUID());
@@ -270,8 +270,7 @@ class PacketEventsEntityViewTest {
         assertEquals(0, view.forEachNeedingRecheckEntity(-1, 11, true, worldEpoch.getAcquire(), ignored -> {}));
 
         assertTrue(entity.setGlowing(true));
-        assertEquals(1, view.forEachNeedingRecheckEntity(-1, 12, true, worldEpoch.getAcquire(),
-                checked -> view.setVisibility(checked, true, 12, worldEpoch.getAcquire())));
+        assertEquals(0, view.forEachNeedingRecheckEntity(-1, 12, true, worldEpoch.getAcquire(), ignored -> {}));
         assertEquals(0, view.forEachNeedingRecheckEntity(-1, 13, true, worldEpoch.getAcquire(), ignored -> {}));
     }
 
