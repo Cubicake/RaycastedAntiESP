@@ -28,9 +28,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.net.URI;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 
 public class UpdateChecker {
@@ -116,16 +118,21 @@ public class UpdateChecker {
         CompletableFuture<List<VersionEntry>> future = new CompletableFuture<>();
 
         Bukkit.getAsyncScheduler().runNow(plugin, ignored -> {
+            try {
+            URLConnection connection = new URI(VERSION_API_ENDPOINT).toURL().openConnection();
+            connection.setConnectTimeout(5_000); //ms
+            connection.setReadTimeout(5_000); //ms
             try (
                 final InputStreamReader reader = new InputStreamReader(new URI(VERSION_API_ENDPOINT).toURL().openConnection().getInputStream());
                 final BufferedReader bufferedReader = new BufferedReader(reader)
             ) {
                 future.complete(parseVersionEntries(bufferedReader));
+            }
             } catch (IOException | URISyntaxException e) {
                 future.completeExceptionally(new IllegalStateException("Unable to fetch latest version", e));
             }
         });
-        return future;
+        return future.orTimeout(10_000, TimeUnit.MILLISECONDS);
     }
 
     private static List<VersionEntry> parseVersionEntries(BufferedReader reader) throws IOException {
