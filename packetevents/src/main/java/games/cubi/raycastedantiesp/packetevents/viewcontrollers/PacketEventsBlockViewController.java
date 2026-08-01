@@ -80,9 +80,8 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         int currentTick = currentTickSupplier.getAsInt();
         boolean tileChecksEnabled = tileEntityConfig.enabled();
         BlockView blockView = playerData.blockView();
-        for (TrackedTileEntity<?> tileEntity : blockView.applyTileEntityCheckMode(tileChecksEnabled, currentTick)) {
-            sendTileEntityVisibilityRepair(event.getUser(), tileEntity);
-        }
+        blockView.applyTileEntityCheckMode(tileChecksEnabled, currentTick,
+                tileEntity -> sendTileEntityVisibilityRepair(event.getUser(), tileEntity));
 
         handleBlockPackets(event, event.getUser(), playerData, world, currentTick, tileChecksEnabled);
 

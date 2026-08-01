@@ -160,29 +160,27 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     @Override
-    public Collection<TrackedTileEntity<?>> applyTileEntityCheckMode(boolean enabled, int currentTick) {
+    public void applyTileEntityCheckMode(boolean enabled, int currentTick, Consumer<TrackedTileEntity<?>> visibilityRepairConsumer) {
         long current = tileEntityCheckModeTokenAcquire();
         if (modeEnabled(current) == enabled) {
-            return null;
+            return;
         }
         // Drop the enabled bit, increment the generation, then restore bit 0 below only for enabled mode.
         long next = ((current >>> 1) + 1L) << 1;
         if (enabled) {
             forEachTileEntity(tileEntity -> tileEntity.setLastChecked(TrackedTileEntity.NEVER_CHECKED));
             TILE_ENTITY_CHECK_MODE_TOKEN.setRelease(this, next | 1L);
-            return null;
+            return;
         }
 
         TILE_ENTITY_CHECK_MODE_TOKEN.setRelease(this, next);
-        ArrayList<TrackedTileEntity<?>> visibilityRepairs = new ArrayList<>();
         forEachTileEntity(tileEntity -> {
             if (!tileEntity.visible()) {
                 tileEntity.setVisible(true);
                 tileEntity.setLastChecked(currentTick);
-                visibilityRepairs.add(tileEntity);
+                visibilityRepairConsumer.accept(tileEntity);
             }
         });
-        return visibilityRepairs;
     }
 
     @Override

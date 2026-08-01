@@ -32,7 +32,7 @@ class PacketEventsBlockViewControllerTest {
         UUID world = UUID.randomUUID();
         ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(3, 64, 5);
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
         view.updateOrInsertTileEntity(world, location, (char) 1, true);
         TrackedTileEntity<?> original = view.getTrackedTileEntity(world, location);
         view.updateVisibilityForEachNeedingRecheck(0, 1, view.tileEntityCheckModeToken(), 2, ignored -> BlockView.VisibilityResolver.HIDE);
@@ -59,7 +59,7 @@ class PacketEventsBlockViewControllerTest {
         UUID world = UUID.randomUUID();
         ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(3, 64, 5);
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
         TrackedTileEntity<?> tileEntity = view.updateOrInsertTileEntity(world, location, (char) 1, true);
         view.updateVisibilityForEachNeedingRecheck(0, 1, view.tileEntityCheckModeToken(), 2, ignored -> BlockView.VisibilityResolver.HIDE);
         view.flushPendingTransitions();
@@ -74,7 +74,7 @@ class PacketEventsBlockViewControllerTest {
         UUID world = UUID.randomUUID();
         ImmutableBlockSpatialImpl location = new ImmutableBlockSpatialImpl(3, 64, 5);
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
         TrackedTileEntity<?> original = view.updateOrInsertTileEntity(world, location, (char) 1, false);
         view.updateVisibilityForEachNeedingRecheck(0, 1, view.tileEntityCheckModeToken(), 2, ignored -> BlockView.VisibilityResolver.SHOW);
         view.flushPendingTransitions();
@@ -98,7 +98,7 @@ class PacketEventsBlockViewControllerTest {
         ImmutableBlockSpatialImpl position = new ImmutableBlockSpatialImpl(3, 64, 5);
         AtomicInteger worldEpoch = new AtomicInteger(2);
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, worldEpoch::getAcquire);
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
         TrackedTileEntity<?> original = view.updateOrInsertTileEntity(firstWorld, position, (char) 1, true);
         view.updateVisibilityForEachNeedingRecheck(0, 1, view.tileEntityCheckModeToken(), worldEpoch.getAcquire(), ignored -> BlockView.VisibilityResolver.HIDE);
         view.flushPendingTransitions();

@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -127,7 +127,7 @@ class ChunkSectionStoreTest {
         UUID worldB = UUID.randomUUID();
         ImmutableBlockLocatable locationA = new ImmutableBlockLocatable(worldA, 1, 2, 3);
 
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
         view.upsertBlock(worldA, 1, 2, 3, 1);
         view.updateOrInsertTileEntity(locationA, 99, true);
         view.updateVisibilityForEachNeedingRecheck(0, 1, view.tileEntityCheckModeToken(), ignored -> BlockView.VisibilityResolver.HIDE);
@@ -269,17 +269,22 @@ class ChunkSectionStoreTest {
     }
 
     @Test
-    void disablingTileChecksReturnsVisibilityRepairs() {
+    void disablingTileChecksConsumesVisibilityRepairs() {
         TestBlockView view = new TestBlockView(ODD_OCCLUDING, false);
         UUID world = UUID.randomUUID();
         ImmutableBlockSpatialImpl position = new ImmutableBlockSpatialImpl(1, 64, 2);
-        view.applyTileEntityCheckMode(true, 0);
-        TestTileEntity tileEntity = view.updateOrInsertTileEntity(world, position, 99, false);
+        ArrayList<TrackedTileEntity<?>> visibilityRepairs = new ArrayList<>();
 
-        Collection<TrackedTileEntity<?>> visibilityRepairs = view.applyTileEntityCheckMode(false, 1);
+        view.applyTileEntityCheckMode(true, 0, visibilityRepairs::add);
+        assertTrue(visibilityRepairs.isEmpty());
+        TestTileEntity tileEntity = view.updateOrInsertTileEntity(world, position, 99, false);
+        view.applyTileEntityCheckMode(true, 1, visibilityRepairs::add);
+        assertTrue(visibilityRepairs.isEmpty());
+
+        view.applyTileEntityCheckMode(false, 1, visibilityRepairs::add);
 
         assertEquals(1, visibilityRepairs.size());
-        assertSame(tileEntity, visibilityRepairs.iterator().next());
+        assertSame(tileEntity, visibilityRepairs.getFirst());
         assertTrue(tileEntity.visible());
         assertFalse(view.hasPendingTransitions());
     }
@@ -289,19 +294,19 @@ class ChunkSectionStoreTest {
         TestBlockView view = new TestBlockView(ODD_OCCLUDING, false);
         UUID world = UUID.randomUUID();
         ImmutableBlockLocatable location = new ImmutableBlockLocatable(world, 1, 64, 2);
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
         view.updateOrInsertTileEntity(location, 99, true);
         long staleToken = view.tileEntityCheckModeToken();
 
         int processed = view.updateVisibilityForEachNeedingRecheck(-1, 1, staleToken, ignored -> {
-            view.applyTileEntityCheckMode(false, 1);
+            view.applyTileEntityCheckMode(false, 1, unused -> {});
             return BlockView.VisibilityResolver.HIDE;
         });
 
         assertEquals(1, processed);
         assertTrue(view.isVisible(location, 1));
 
-        view.applyTileEntityCheckMode(true, 2);
+        view.applyTileEntityCheckMode(true, 2, unused -> {});
         long enabledToken = view.tileEntityCheckModeToken();
         AtomicInteger checks = new AtomicInteger();
         view.updateVisibilityForEachNeedingRecheck(-1, 2, enabledToken, ignored -> {
@@ -318,7 +323,7 @@ class ChunkSectionStoreTest {
         UUID firstWorld = UUID.randomUUID();
         UUID secondWorld = UUID.randomUUID();
         ImmutableBlockSpatialImpl position = new ImmutableBlockSpatialImpl(1, 64, 2);
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
         TestTileEntity original = view.updateOrInsertTileEntity(firstWorld, position, 99, true);
         long modeToken = view.tileEntityCheckModeToken();
         int staleEpoch = worldEpoch.getAcquire();
@@ -344,7 +349,7 @@ class ChunkSectionStoreTest {
             TestBlockView view = new TestBlockView(ODD_OCCLUDING, false);
             UUID world = UUID.randomUUID();
             ImmutableBlockLocatable location = new ImmutableBlockLocatable(world, 1, 64, 2);
-            view.applyTileEntityCheckMode(true, 0);
+            view.applyTileEntityCheckMode(true, 0, unused -> {});
             TestTileEntity tileEntity = view.updateOrInsertTileEntity(location, 99, true);
             long modeToken = view.tileEntityCheckModeToken();
             AtomicInteger acknowledgedTick = new AtomicInteger();

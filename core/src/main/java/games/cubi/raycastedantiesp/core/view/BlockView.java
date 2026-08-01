@@ -6,8 +6,6 @@ import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.Collection;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -50,10 +48,11 @@ public interface BlockView extends Clearable {
     /**
      * Applies a mode change from the structural writer.
      *
-     * @return tile entities made visible when checks were disabled; the structural writer must send their current state
-     * directly rather than publishing them to the engine transition queue.
+     * Invokes {@code visibilityRepairConsumer} for each tile entity made visible when checks are disabled. The
+     * structural writer must send their current state directly rather than publishing them to the engine transition
+     * queue.
      */
-    @Nullable Collection<TrackedTileEntity<?>> applyTileEntityCheckMode(boolean enabled, int currentTick);
+    void applyTileEntityCheckMode(boolean enabled, int currentTick, Consumer<TrackedTileEntity<?>> visibilityRepairConsumer);
 
     /** Returns an opaque enabled-state/generation snapshot for rejecting results that cross a mode change. */
     long tileEntityCheckModeToken();
