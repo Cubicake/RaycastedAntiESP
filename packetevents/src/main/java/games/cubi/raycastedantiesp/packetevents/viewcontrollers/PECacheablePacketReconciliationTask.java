@@ -9,9 +9,10 @@
 package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.utils.BaseEntitySpawnTask;
 import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;
 
@@ -20,7 +21,7 @@ final class PECacheablePacketReconciliationTask extends BaseEntitySpawnTask {
     private final int entityID;
     private final PacketWrapper<?> packet;
 
-    PECacheablePacketReconciliationTask(PacketEventsEntityViewController controller, PlayerData playerData, int entityID, PacketWrapper<?> packet, int submittedTick) {
+    PECacheablePacketReconciliationTask(PlayerData playerData, int entityID, PacketWrapper<?> packet, int submittedTick) {
         super(submittedTick);
         this.playerData = playerData;
         this.entityID = entityID;
@@ -33,6 +34,9 @@ final class PECacheablePacketReconciliationTask extends BaseEntitySpawnTask {
         if (entity == null) {
             Logger.error("Reconciliation fail: Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ".", 3, this.getClass());
             return;
+        }
+        if (packet instanceof WrapperPlayServerEntityMetadata metadataPacket) {
+            PacketEventsEntityViewController.applyTrackedMetadata(entity, metadataPacket.getEntityMetadata());
         }
         PacketEventsEntityViewController.get().ensureReplayData((PacketEventsEntity) entity).addPacket(packet);
     }
