@@ -3,6 +3,7 @@
 
 README.md
 *.md
+*.toml
 
 *.iml
 *.ipr
