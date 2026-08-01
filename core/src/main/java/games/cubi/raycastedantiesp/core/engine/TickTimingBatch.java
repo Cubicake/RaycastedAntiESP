@@ -72,20 +72,12 @@ public class TickTimingBatch {
         entityChecked += count;
     }
 
-    public void incrementEntityNullTargets() {
-        entityNullTargets++;
-    }
-
     public void incrementEntityRaycasts() {
         entityRaycasts++;
     }
 
     public void addPlayerChecked(int count) {
         playerChecked += count;
-    }
-
-    public void incrementPlayerNullTargets() {
-        playerNullTargets++;
     }
 
     public void incrementPlayerRaycasts() {

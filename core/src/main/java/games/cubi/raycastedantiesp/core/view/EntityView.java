@@ -6,7 +6,6 @@ import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
@@ -47,6 +46,13 @@ public interface EntityView<T extends TrackedEntity<?>>  extends Clearable {
 
     void setVisibility(NettyEntity<?> entity, boolean visible, int currentTick, int expectedWorldEpoch);
 
+    /**
+     * Applies visibility from the Netty structural writer without publishing an engine transition.
+     *
+     * @return whether the entity and epoch were current and the visibility was applied
+     */
+    boolean recordDirectVisibility(NettyEntity<?> entity, boolean visible, int currentTick, int expectedWorldEpoch);
+
     Collection<UUID> getKnownEntities();
 
     int[] getKnownEntityIDs();
@@ -67,7 +73,15 @@ public interface EntityView<T extends TrackedEntity<?>>  extends Clearable {
 
     boolean hasPendingTransitions();
 
-    List<EntityViewTransition> drainTransitions();
+    /** Publishes the partial transition batch owned by the current engine producer. */
+    void flushPendingTransitions();
+
+    @FunctionalInterface
+    interface TransitionConsumer {
+        void accept(EntityViewTransition.Type type, TrackedEntity<?> entity, int worldEpoch);
+    }
+
+    void drainTransitions(TransitionConsumer consumer);
 
     boolean isPlayerView();
 

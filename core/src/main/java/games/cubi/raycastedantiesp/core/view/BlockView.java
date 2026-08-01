@@ -6,9 +6,7 @@ import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
-
 import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
@@ -40,9 +38,6 @@ public interface BlockView extends Clearable {
 
     boolean isVisible(UUID world, BlockSpatial position, int currentTick);
 
-    /** Applies a checked visibility decision and queues any required client transition. */
-    void applyTileEntityVisibilityDecision(TrackedTileEntity<?> tileEntity, boolean visible, int currentTick, long modeToken, int expectedWorldEpoch);
-
     /**
      * Records visibility established by the current outbound packet without queuing another packet. This also resets
      * the check timestamp because the transmitted state supersedes the result of any previous visibility check. The
@@ -50,8 +45,14 @@ public interface BlockView extends Clearable {
      */
     void recordOutboundTileEntityVisibility(TrackedTileEntity<?> tileEntity, boolean visible);
 
-    /** Applies a mode change from the structural writer. */
-    void applyTileEntityCheckMode(boolean enabled, int currentTick);
+    /**
+     * Applies a mode change from the structural writer.
+     *
+     * Invokes {@code visibilityRepairConsumer} for each tile entity made visible when checks are disabled. The
+     * structural writer must send their current state directly rather than publishing them to the engine transition
+     * queue.
+     */
+    void applyTileEntityCheckMode(boolean enabled, int currentTick, Consumer<TrackedTileEntity<?>> visibilityRepairConsumer);
 
     /** Returns an opaque enabled-state/generation snapshot for rejecting results that cross a mode change. */
     long tileEntityCheckModeToken();
@@ -86,7 +87,15 @@ public interface BlockView extends Clearable {
 
     boolean hasPendingTransitions();
 
-    List<BlockViewTransition> drainTransitions();
+    /** Publishes the partial transition batch owned by the current engine producer. */
+    void flushPendingTransitions();
+
+    @FunctionalInterface
+    interface TransitionConsumer {
+        void accept(BlockViewTransition.Type type, TrackedTileEntity<?> tileEntity, long modeToken, int worldEpoch);
+    }
+
+    void drainTransitions(TransitionConsumer consumer);
 
     /** Structural-writer operation. */
     void upsertBlock(UUID world, int x, int y, int z, int blockID);

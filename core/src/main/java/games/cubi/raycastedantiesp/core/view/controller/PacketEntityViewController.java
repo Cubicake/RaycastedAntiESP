@@ -96,6 +96,9 @@ public abstract class PacketEntityViewController<P> {
 
     protected abstract NettyEntity<?> createSelfEntity(PlayerData ownData, int entityID, UUID playerUUID);
 
+    /** Applies a SHOW transition immediately on the Netty thread without publishing it to the engine SPSC queue. */
+    protected abstract void processDirectEntityShow(PlayerData playerData, EntityView<?> view, NettyEntity<?> entity, int worldEpoch);
+
     protected void handlePlayerDisconnect(UUID player) {
         if (player == null) {
             return;
@@ -305,6 +308,9 @@ public abstract class PacketEntityViewController<P> {
                 }
                 else if (entity.isSelfEntity() && forceVisibleBecauseAttached(passenger, playerData, currentTick, "self-vehicle passenger")) {
                     passengersNotVisible = true;
+                    // The direct SHOW path already makes this passenger client-visible. Keep it in the
+                    // replacement relationship packet so the packet does not undo the newly established mount.
+                    visiblePassengers.add(passengerID);
                 }
                 else if (entity.isSelfEntity() || passenger.isSelfEntity()) {
                     visiblePassengers.add(passengerID);
@@ -543,7 +549,14 @@ public abstract class PacketEntityViewController<P> {
             // Note that this path can fire when a vehicle is bypassed, so its log level must be higher than default.
             return false;
         }
-        view.setVisibility(entity, true, currentTick, self.acquireWorldEpoch());
+        boolean wasVisible = entity.visible();
+        int worldEpoch = self.acquireWorldEpoch();
+        if (!view.recordDirectVisibility(entity, true, currentTick, worldEpoch)) {
+            return false;
+        }
+        if (!wasVisible || !wasClientVisible) {
+            processDirectEntityShow(self, view, entity, worldEpoch);
+        }
         return !wasClientVisible;
     }
 

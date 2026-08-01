@@ -17,10 +17,8 @@ record TickTimingSnapshot(
         int nullLocationSkippedPlayers,
         int entityChecked,
         int entityRaycasts,
-        int entityNullTargets,
         int playerChecked,
         int playerRaycasts,
-        int playerNullTargets,
         int tileChecked,
         int tileRaycasts,
         int tileWorldSkipped,
@@ -44,10 +42,8 @@ record TickTimingSnapshot(
                 + " nullLocationSkippedPlayers=" + nullLocationSkippedPlayers
                 + " entityRecheckCandidates=" + entityChecked
                 + " entityRaycasts=" + entityRaycasts
-                + " entityNullTargets=" + entityNullTargets
                 + " playerRecheckCandidates=" + playerChecked
                 + " playerRaycasts=" + playerRaycasts
-                + " playerNullTargets=" + playerNullTargets
                 + " tileRecheckCandidates=" + tileChecked
                 + " tileRaycasts=" + tileRaycasts
                 + " tileWorldSkipped=" + tileWorldSkipped

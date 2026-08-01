@@ -28,6 +28,7 @@ import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityTypeExclusions;
 import games.cubi.raycastedantiesp.core.entity.EntityBypassRegistry;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
+import games.cubi.raycastedantiesp.core.tracked.TrackedEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.utils.PrimitiveIntArrayList;
@@ -298,6 +299,13 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     @Override
+    protected void processDirectEntityShow(PlayerData playerData, EntityView<?> view, NettyEntity<?> entity, int worldEpoch) {
+        Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(playerData.getPlayerUUID());
+        User viewer = PacketEvents.getAPI().getProtocolManager().getUser(channel);
+        processEntityTransition(playerData, viewer, cast(view), worldEpoch, EntityViewTransition.Type.SHOW, entity, worldEpoch);
+    }
+
+    @Override
     protected @NotNull NettyEntity<?> processEntitySpawn(PlayerData playerData, PacketWrapper<?> packetWrapper, UUID world, int currentTick) {
         WrapperPlayServerSpawnEntity packet = (WrapperPlayServerSpawnEntity) packetWrapper;
         if (packet.getUUID().isEmpty()) {
@@ -466,39 +474,43 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     private void processEntityTransitions(PlayerData data, User viewer, EntityView<PacketEventsEntity> entityView) {
         int worldEpoch = data.acquireWorldEpoch(); //epoch can only change on the netty thread, so the epoch cannot be invalidated between this read and the packets being written
-        for (EntityViewTransition transition : entityView.drainTransitions()) {
-            if (!(transition.entity() instanceof PacketEventsEntity entity)
-                    || transition.worldEpoch() != worldEpoch
-                    || entityView.getEntity(entity.entityUUID()) != entity) {
-                continue;
-            }
+        entityView.drainTransitions((type, transitionEntity, transitionWorldEpoch) -> processEntityTransition(
+                data, viewer, entityView, worldEpoch, type, transitionEntity, transitionWorldEpoch));
+    }
 
-            if (entity.isSelfEntity()) {
-                Logger.warning("PacketEvents.processEntityTransitions skipped self entity viewer=" + data.getPlayerUUID()
-                        + " target=" + entity.entityUUID(), 2, PacketEventsEntityViewController.class);
-                continue;
-            }
-            if (!transitionMatchesCurrentVisibility(transition.type(), entity.visible())) {
-                continue;
-            }
+    private void processEntityTransition(PlayerData data, User viewer, EntityView<PacketEventsEntity> entityView,
+            int worldEpoch, EntityViewTransition.Type type, TrackedEntity<?> transitionEntity, int transitionWorldEpoch) {
+        if (!(transitionEntity instanceof PacketEventsEntity entity)
+                || transitionWorldEpoch != worldEpoch
+                || entityView.getEntity(entity.entityUUID()) != entity) {
+            return;
+        }
 
-            ClientTransitionAction action = resolveClientTransitionAction(
-                    transition.type(),
-                    entity.clientVisible(),
-                    getCorrectConfig(entityView).keepClientEntityWhenHidden()
-            );
-            switch (action) {
-                case DESTROY -> {
-                    viewer.writePacketSilently(new WrapperPlayServerDestroyEntities(entity.entityID()));
-                    entity.setClientVisible(false);
-                }
-                case SPAWN_AND_SYNC, SYNC -> {
-                    PacketEventsEntityReplayData replayData = ensureReplayData(entity);
-                    sendEntityShow(viewer, data, entity, replayData, action == ClientTransitionAction.SPAWN_AND_SYNC);
-                    entity.setClientVisible(true);
-                }
-                case NONE -> {}
+        if (entity.isSelfEntity()) {
+            Logger.warning("PacketEvents.processEntityTransitions skipped self entity viewer=" + data.getPlayerUUID()
+                    + " target=" + entity.entityUUID(), 2, PacketEventsEntityViewController.class);
+            return;
+        }
+        if (!transitionMatchesCurrentVisibility(type, entity.visible())) {
+            return;
+        }
+
+        ClientTransitionAction action = resolveClientTransitionAction(
+                type,
+                entity.clientVisible(),
+                getCorrectConfig(entityView).keepClientEntityWhenHidden()
+        );
+        switch (action) {
+            case DESTROY -> {
+                viewer.writePacketSilently(new WrapperPlayServerDestroyEntities(entity.entityID()));
+                entity.setClientVisible(false);
             }
+            case SPAWN_AND_SYNC, SYNC -> {
+                PacketEventsEntityReplayData replayData = ensureReplayData(entity);
+                sendEntityShow(viewer, data, entity, replayData, action == ClientTransitionAction.SPAWN_AND_SYNC);
+                entity.setClientVisible(true);
+            }
+            case NONE -> {}
         }
     }
 

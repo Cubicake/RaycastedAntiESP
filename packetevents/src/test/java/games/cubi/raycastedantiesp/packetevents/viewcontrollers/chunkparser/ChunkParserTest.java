@@ -87,7 +87,7 @@ class ChunkParserTest {
         TileEntity tileEntity = new TileEntity((byte) (3 << 4 | 1), (short) 2, 0, null);
         Column column = new Column(0, 0, true, new BaseChunk[]{section}, new TileEntity[]{tileEntity});
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
 
         Column replacement = new BlockChunkParser(RESOLVER, ignored -> 1).parse(view, world, column, 0);
 
@@ -142,7 +142,7 @@ class ChunkParserTest {
         Column initialColumn = new Column(0, 0, true, new BaseChunk[]{initial}, new TileEntity[]{tile});
         new NonMutatingBlockChunkParser(RESOLVER, ignored -> 1).parse(view, world, initialColumn, 0);
 
-        view.applyTileEntityCheckMode(true, 1);
+        view.applyTileEntityCheckMode(true, 1, unused -> {});
         Chunk_v1_18 resend = airSection();
         resend.set(3, 2, 1, 99);
         Column resendColumn = new Column(0, 0, true, new BaseChunk[]{resend}, new TileEntity[]{tile});
@@ -220,7 +220,7 @@ class ChunkParserTest {
         Chunk_v1_18 mutatingSection = airSection();
         mutatingSection.set(3, 2, 1, 99);
         PacketEventsBlockView mutatingView = new PacketEventsBlockView(RESOLVER, false, STABLE_WORLD_EPOCH);
-        mutatingView.applyTileEntityCheckMode(true, 0);
+        mutatingView.applyTileEntityCheckMode(true, 0, unused -> {});
         Column mutatingReplacement = new OcclusionChunkParser(RESOLVER, ignored -> 1).parse(
                 mutatingView, world, new Column(0, 0, true, new BaseChunk[]{mutatingSection}, new TileEntity[]{tile}), 0
         );
@@ -250,7 +250,7 @@ class ChunkParserTest {
     void mutatingParserCompactsManagedAndInvalidEntriesWhileRetainingUnmanagedData() {
         UUID world = UUID.randomUUID();
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
         Chunk_v1_18 section = airSection();
         section.set(1, 2, 1, 99);
         section.set(2, 2, 2, 100);
@@ -296,7 +296,7 @@ class ChunkParserTest {
 
     private static PacketEventsBlockView enabledView() {
         PacketEventsBlockView view = new PacketEventsBlockView(RESOLVER, true, STABLE_WORLD_EPOCH);
-        view.applyTileEntityCheckMode(true, 0);
+        view.applyTileEntityCheckMode(true, 0, unused -> {});
         return view;
     }
 
