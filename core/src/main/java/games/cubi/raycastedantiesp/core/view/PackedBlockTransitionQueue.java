@@ -58,9 +58,13 @@ public final class PackedBlockTransitionQueue {
         }
     }
 
-    public void clear() {
+    /**
+     * Discards transitions already published to the consumer. The producer-owned pending batch is intentionally left
+     * untouched: a structural clear can race an engine flush, and that in-flight batch must retain its old epoch and
+     * mode token so the consumer can reject it normally after it is published.
+     */
+    public void clearPublishedTransitions() {
         publishedEntries.clear();
-        pending.clear();
     }
 
     private void flushPending() {
