@@ -121,7 +121,7 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
     public int lastChecked() {
         return (int) LAST_CHECKED.getOpaque(this);
     }
-// todo it may be that this is only ever set by the engine thread? If so, just volatile annotation may be safe enough, as no two engine threads should update a single player at the same time (add guard lock for this)
+
     @Override
     public TrackedEntity<?> setLastChecked(int lastChecked) {
         LAST_CHECKED.setOpaque(this, lastChecked);
