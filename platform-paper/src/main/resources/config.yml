@@ -7,7 +7,7 @@ checks:
         always-show-radius: 8
         raycast-radius: 128
         hide-on-spawn-distance: 24
-        visible-recheck-interval-ticks: 5
+        visible-recheck-interval-ticks: 5  # -1 disables visible rechecks. When set to -1, once an entity is shown by any mechanism, it will be permanently visible.
         keep-client-entity-when-hidden: true
         only-check-sneaking: false
     entity:
@@ -17,7 +17,7 @@ checks:
         always-show-radius: 8
         raycast-radius: 92
         hide-on-spawn-distance: 24
-        visible-recheck-interval-ticks: 5
+        visible-recheck-interval-ticks: 5 # -1 disables visible rechecks. When set to -1, once an entity is shown by any mechanism, it will be permanently visible.
         keep-client-entity-when-hidden: true
         excluded-types:
             # Projectiles move very quickly, giving limited time for the raycast engine to process them. This could cause the player not to have enough time to dodge the projectile, so they are always visible by default.
@@ -68,7 +68,7 @@ checks:
         always-show-radius: 8
         raycast-radius: 64
         hide-on-spawn-distance: 24
-        visible-recheck-interval-ticks: -1
+        visible-recheck-interval-ticks: -1  # -1 disables visible rechecks. When set to -1, once an entity is shown by any mechanism, it will be permanently visible.
     sound-effects:
         enabled: true
         max-occluding-count: 3
