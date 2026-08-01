@@ -1,6 +1,5 @@
 package games.cubi.raycastedantiesp.core.view;
 
-import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
 import ca.spottedleaf.concurrentutil.map.SWMRInt2ObjectHashTable;
 import games.cubi.locatables.api.BlockLocatable;
 import games.cubi.locatables.api.BlockSpatial;
@@ -40,7 +39,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
      * <p> Since direct access to this object outside {@link AbstractBlockView} is impossible, a marker head object is skipped, and head removal is handled separately.
      * **/
     private final SWMRInt2ObjectHashTable<NettyTileEntity<R>> knownTileEntitiesByColumnBucket = new SWMRInt2ObjectHashTable<>();
-    private final MultiThreadedQueue<BlockViewTransition> transitions = new MultiThreadedQueue<>();
+    private final PackedBlockTransitionQueue transitions = new PackedBlockTransitionQueue();
     private final IntSupplier worldEpochSupplier;
     private volatile UUID trackedWorld;
     // Bit 0 is enabled; higher bits are a generation. The generation prevents enabled -> disabled -> enabled ABA from
@@ -135,15 +134,6 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
         return state == null || state.visible();
     }
 
-    @Override
-    public void applyTileEntityVisibilityDecision(TrackedTileEntity<?> tileEntity, boolean visible, int currentTick, long modeToken, int expectedWorldEpoch) {
-        if (!(tileEntity instanceof NettyTileEntity<?> nettyTileEntity)) {
-            return;
-        }
-        @SuppressWarnings("unchecked") T typed = (T) nettyTileEntity;
-        commitTileEntityVisibilityDecision(typed, typed.visible(), visible, currentTick, modeToken, expectedWorldEpoch);
-    }
-
     private void commitTileEntityVisibilityDecision(T tileEntity, boolean currentVisibility, boolean shouldBeVisible, int currentTick, long modeToken, int expectedWorldEpoch) {
         if (!isCurrentWorldEpoch(expectedWorldEpoch) || tileEntityCheckModeTokenAcquire() != modeToken) {
             return;
@@ -155,12 +145,8 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
         tileEntity.setVisible(shouldBeVisible);
         tileEntity.setLastChecked(currentTick);
         if (visibilityChanged) {
-            transitions.add(new BlockViewTransition(
-                    shouldBeVisible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE,
-                    tileEntity,
-                    modeToken,
-                    expectedWorldEpoch
-            ));
+            BlockViewTransition.Type type = shouldBeVisible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE;
+            transitions.add(type, tileEntity, modeToken, expectedWorldEpoch);
         }
     }
 
@@ -174,28 +160,29 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
     }
 
     @Override
-    public void applyTileEntityCheckMode(boolean enabled, int currentTick) {
+    public Collection<TrackedTileEntity<?>> applyTileEntityCheckMode(boolean enabled, int currentTick) {
         long current = tileEntityCheckModeTokenAcquire();
         if (modeEnabled(current) == enabled) {
-            return;
+            return null;
         }
         // Drop the enabled bit, increment the generation, then restore bit 0 below only for enabled mode.
         long next = ((current >>> 1) + 1L) << 1;
         if (enabled) {
             forEachTileEntity(tileEntity -> tileEntity.setLastChecked(TrackedTileEntity.NEVER_CHECKED));
             TILE_ENTITY_CHECK_MODE_TOKEN.setRelease(this, next | 1L);
-            return;
+            return null;
         }
 
         TILE_ENTITY_CHECK_MODE_TOKEN.setRelease(this, next);
-        int worldEpoch = worldEpochSupplier.getAsInt();
+        ArrayList<TrackedTileEntity<?>> visibilityRepairs = new ArrayList<>();
         forEachTileEntity(tileEntity -> {
-            boolean visible = tileEntity.visible();
-            if (!visible) {
-                @SuppressWarnings("unchecked") T typed = (T) tileEntity;
-                commitTileEntityVisibilityDecision(typed, false, true, currentTick, next, worldEpoch);
+            if (!tileEntity.visible()) {
+                tileEntity.setVisible(true);
+                tileEntity.setLastChecked(currentTick);
+                visibilityRepairs.add(tileEntity);
             }
         });
+        return visibilityRepairs;
     }
 
     @Override
@@ -257,17 +244,17 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
 
     @Override
     public boolean hasPendingTransitions() {
-        return !transitions.isEmpty();
+        return transitions.hasPendingTransitions();
     }
 
     @Override
-    public List<BlockViewTransition> drainTransitions() {
-        List<BlockViewTransition> drained = new ArrayList<>();
-        BlockViewTransition transition;
-        while ((transition = transitions.poll()) != null) {
-            drained.add(transition);
-        }
-        return drained;
+    public void flushPendingTransitions() {
+        transitions.flushPendingTransitions();
+    }
+
+    @Override
+    public void drainTransitions(BlockView.TransitionConsumer consumer) {
+        transitions.drainTransitions(consumer);
     }
 
     @Override
@@ -374,7 +361,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
         chunks.clear();
         forEachTileEntity(NettyTileEntity::markRemoved);
         knownTileEntitiesByColumnBucket.clear();
-        transitions.clear();
+        transitions.clearPublishedTransitions();
     }
 
     private void removeTileEntitiesInChunk(int chunkX, int chunkZ) {
