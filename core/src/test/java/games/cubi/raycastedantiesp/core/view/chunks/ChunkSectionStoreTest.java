@@ -20,8 +20,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -128,7 +130,8 @@ class ChunkSectionStoreTest {
         view.applyTileEntityCheckMode(true, 0);
         view.upsertBlock(worldA, 1, 2, 3, 1);
         view.updateOrInsertTileEntity(locationA, 99, true);
-        view.applyTileEntityVisibilityDecision(locationA, false, 1);
+        view.updateVisibilityForEachNeedingRecheck(0, 1, view.tileEntityCheckModeToken(), ignored -> BlockView.VisibilityResolver.HIDE);
+        view.flushPendingTransitions();
 
         Assertions.assertTrue(view.isBlockOccluding(worldA, 1, 2, 3));
         Assertions.assertFalse(view.isBlockOccluding(worldB, 1, 2, 3));
@@ -266,6 +269,22 @@ class ChunkSectionStoreTest {
     }
 
     @Test
+    void disablingTileChecksReturnsVisibilityRepairs() {
+        TestBlockView view = new TestBlockView(ODD_OCCLUDING, false);
+        UUID world = UUID.randomUUID();
+        ImmutableBlockSpatialImpl position = new ImmutableBlockSpatialImpl(1, 64, 2);
+        view.applyTileEntityCheckMode(true, 0);
+        TestTileEntity tileEntity = view.updateOrInsertTileEntity(world, position, 99, false);
+
+        Collection<TrackedTileEntity<?>> visibilityRepairs = view.applyTileEntityCheckMode(false, 1);
+
+        assertEquals(1, visibilityRepairs.size());
+        assertSame(tileEntity, visibilityRepairs.iterator().next());
+        assertTrue(tileEntity.visible());
+        assertFalse(view.hasPendingTransitions());
+    }
+
+    @Test
     void modeGenerationRejectsInFlightHideAndForcesFirstEnabledCheck() {
         TestBlockView view = new TestBlockView(ODD_OCCLUDING, false);
         UUID world = UUID.randomUUID();
@@ -333,24 +352,31 @@ class ChunkSectionStoreTest {
 
             Thread producer = Thread.startVirtualThread(() -> {
                 for (int tick = 1; tick <= transitions; tick++) {
-                    view.applyTileEntityVisibilityDecision(tileEntity, (tick & 1) == 0, tick, modeToken, 2);
+                    byte visibility = (tick & 1) == 0 ? BlockView.VisibilityResolver.SHOW : BlockView.VisibilityResolver.HIDE;
+                    view.updateVisibilityForEachNeedingRecheck(0, tick, modeToken, ignored -> visibility);
+                    view.flushPendingTransitions();
                     while (acknowledgedTick.getAcquire() != tick) {
                         Thread.onSpinWait();
                     }
                 }
             });
 
+            AtomicReference<BlockViewTransition.Type> transitionType = new AtomicReference<>();
+            AtomicReference<TrackedTileEntity<?>> transitionTileEntity = new AtomicReference<>();
+            boolean[] drained = {false};
             for (int tick = 1; tick <= transitions; tick++) {
-                var drained = view.drainTransitions();
-                while (drained.isEmpty()) {
-                    Thread.onSpinWait();
-                    drained = view.drainTransitions();
-                }
+                do {
+                    drained[0] = false;
+                    view.drainTransitions((type, queuedTileEntity, modeTokenValue, worldEpoch) -> {
+                        transitionType.set(type);
+                        transitionTileEntity.set(queuedTileEntity);
+                        drained[0] = true;
+                    });
+                } while (!drained[0]);
 
-                assertEquals(1, drained.size());
                 boolean expectedVisible = (tick & 1) == 0;
-                assertEquals(expectedVisible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE, drained.getFirst().type());
-                assertSame(tileEntity, drained.getFirst().tileEntity());
+                assertEquals(expectedVisible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE, transitionType.get());
+                assertSame(tileEntity, transitionTileEntity.get());
                 assertEquals(expectedVisible, tileEntity.visible());
                 assertEquals(tick, tileEntity.lastChecked());
                 acknowledgedTick.setRelease(tick);
@@ -470,11 +496,6 @@ class ChunkSectionStoreTest {
 
         private boolean isBlockOccluding(UUID world, int x, int y, int z) {
             return isBlockOccluding(new ImmutableBlockLocatable(world, x, y, z));
-        }
-
-        private void applyTileEntityVisibilityDecision(BlockLocatable location, boolean visible, int currentTick) {
-            TestTileEntity tileEntity = getTrackedTileEntity(location);
-            applyTileEntityVisibilityDecision(tileEntity, visible, currentTick, tileEntityCheckModeToken(), worldEpochSupplier.getAsInt());
         }
 
         private int updateVisibilityForEachNeedingRecheck(int recheckTicks, int currentTick, long modeToken, BlockView.VisibilityResolver action) {

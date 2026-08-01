@@ -8,7 +8,6 @@
 
 package games.cubi.raycastedantiesp.packetevents.view;
 
-import ca.spottedleaf.concurrentutil.collection.MultiThreadedQueue;
 import ca.spottedleaf.concurrentutil.map.SWMRHashTable;
 import games.cubi.locatables.api.Spatial;
 import games.cubi.logs.Logger;
@@ -17,6 +16,7 @@ import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.SingleThreadedGuard;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
+import games.cubi.raycastedantiesp.core.view.PackedEntityTransitionQueue;
 import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +28,7 @@ import java.util.function.IntSupplier;
 public class PacketEventsEntityView extends SingleThreadedGuard implements EntityView<PacketEventsEntity> {
     private final SWMRHashTable<UUID, PacketEventsEntity> entitiesByUUID = new SWMRHashTable<>();
     private final Int2ObjectOpenHashMap<UUID> entityUUIDsByID = new Int2ObjectOpenHashMap<>();
-    private final MultiThreadedQueue<EntityViewTransition> transitions = new MultiThreadedQueue<>();
+    private final PackedEntityTransitionQueue transitions = new PackedEntityTransitionQueue();
     private final boolean isPlayerView;
     private final IntSupplier worldEpochSupplier;
     private UUID trackedWorld;
@@ -160,23 +160,33 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
 
     @Override
     public void setVisibility(@NotNull NettyEntity<?> entity, boolean visible, int currentTick, int expectedWorldEpoch) {
-        if (!isCurrentWorldEpoch(expectedWorldEpoch)) {
-            return;
-        }
-        if (entitiesByUUID.get(entity.entityUUID()) != entity) {
-            return;
-        }
-        if (entity.isSelfEntity()) return;
         boolean visibilityChanged = entity.visible() != visible;
-        entity.setVisible(visible);
-        entity.setLastChecked(currentTick);
+        if (!recordDirectVisibility(entity, visible, currentTick, expectedWorldEpoch)) {
+            return;
+        }
         if (visibilityChanged) {
-            transitions.add(new EntityViewTransition(
+            transitions.add(
                     visible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE,
                     entity,
                     expectedWorldEpoch
-            ));
+            );
         }
+    }
+
+    @Override
+    public boolean recordDirectVisibility(@NotNull NettyEntity<?> entity, boolean visible, int currentTick, int expectedWorldEpoch) {
+        if (!isCurrentWorldEpoch(expectedWorldEpoch)) {
+            return false;
+        }
+        if (entitiesByUUID.get(entity.entityUUID()) != entity) {
+            return false;
+        }
+        if (entity.isSelfEntity()) {
+            return false;
+        }
+        entity.setVisible(visible);
+        entity.setLastChecked(currentTick);
+        return true;
     }
 
     @Override
@@ -230,17 +240,17 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
 
     @Override
     public boolean hasPendingTransitions() {
-        return !transitions.isEmpty();
+        return transitions.hasPendingTransitions();
     }
 
     @Override
-    public List<EntityViewTransition> drainTransitions() {
-        List<EntityViewTransition> drained = new ArrayList<>();
-        EntityViewTransition transition;
-        while ((transition = transitions.poll()) != null) {
-            drained.add(transition);
-        }
-        return drained;
+    public void flushPendingTransitions() {
+        transitions.flushPendingTransitions();
+    }
+
+    @Override
+    public void drainTransitions(EntityView.TransitionConsumer consumer) {
+        transitions.drainTransitions(consumer);
     }
 
     @Override
@@ -267,7 +277,7 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     private void clearTrackedState() {
         entitiesByUUID.clear();
         entityUUIDsByID.clear();
-        transitions.clear();
+        transitions.clearPublishedTransitions();
     }
 
     private boolean isCurrentWorldEpoch(int expectedWorldEpoch) {

@@ -356,20 +356,26 @@ public abstract class AsyncEngine implements Engine {
             }
             timings.incrementProcessedPlayers();
 
-            if (entityConfig.enabled()) {
-                long sectionStartNanos = timings.startEntitySection();
-                checkEntities(playerData, playerLocation, entityConfig, debugParticles, blockView, currentTick, worldEpoch, timings);
-                timings.finishEntitySection(sectionStartNanos);
-            }
-            if (playerConfig.enabled()) {
-                long sectionStartNanos = timings.startPlayerSection();
-                checkPlayers(playerData, playerLocation, playerConfig, debugParticles, blockView, currentTick, worldEpoch, timings);
-                timings.finishPlayerSection(sectionStartNanos);
-            }
-            if (tileEntityConfig.enabled()) {
-                long sectionStartNanos = timings.startTileSection();
-                checkTileEntities(playerData, playerLocation, tileEntityConfig, debugParticles, blockView, currentTick, worldEpoch, timings);
-                timings.finishTileSection(sectionStartNanos);
+            try {
+                if (entityConfig.enabled()) {
+                    long sectionStartNanos = timings.startEntitySection();
+                    checkEntities(playerData, playerLocation, entityConfig, debugParticles, blockView, currentTick, worldEpoch, timings);
+                    timings.finishEntitySection(sectionStartNanos);
+                }
+                if (playerConfig.enabled()) {
+                    long sectionStartNanos = timings.startPlayerSection();
+                    checkPlayers(playerData, playerLocation, playerConfig, debugParticles, blockView, currentTick, worldEpoch, timings);
+                    timings.finishPlayerSection(sectionStartNanos);
+                }
+                if (tileEntityConfig.enabled()) {
+                    long sectionStartNanos = timings.startTileSection();
+                    checkTileEntities(playerData, playerLocation, tileEntityConfig, debugParticles, blockView, currentTick, worldEpoch, timings);
+                    timings.finishTileSection(sectionStartNanos);
+                }
+            } finally {
+                playerData.entityView().flushPendingTransitions();
+                playerData.playerView().flushPendingTransitions();
+                blockView.flushPendingTransitions();
             }
         }
     }

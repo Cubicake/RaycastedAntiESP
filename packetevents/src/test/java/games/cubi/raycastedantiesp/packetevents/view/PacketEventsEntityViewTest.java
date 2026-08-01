@@ -14,11 +14,11 @@ import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsEntityRep
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -129,6 +129,21 @@ class PacketEventsEntityViewTest {
     }
 
     @Test
+    void directVisibilityDoesNotPublishEngineTransition() {
+        AtomicInteger worldEpoch = new AtomicInteger(2);
+        PacketEventsEntityView view = PacketEventsEntityView.createEntityView(worldEpoch::getAcquire);
+        PacketEventsEntity entity = entity(1, UUID.randomUUID());
+        entity.setVisible(false);
+        view.insertEntity(UUID.randomUUID(), entity);
+
+        assertTrue(view.recordDirectVisibility(entity, true, 1, worldEpoch.getAcquire()));
+
+        assertTrue(entity.visible());
+        assertEquals(1, entity.lastChecked());
+        assertFalse(view.hasPendingTransitions());
+    }
+
+    @Test
     void currentEntityTransitionRetainsIdentityAndEpoch() {
         AtomicInteger worldEpoch = new AtomicInteger(2);
         PacketEventsEntityView view = PacketEventsEntityView.createEntityView(worldEpoch::getAcquire);
@@ -138,10 +153,19 @@ class PacketEventsEntityViewTest {
         int epoch = worldEpoch.getAcquire();
 
         view.setVisibility(entity, false, 1, epoch);
-        EntityViewTransition transition = view.drainTransitions().getFirst();
+        view.flushPendingTransitions();
+        AtomicReference<EntityViewTransition.Type> transitionType = new AtomicReference<>();
+        AtomicReference<PacketEventsEntity> transitionEntity = new AtomicReference<>();
+        AtomicInteger transitionWorldEpoch = new AtomicInteger();
+        view.drainTransitions((type, queuedEntity, queuedWorldEpoch) -> {
+            transitionType.set(type);
+            transitionEntity.set((PacketEventsEntity) queuedEntity);
+            transitionWorldEpoch.set(queuedWorldEpoch);
+        });
 
-        assertSame(entity, transition.entity());
-        assertEquals(epoch, transition.worldEpoch());
+        assertSame(entity, transitionEntity.get());
+        assertEquals(epoch, transitionWorldEpoch.get());
+        assertEquals(EntityViewTransition.Type.HIDE, transitionType.get());
         assertFalse(entity.visible());
         assertEquals(1, entity.lastChecked());
     }
@@ -160,22 +184,27 @@ class PacketEventsEntityViewTest {
             Thread producer = Thread.startVirtualThread(() -> {
                 for (int tick = 1; tick <= transitions; tick++) {
                     view.setVisibility(entity, (tick & 1) == 0, tick, worldEpoch.getAcquire());
+                    view.flushPendingTransitions();
                     while (acknowledgedTick.getAcquire() != tick) {
                         Thread.onSpinWait();
                     }
                 }
             });
 
+            AtomicReference<EntityViewTransition.Type> transitionType = new AtomicReference<>();
+            boolean[] drained = {false};
             for (int tick = 1; tick <= transitions; tick++) {
-                List<EntityViewTransition> drained;
                 do {
-                    drained = view.drainTransitions();
-                    if (drained.isEmpty()) Thread.onSpinWait();
-                } while (drained.isEmpty());
+                    drained[0] = false;
+                    view.drainTransitions((type, queuedEntity, worldEpochValue) -> {
+                        transitionType.set(type);
+                        drained[0] = true;
+                    });
+                    if (!drained[0]) Thread.onSpinWait();
+                } while (!drained[0]);
 
-                assertEquals(1, drained.size());
                 boolean expectedVisible = (tick & 1) == 0;
-                assertEquals(expectedVisible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE, drained.getFirst().type());
+                assertEquals(expectedVisible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE, transitionType.get());
                 assertEquals(expectedVisible, entity.visible());
                 assertEquals(tick, entity.lastChecked());
                 acknowledgedTick.setRelease(tick);

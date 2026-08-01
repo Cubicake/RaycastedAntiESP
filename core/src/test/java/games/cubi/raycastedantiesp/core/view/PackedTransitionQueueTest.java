@@ -113,7 +113,7 @@ class PackedTransitionQueueTest {
         PackedEntityTransitionQueue entityQueue = new PackedEntityTransitionQueue();
         entityQueue.add(EntityViewTransition.Type.SHOW, entity(), 1);
         entityQueue.flushPendingTransitions();
-        entityQueue.clear();
+        entityQueue.clearPublishedTransitions();
         assertFalse(entityQueue.hasPendingTransitions());
         entityQueue.drainTransitions((type, entity, worldEpoch) -> {
             throw new AssertionError("cleared entity transition was drained");
@@ -122,17 +122,59 @@ class PackedTransitionQueueTest {
         for (int index = 0; index < 8; index++) {
             entityQueue.add(EntityViewTransition.Type.SHOW, entity(), 1);
         }
-        entityQueue.clear();
+        entityQueue.clearPublishedTransitions();
         assertFalse(entityQueue.hasPendingTransitions());
 
         PackedBlockTransitionQueue blockQueue = new PackedBlockTransitionQueue();
         blockQueue.add(BlockViewTransition.Type.HIDE, tileEntity(), 1L, 1);
         blockQueue.flushPendingTransitions();
-        blockQueue.clear();
+        blockQueue.clearPublishedTransitions();
         assertFalse(blockQueue.hasPendingTransitions());
         blockQueue.drainTransitions((type, tileEntity, modeToken, worldEpoch) -> {
             throw new AssertionError("cleared block transition was drained");
         });
+    }
+
+    @Test
+    void entityConsumerClearPreservesPendingBatchMetadata() {
+        PackedEntityTransitionQueue queue = new PackedEntityTransitionQueue();
+        TrackedEntity<?> published = entity();
+        TrackedEntity<?> pending = entity();
+        queue.add(EntityViewTransition.Type.SHOW, published, 3);
+        queue.flushPendingTransitions();
+        queue.add(EntityViewTransition.Type.HIDE, pending, 17);
+
+        queue.clearPublishedTransitions();
+        assertFalse(queue.hasPendingTransitions());
+
+        queue.flushPendingTransitions();
+        List<EntityObservation> observed = new ArrayList<>();
+        queue.drainTransitions((type, entity, worldEpoch) -> observed.add(new EntityObservation(type, entity, worldEpoch)));
+
+        assertEquals(List.of(pending), observed.stream().map(EntityObservation::entity).toList());
+        assertEquals(List.of(17), observed.stream().map(EntityObservation::worldEpoch).toList());
+    }
+
+    @Test
+    void blockConsumerClearPreservesPendingBatchMetadata() {
+        PackedBlockTransitionQueue queue = new PackedBlockTransitionQueue();
+        TrackedTileEntity<?> published = tileEntity();
+        TrackedTileEntity<?> pending = tileEntity();
+        queue.add(BlockViewTransition.Type.SHOW, published, 2L, 3);
+        queue.flushPendingTransitions();
+        queue.add(BlockViewTransition.Type.HIDE, pending, 19L, 23);
+
+        queue.clearPublishedTransitions();
+        assertFalse(queue.hasPendingTransitions());
+
+        queue.flushPendingTransitions();
+        List<BlockObservation> observed = new ArrayList<>();
+        queue.drainTransitions((type, tileEntity, modeToken, worldEpoch) ->
+                observed.add(new BlockObservation(type, tileEntity, modeToken, worldEpoch)));
+
+        assertEquals(List.of(pending), observed.stream().map(BlockObservation::tileEntity).toList());
+        assertEquals(List.of(19L), observed.stream().map(BlockObservation::modeToken).toList());
+        assertEquals(List.of(23), observed.stream().map(BlockObservation::worldEpoch).toList());
     }
 
     @Test

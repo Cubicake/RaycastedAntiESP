@@ -6,7 +6,6 @@ import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
@@ -74,7 +73,15 @@ public interface EntityView<T extends TrackedEntity<?>>  extends Clearable {
 
     boolean hasPendingTransitions();
 
-    List<EntityViewTransition> drainTransitions();
+    /** Publishes the partial transition batch owned by the current engine producer. */
+    void flushPendingTransitions();
+
+    @FunctionalInterface
+    interface TransitionConsumer {
+        void accept(EntityViewTransition.Type type, TrackedEntity<?> entity, int worldEpoch);
+    }
+
+    void drainTransitions(TransitionConsumer consumer);
 
     boolean isPlayerView();
 
