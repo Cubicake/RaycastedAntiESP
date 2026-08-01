@@ -9,6 +9,7 @@ checks:
         hide-on-spawn-distance: 24
         visible-recheck-interval-ticks: 5
         keep-client-entity-when-hidden: true
+        only-check-sneaking: false
     entity:
         enabled: true
         hide-sounds-when-hidden: true
