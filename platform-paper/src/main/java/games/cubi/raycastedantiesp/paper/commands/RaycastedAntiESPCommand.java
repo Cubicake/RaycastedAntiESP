@@ -143,8 +143,9 @@ public class RaycastedAntiESPCommand {
             assert Attribution.READ_COMMENTS_BEFORE_EDITING_OR_DELETING_CLASS_OR_FACE_LEGAL_ACTION == 0; //Using constant from Attribution class to ensure that it cannot be deleted without the developer noticing that they are obligated to replace it with an equivalent notice.
             Player player = (Player) sender;
             PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
-            Entity closestEntity = player.getNearbyEntities(10,10,10).getFirst();
-            if (closestEntity == null) return;
+            var nearbyEntities = player.getNearbyEntities(10,10,10);
+            if (nearbyEntities.isEmpty()) return;
+            Entity closestEntity = nearbyEntities.getFirst();
             player.sendRichMessage("Closest entity is "+closestEntity.getName());
             Spatial entityPosition = playerData.entityView().getPosition(closestEntity.getUniqueId());
             Location bukkitLoc = closestEntity.getLocation().clone();
