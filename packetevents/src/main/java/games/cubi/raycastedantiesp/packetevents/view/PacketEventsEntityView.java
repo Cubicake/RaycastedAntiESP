@@ -203,10 +203,10 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
-    public int forEachNeedingRecheck(int recheckTicks, int currentTick, Consumer<UUID> action) {
+    public int forEachNeedingRecheck(int visibleRecheckTicks, int currentTick, Consumer<UUID> action) {
         int processed = 0;
         for (PacketEventsEntity state : entitiesByUUID.values()) {
-            if (state.visible() && (recheckTicks < 0 || currentTick - state.lastChecked() < recheckTicks)) {
+            if (shouldSkipCheck(state.visible(), visibleRecheckTicks, state.lastChecked(), currentTick)) {
                 continue;
             }
             action.accept(state.entityUUID());
@@ -216,13 +216,13 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
     }
 
     @Override
-    public int forEachNeedingRecheckEntity(int recheckTicks, int currentTick, boolean countingActuallyNeeded, int expectedWorldEpoch, Consumer<NettyEntity<?>> action) {
+    public int forEachNeedingRecheckEntity(int visibleRecheckTicks, int currentTick, boolean countingActuallyNeeded, int expectedWorldEpoch, Consumer<NettyEntity<?>> action) {
         if (!isCurrentWorldEpoch(expectedWorldEpoch)) {
             return 0;
         }
         if (countingActuallyNeeded) {
             return entitiesByUUID.forEachValueCounted( (entity) -> {
-                if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
+                if (shouldSkipCheck(entity.visible(), visibleRecheckTicks, entity.lastChecked(), currentTick)) {
                     return false;
                 }
                 action.accept(entity);
@@ -230,12 +230,18 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
             });
         }
         entitiesByUUID.forEachValue( (entity) -> {
-            if (entity.visible() && (recheckTicks < 0 || currentTick - entity.lastChecked() < recheckTicks)) {
+            if (shouldSkipCheck(entity.visible(), visibleRecheckTicks, entity.lastChecked(), currentTick)) {
                 return;
             }
             action.accept(entity);
         });
         return 0;
+    }
+
+    private boolean shouldSkipCheck(boolean currentlyVisible, int visibleRecheckTicks, int lastChecked, int currentTick) {
+        return  currentlyVisible // If not currently visible checks always run
+                && ((visibleRecheckTicks < 0) // If recheck is disabled and entity is visible, skip
+                    || (lastChecked > 0 && currentTick - lastChecked < visibleRecheckTicks)); // If last checked is set and the difference between last checked and now is less than visible recheck ticks, skip.
     }
 
     @Override

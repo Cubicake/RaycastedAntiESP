@@ -51,6 +51,9 @@ import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_VEHICLE;
 
 public abstract class PacketEventsEntityViewController extends PacketEntityViewController<PacketWrapper<?>> implements PacketListener {
     private static final int NO_ENTITY = -1; // HackyEntityIDGuard prevents -1 from ever being assigned to a real entity.
+    private static final byte PROTOCOL_FLAG_SNEAKING = 0x02;
+    private static final byte PROTOCOL_FLAG_GLOWING = 0x40;
+
     enum ClientTransitionAction {
         NONE,
         DESTROY,
@@ -393,7 +396,29 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         return entityID;
     }
 
+    @Override
+    protected void processTrackedMetadata(PacketWrapper<?> packet, NettyEntity<?> entity) {
+        WrapperPlayServerEntityMetadata metadataPacket = (WrapperPlayServerEntityMetadata) packet;
+        applyTrackedMetadata(entity, metadataPacket.getEntityMetadata());
+    }
 
+    static void applyTrackedMetadata(NettyEntity<?> entity, List<EntityData<?>> metadata) {
+        if (metadata == null) {
+            return;
+        }
+        for (EntityData<?> value : metadata) {
+            if (value.getIndex() != 0) {
+                continue;
+            }
+            if (!(value.getValue() instanceof Byte protocolFlags)) {
+                Logger.warning("Entity metadata index 0 did not contain a byte for entity id=" + entity.entityID() + ".", 4, PacketEventsEntityViewController.class);
+                return;
+            }
+            entity.setSneaking((protocolFlags & PROTOCOL_FLAG_SNEAKING) != 0);
+            entity.setGlowing((protocolFlags & PROTOCOL_FLAG_GLOWING) != 0);
+            return;
+        }
+    }
 
     @Override
     protected void cachePacket(PacketWrapper<?> packet, int entityID, PlayerData playerData, int currentTick) {
@@ -403,7 +428,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.warning("Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
-            playerData.nettyData().addPostEntitySpawnTask(entityID, new PECacheablePacketReconciliationTask(this, playerData, entityID, packet, currentTick));
+            playerData.nettyData().addPostEntitySpawnTask(entityID, new PECacheablePacketReconciliationTask(playerData, entityID, packet, currentTick));
             return;
         }
         ensureReplayData((PacketEventsEntity) entity).addPacket(packet);

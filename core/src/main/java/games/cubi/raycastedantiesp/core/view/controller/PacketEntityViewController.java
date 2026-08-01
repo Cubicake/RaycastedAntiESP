@@ -209,6 +209,10 @@ public abstract class PacketEntityViewController<P> {
      * @return Whether or not to cancel the packet event. <code>true</code> to cancel, <code>false</code> to do nothing.
      */
     protected boolean handleEntityMetadata(P packet, int entityID, PlayerData playerData, int currentTick) {
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
+        if (entity != null) {
+            processTrackedMetadata(packet, entity);
+        }
         cachePacket(packet, entityID, playerData, currentTick);
         return cancelIfEnabledAndHidden(entityID, playerData);
     }
@@ -786,6 +790,8 @@ public abstract class PacketEntityViewController<P> {
 
     /**   @return The entity ID of the entity   */
     protected abstract int processPositionSyncPacket(P packet, PlayerData playerData, int currentTick);
+
+    protected abstract void processTrackedMetadata(P packet, NettyEntity<?> entity);
 
     protected abstract void cachePacket(P packet, int entityID, PlayerData playerData, int currentTick);
     /**   @return The entity ID of the entity   */

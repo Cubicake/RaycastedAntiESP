@@ -8,9 +8,7 @@
 
 package games.cubi.raycastedantiesp.core.tracked;
 
-import games.cubi.locatables.api.ImmutableSpatial;
 import games.cubi.locatables.api.MutableFloatingSpatial;
-import games.cubi.locatables.implementations.ImmutableSpatialImpl;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
 import games.cubi.raycastedantiesp.core.utils.PrimitiveIntArrayList;
@@ -37,6 +35,11 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
     private volatile double x; private static final VarHandle X = VarHandler.get(NettyEntity.class, "x", double.class);
     private volatile double y; private static final VarHandle Y = VarHandler.get(NettyEntity.class, "y", double.class);
     private volatile double z; private static final VarHandle Z = VarHandler.get(NettyEntity.class, "z", double.class);
+
+    // Packet-derived state shared with the engine.
+    private static final byte FLAG_SNEAKING = 1;
+    private static final byte FLAG_GLOWING = 1 << 1;
+    private volatile byte trackedFlags; private static final VarHandle TRACKED_FLAGS = VarHandler.get(NettyEntity.class, "trackedFlags", byte.class);
 
     // Packet-thread-only replay and client state.
     private float yaw;
@@ -65,7 +68,7 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
     private volatile boolean visible;
 
     // Constants
-
+    public static final int NEVER_CHECKED = Integer.MIN_VALUE;
     public static final int NO_VEHICLE = -1;
     public static final int NO_LEASHER = -2;
     public static final int SELF_ENTITY_TYPE = -29;
@@ -118,10 +121,42 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
     }
 
     @Override
+    public boolean glowing() {
+        return (((byte) TRACKED_FLAGS.getOpaque(this)) & FLAG_GLOWING) != 0;
+    }
+
+    @Override
+    public boolean sneaking() {
+        return (((byte) TRACKED_FLAGS.getOpaque(this)) & FLAG_SNEAKING) != 0;
+    }
+
+    public boolean setGlowing(boolean glowing) {
+        return setTrackedFlag(FLAG_GLOWING, glowing);
+    }
+
+    public boolean setSneaking(boolean sneaking) {
+        return setTrackedFlag(FLAG_SNEAKING, sneaking);
+    }
+
+    private boolean setTrackedFlag(byte mask, boolean enabled) {
+        byte previous = enabled
+                ? (byte) TRACKED_FLAGS.getAndBitwiseOrRelease(this, mask)
+                : (byte) TRACKED_FLAGS.getAndBitwiseAndRelease(this, (byte) ~mask);
+        boolean changed = (previous & mask) != (enabled ? mask : 0);
+        if (changed) {
+            // A concurrent engine check may overwrite this marker. Hidden entities retry next tick; visible entities
+            // may wait for their configured recheck or remain visible if rechecks are disabled.
+            // This is acceptable and not considered an issue.
+            LAST_CHECKED.setOpaque(this, NEVER_CHECKED);
+        }
+        return changed;
+    }
+
+    @Override
     public int lastChecked() {
         return (int) LAST_CHECKED.getOpaque(this);
     }
-// todo it may be that this is only ever set by the engine thread? If so, just volatile annotation may be safe enough, as no two engine threads should update a single player at the same time (add guard lock for this)
+
     @Override
     public TrackedEntity<?> setLastChecked(int lastChecked) {
         LAST_CHECKED.setOpaque(this, lastChecked);
@@ -381,6 +416,7 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
         if (packetReplayData != null) packetReplayData.clear();
         packetReplayData = null;
 
+        TRACKED_FLAGS.setOpaque(this, (byte) 0);
         VEHICLE_ID.setOpaque(this, NO_VEHICLE);
         PASSENGER_IDS.setRelease(this, null);
         leashedIDs = null;

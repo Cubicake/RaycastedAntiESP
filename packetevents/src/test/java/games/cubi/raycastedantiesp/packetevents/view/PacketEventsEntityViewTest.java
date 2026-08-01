@@ -259,6 +259,21 @@ class PacketEventsEntityViewTest {
         assertArrayEquals(new int[]{8}, entity.leashedEntityIDsOrNull());
     }
 
+    @Test
+    void trackedStateChangeDoesNotOverrideDisabledVisibleRechecks() {
+        AtomicInteger worldEpoch = new AtomicInteger(2);
+        PacketEventsEntityView view = PacketEventsEntityView.createEntityView(worldEpoch::getAcquire);
+        PacketEventsEntity entity = entity(1, UUID.randomUUID());
+        view.insertEntity(UUID.randomUUID(), entity);
+        view.setVisibility(entity, true, 10, worldEpoch.getAcquire());
+
+        assertEquals(0, view.forEachNeedingRecheckEntity(-1, 11, true, worldEpoch.getAcquire(), ignored -> {}));
+
+        assertTrue(entity.setGlowing(true));
+        assertEquals(0, view.forEachNeedingRecheckEntity(-1, 12, true, worldEpoch.getAcquire(), ignored -> {}));
+        assertEquals(0, view.forEachNeedingRecheckEntity(-1, 13, true, worldEpoch.getAcquire(), ignored -> {}));
+    }
+
     private static PacketEventsEntity entity(int entityID, UUID entityUUID) {
         return new PacketEventsEntity(null, 1, 2, 3, entityID, entityUUID, false, 0, true);
     }

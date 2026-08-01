@@ -8,8 +8,13 @@
 
 package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
+import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
+import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.UUID;
 
 import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_LEASHER;
 import static games.cubi.raycastedantiesp.packetevents.viewcontrollers.PacketEventsEntityViewController.ClientTransitionAction.DESTROY;
@@ -61,6 +66,43 @@ class PacketEventsEntityViewControllerTest {
                 EntityViewTransition.Type.SHOW, true));
         assertTrue(PacketEventsEntityViewController.transitionMatchesCurrentVisibility(
                 EntityViewTransition.Type.HIDE, false));
+    }
+
+    @Test
+    void sharedEntityFlagsUpdateSneakingAndGlowingState() {
+        PacketEventsEntity entity = entity();
+
+        PacketEventsEntityViewController.applyTrackedMetadata(entity, List.of(
+                new EntityData<>(0, null, (byte) 0x42)
+        ));
+
+        assertTrue(entity.sneaking());
+        assertTrue(entity.glowing());
+
+        PacketEventsEntityViewController.applyTrackedMetadata(entity, List.of(
+                new EntityData<>(0, null, (byte) 0)
+        ));
+
+        assertFalse(entity.sneaking());
+        assertFalse(entity.glowing());
+    }
+
+    @Test
+    void metadataWithoutSharedFlagsPreservesTrackedState() {
+        PacketEventsEntity entity = entity();
+        entity.setSneaking(true);
+        entity.setGlowing(true);
+
+        PacketEventsEntityViewController.applyTrackedMetadata(entity, List.of(
+                new EntityData<>(1, null, (byte) 0)
+        ));
+
+        assertTrue(entity.sneaking());
+        assertTrue(entity.glowing());
+    }
+
+    private static PacketEventsEntity entity() {
+        return new PacketEventsEntity(null, 0, 0, 0, 1, UUID.randomUUID(), false, 0, true);
     }
 
     @Test
