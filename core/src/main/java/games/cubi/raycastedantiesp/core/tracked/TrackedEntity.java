@@ -1,6 +1,5 @@
 package games.cubi.raycastedantiesp.core.tracked;
 
-import games.cubi.locatables.api.ImmutableSpatial;
 import games.cubi.locatables.api.MutableFloatingSpatial;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,6 +16,10 @@ public interface TrackedEntity<PacketReplayData> extends MutableFloatingSpatial 
 
     boolean visible();
     TrackedEntity<?> setVisible(boolean visible);
+
+    boolean glowing();
+
+    boolean sneaking();
 
     int lastChecked();
     TrackedEntity<?> setLastChecked(int lastChecked);
