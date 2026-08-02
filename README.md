@@ -22,6 +22,9 @@ The supported minecraft versions are 1.21.4+. Only Paper and derivative software
     - Unless you are extremely limited by bandwidth, this will probably be unnoticeable.
 - Hide nametags behind walls
   - Yes, this plugin is overkill for doing that, yes you can do it anyways.
+
+## Configuration
+RaycastedAntiESP has many configuration options. A full list with explanations can be found at https://raycastedantiesp.cubi.games/config/.
  
 ## Dependencies:
 - Packetevents
