@@ -18,7 +18,7 @@ public record UpdateConfig(boolean checkRelease, boolean checkBeta, boolean chec
                 ConfigReader.bool(ConfigReader.node(node, "check-release"), "updates.check-release"),
                 ConfigReader.bool(ConfigReader.node(node, "check-beta"), "updates.check-beta"),
                 ConfigReader.bool(ConfigReader.node(node, "check-alpha"), "updates.check-alpha"),
-                ConfigReader.bool(ConfigReader.node(node, "notify-ingame"), "updates.notify-ingame")
+                ConfigReader.bool(ConfigReader.node(node, "notify-in-game"), "updates.notify-in-game")
         );
     }
 

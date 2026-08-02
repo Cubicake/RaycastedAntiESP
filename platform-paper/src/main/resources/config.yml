@@ -104,4 +104,4 @@ updates:
     check-release: true
     check-beta: true
     check-alpha: true
-    notify-ingame: true # When false, update checks only notify the console
+    notify-in-game: true # When false, update checks only notify the console. When true, players with the correct permission are notified.
