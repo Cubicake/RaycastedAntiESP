@@ -1,3 +1,4 @@
+# An explanation of this configuration file and what the options do can be found at https://raycastedantiesp.cubi.games/config/
 config-version: '2.0'
 checks:
     player:
