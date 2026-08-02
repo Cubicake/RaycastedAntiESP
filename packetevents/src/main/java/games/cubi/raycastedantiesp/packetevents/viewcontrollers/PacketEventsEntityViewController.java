@@ -137,7 +137,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             processEntityTransitions(data, viewer, cast(data.playerView()));
         }
 
-        viewer.flushPackets();
     }
 
     private void handleEntityPackets(PacketSendEvent event, User viewer, PlayerData playerData, UUID world, int currentTick) {
