@@ -161,6 +161,40 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         }
     }
 
+    static class MutableVector3i extends Vector3i {
+        int x,y,z;
+
+        public int getX() {
+            return x;
+        }
+
+        public int getY() {
+            return y;
+        }
+
+        public int getZ() {
+            return z;
+        }
+
+        public MutableVector3i set(int x, int y, int z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            return this;
+        }
+    }
+
+    private final ThreadLocal<MutableVector3i> vector = ThreadLocal.withInitial(MutableVector3i::new);
+    private final ThreadLocal<WrapperPlayServerBlockChange> blockChangeWrapper = ThreadLocal.withInitial(() -> new WrapperPlayServerBlockChange(vector.get(), 0));
+
+    private WrapperPlayServerBlockChange getBlockChangeWith(int x, int y, int z, int blockID) {
+        MutableVector3i vec = vector.get().set(x,y,z);
+        WrapperPlayServerBlockChange change = blockChangeWrapper.get();
+        change.setBlockID(blockID);
+        change.setBlockPosition(vec);
+        return change;
+    }
+
     private void processTileEntityTransitions(User viewer, PlayerData playerData) {
         BlockView blockView = playerData.blockView();
         int worldEpoch = playerData.acquireWorldEpoch();
@@ -181,10 +215,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
                     state.setLastChecked(TrackedTileEntity.NEVER_CHECKED);
                     return;
                 }
-                viewer.writePacketSilently(new WrapperPlayServerBlockChange(
-                        new Vector3i(tileEntity.blockX(), tileEntity.blockY(), tileEntity.blockZ()),
-                        getHiddenBlockId(tileEntity.blockY())
-                ));
+                viewer.writePacketSilently(getBlockChangeWith(tileEntity.blockX(), tileEntity.blockY(), tileEntity.blockZ(), getHiddenBlockId(tileEntity.blockY())));
             }
             case SHOW -> {
                 if (!state.visible()) {
@@ -204,10 +235,8 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
     }
 
     private void sendTileEntity(User viewer, TrackedTileEntity<PacketEventsTileEntityReplayData> tileEntity) {
-        viewer.writePacketSilently(new WrapperPlayServerBlockChange(
-                new Vector3i(tileEntity.blockX(), tileEntity.blockY(), tileEntity.blockZ()),
-                tileEntity.blockID()
-        ));
+        viewer.writePacketSilently(getBlockChangeWith(tileEntity.blockX(), tileEntity.blockY(), tileEntity.blockZ(), tileEntity.blockID()));
+
         PacketEventsTileEntityReplayData replayData = ensureTileReplayData(tileEntity);
         if (replayData.blockEntityType() != null && replayData.nbt() != null) {
             viewer.writePacketSilently(buildBlockEntityDataPacket(tileEntity, replayData));
