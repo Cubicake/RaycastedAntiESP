@@ -16,6 +16,7 @@ import de.oliver.fancynpcs.api.events.NpcSpawnEvent;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.entity.EntityBypassRegistry;
 import games.cubi.raycastedantiesp.paper.utils.PaperListener;
+import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 
@@ -23,15 +24,9 @@ import org.bukkit.event.EventPriority;
 // This should not be an issue as NPCs and Holograms are typically static entities which are not spawned or unspawned.
 public class FancyCompatibility {
     FancyCompatibility() {
-        try {
-            new NPCs();
-            Logger.info("Successfully initiated FancyNpcs compatibility layer",5);
-        } catch (Exception ignored) {}
-
-        try {
-            new Holograms();
-            Logger.info("Successfully initiated FancyHolograms compatibility layer",5);
-        } catch (Exception ignored) {}
+        Logger.info("Attempting to initiate FancyNPCs and FancyHolograms compatibility layer. If you are not using those plugins, you will see an error. This is safe to ignore.", 5);
+        new NPCs();
+        new Holograms();
     }
 
     static class NPCs extends PaperListener {
