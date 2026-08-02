@@ -8,12 +8,16 @@
 
 package games.cubi.raycastedantiesp.core.utils;
 
+import games.cubi.utils.sets.CopyOnWriteMTIntSet;
+import games.cubi.utils.sets.SortedStripedMTIntSet;
 import org.junit.jupiter.api.DynamicContainer;
 import org.junit.jupiter.api.TestFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -22,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -30,8 +35,7 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 class CopyOnWriteMTIntSetTest {
     private static final List<Implementation> IMPLEMENTATIONS = List.of(
-            new Implementation("sorted array", SortedMTIntSet::new),
-            new Implementation("fastutil wrapper", MTWrappedFastIntSet::new)
+            new Implementation("sorted stripes", SortedStripedMTIntSet::new)
     );
 
     @TestFactory
@@ -41,6 +45,7 @@ class CopyOnWriteMTIntSetTest {
                 Stream.of(
                         dynamicTest("adds, finds, and removes all int values", () -> basicOperations(implementation.create())),
                         dynamicTest("removes beginning, middle, and end values", () -> removalPositions(implementation.create())),
+                        dynamicTest("traverses one coherent snapshot", () -> snapshotTraversal(implementation.create())),
                         dynamicTest("supports concurrent readers and writers", () -> concurrentReadersAndWriters(implementation.create()))
                 )
         ));
@@ -77,41 +82,80 @@ class CopyOnWriteMTIntSetTest {
         assertFalse(set.contains(5));
     }
 
+    private static void snapshotTraversal(CopyOnWriteMTIntSet set) {
+        set.add(1);
+        set.add(2);
+        set.add(3);
+
+        Set<Integer> observed = new HashSet<>();
+        set.forEach(value -> {
+            assertTrue(observed.add(value));
+            if (value == 1) {
+                assertTrue(set.remove(2));
+                set.add(4);
+            }
+        });
+
+        assertTrue(observed.containsAll(Set.of(1, 2, 3)));
+        assertTrue(observed.size() == 3);
+        assertFalse(set.contains(2));
+        assertTrue(set.contains(4));
+
+        set.remove(1);
+        set.remove(3);
+        set.remove(4);
+        set.forEach(value -> assertTrue(false, "An empty set must not be traversed: " + value));
+    }
+
     private static void concurrentReadersAndWriters(CopyOnWriteMTIntSet set) {
-        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
-            int valueCount = 512;
-            int addedBase = 10_000;
-            for (int value = 0; value < valueCount; value++) {
-                set.add(value);
+        assertTimeoutPreemptively(Duration.ofSeconds(20), () -> {
+            int transientCount = 512;
+            int transientBase = 100_000;
+            for (int value = 0; value < transientCount; value++) {
+                set.add(transientBase + value);
             }
 
-            ExecutorService executor = Executors.newFixedThreadPool(6);
+            int valueCount = 2_048;
+            ExecutorService executor = Executors.newFixedThreadPool(8);
             CountDownLatch start = new CountDownLatch(1);
             List<Future<?>> futures = new ArrayList<>();
             try {
                 for (int worker = 0; worker < 2; worker++) {
-                    int from = worker * valueCount / 2;
-                    int to = (worker + 1) * valueCount / 2;
+                    int workerIndex = worker;
                     futures.add(executor.submit(() -> {
                         await(start);
-                        for (int value = from; value < to; value++) {
-                            assertTrue(set.remove(value));
-                        }
-                    }));
-                    futures.add(executor.submit(() -> {
-                        await(start);
-                        for (int value = from; value < to; value++) {
-                            set.add(addedBase + value);
+                        if (workerIndex == 0) {
+                            for (int value = 0; value < valueCount; value++) {
+                                addFinalValues(set, value);
+                            }
+                        } else {
+                            for (int value = valueCount - 1; value >= 0; value--) {
+                                addFinalValues(set, value);
+                            }
                         }
                     }));
                 }
-                for (int reader = 0; reader < 2; reader++) {
+                for (int remover = 0; remover < 2; remover++) {
+                    futures.add(executor.submit(() -> {
+                        await(start);
+                        for (int value = 0; value < transientCount; value++) {
+                            set.remove(transientBase + value);
+                        }
+                    }));
+                }
+                for (int reader = 0; reader < 3; reader++) {
                     futures.add(executor.submit(() -> {
                         await(start);
                         for (int iteration = 0; iteration < 10_000; iteration++) {
                             int value = iteration % valueCount;
                             set.contains(value);
-                            set.contains(addedBase + value);
+                            set.contains(-value - 1);
+                            set.contains(Integer.MIN_VALUE);
+                            set.contains(Integer.MAX_VALUE);
+                            if (iteration % 100 == 0) {
+                                Set<Integer> snapshot = new HashSet<>();
+                                set.forEach(snapshotValue -> assertTrue(snapshot.add(snapshotValue), "Duplicate value in traversal snapshot: " + snapshotValue));
+                            }
                         }
                     }));
                 }
@@ -125,11 +169,32 @@ class CopyOnWriteMTIntSetTest {
                 executor.awaitTermination(5, TimeUnit.SECONDS);
             }
 
+            Set<Integer> expected = new HashSet<>();
             for (int value = 0; value < valueCount; value++) {
-                assertFalse(set.contains(value));
-                assertTrue(set.contains(addedBase + value));
+                expected.add(value);
+                expected.add(-value - 1);
+            }
+            expected.add(Integer.MIN_VALUE);
+            expected.add(Integer.MAX_VALUE);
+
+            Set<Integer> actual = new HashSet<>();
+            set.forEach(value -> assertTrue(actual.add(value), "Duplicate value in final snapshot: " + value));
+            assertEquals(expected, actual);
+            for (int value = 0; value < transientCount; value++) {
+                assertFalse(set.contains(transientBase + value));
             }
         });
+    }
+
+    private static void addFinalValues(CopyOnWriteMTIntSet set, int value) {
+        set.add(value);
+        set.add(-value - 1);
+        set.add(value);
+        set.add(-value - 1);
+        if (value == 0) {
+            set.add(Integer.MIN_VALUE);
+            set.add(Integer.MAX_VALUE);
+        }
     }
 
     private static void await(CountDownLatch latch) {

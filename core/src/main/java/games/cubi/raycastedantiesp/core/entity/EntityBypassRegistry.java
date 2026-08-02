@@ -8,7 +8,7 @@
 
 package games.cubi.raycastedantiesp.core.entity;
 
-import games.cubi.raycastedantiesp.core.utils.CopyOnWriteMTIntSet;
+import games.cubi.utils.sets.CopyOnWriteMTIntSet;
 
 /**
  * Global registry of entity IDs which RaycastedAntiESP must ignore.
