@@ -306,8 +306,25 @@ public class ConfigManager {
                     Files.createFile(configPath);
                 }
             }
+            prependConfigDocumentationHeaderIfMissing();
         } catch (IOException e) {
             throw new ConfigLoadException("Failed to create config.yml", e);
+        }
+    }
+
+    private void prependConfigDocumentationHeaderIfMissing() {
+        try {
+            String content = Files.readString(configPath);
+
+            if (content.startsWith("#")) {
+                Logger.debug("Config starts with comment");
+                return;
+            }
+
+            Logger.debug("no starting comment");
+            Files.writeString(configPath,"# An explanation of this configuration file and what all the options do can be found at https://raycastedantiesp.cubi.games/config/");
+        } catch (Exception e) {
+            Logger.warning(e,3, ConfigManager.class);
         }
     }
 

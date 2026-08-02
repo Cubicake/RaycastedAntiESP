@@ -11,12 +11,20 @@ The supported minecraft versions are 1.21.4+. Only Paper and derivative software
 ## Use cases:
 
 - Prevent cheating (anti-esp hacks)
-  - Block usage of pie-ray to locate underground bases or farms
-  - Prevent mods such as mini-maps or cheat clients from displaying the locations of hidden entities
+  - This is the plugin's primary purpose. 
+  - Block usage of pie-ray to locate underground bases or farms.
+  - Prevent mods such as mini-maps or cheat clients from displaying the locations of hidden entities.
 - Increase client-side performance for low-end devices
   - Massive megabases containing hundreds of armour stands, item frames, banners etc can cause performance issues on low-end devices unable to process so many entities. Raycasted AntiESP will cull those entities for the client, reducing the number of entities to process.
+- Reduce network load by limiting packets
+  - With `keep-client-entity-when-hidden` set to true, running RaycastedAntiESP will significantly reduce the number of entity packets sent to the client.
+  - While entity packets are only a small portion of network bandwidth, this will still have a measurable impact and may be useful on extremely bandwidth-limited servers.
+    - Unless you are extremely limited by bandwidth, this will probably be unnoticeable.
 - Hide nametags behind walls
   - Yes, this plugin is overkill for doing that, yes you can do it anyways.
+
+## Configuration
+RaycastedAntiESP has many configuration options. A full list with explanations can be found at https://raycastedantiesp.cubi.games/config/.
  
 ## Dependencies:
 - Packetevents
