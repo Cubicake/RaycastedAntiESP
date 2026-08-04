@@ -322,7 +322,7 @@ public class ConfigManager {
             }
 
             Logger.debug("no starting comment");
-            Files.writeString(configPath,"# An explanation of this configuration file and what all the options do can be found at https://raycastedantiesp.cubi.games/config/");
+            Files.writeString(configPath, "# An explanation of this configuration file and what all the options do can be found at https://raycastedantiesp.cubi.games/config/" + System.lineSeparator() + content);
         } catch (Exception e) {
             Logger.warning(e,3, ConfigManager.class);
         }
