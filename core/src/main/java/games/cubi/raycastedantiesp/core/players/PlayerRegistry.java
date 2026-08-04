@@ -13,14 +13,11 @@ public class PlayerRegistry {
         NettyEntity<?> createSelfEntity(PlayerData playerData, int selfEntityID, UUID playerUUID);
     }
 
-    private static PlayerRegistry instance;
+    private static final PlayerRegistry instance = new PlayerRegistry();
 
     private PlayerRegistry() {}
 
     public static PlayerRegistry getInstance() {
-        if (instance == null) {
-            instance = new PlayerRegistry();
-        }
         return instance;
     }
 
