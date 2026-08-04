@@ -19,8 +19,6 @@ import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
 
 import java.lang.invoke.VarHandle;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.IntSupplier;
 
 public class FoliaTicker implements Ticker {
     private volatile int currentTick; private static final VarHandle CURRENT_TICK = VarHandler.get(FoliaTicker.class, "currentTick", int.class);
