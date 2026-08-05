@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.view;
 
 import ca.spottedleaf.concurrentutil.map.SWMRInt2ObjectHashTable;
@@ -6,6 +14,7 @@ import games.cubi.locatables.api.BlockSpatial;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
+import games.cubi.raycastedantiesp.core.chunks.ChunkOcclusionView;
 import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.tracked.NettyTileEntity;
@@ -58,6 +67,10 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
 
     protected abstract T createTrackedTileEntity(BlockSpatial position, char blockID, boolean visible);
 
+    @Override
+    public ChunkOcclusionView getChunkOcclusionView(int chunkX, int chunkY, int chunkZ) {
+        return chunks.getSection(chunkX, chunkY, chunkZ);
+    }
 
     @Override
     public boolean isBlockOccluding(int x, int y, int z) {

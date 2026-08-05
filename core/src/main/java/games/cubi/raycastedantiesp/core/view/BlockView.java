@@ -1,7 +1,17 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.view;
 
 import games.cubi.locatables.api.BlockLocatable;
 import games.cubi.locatables.api.BlockSpatial;
+import games.cubi.locatables.api.SpatialChunkSection;
+import games.cubi.raycastedantiesp.core.chunks.ChunkOcclusionView;
 import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
 import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
@@ -19,6 +29,15 @@ import java.util.function.IntSupplier;
  * decisions; visibility fields and the transition queue are safe for that Netty/engine overlap.</p>
  */
 public interface BlockView extends Clearable {
+    /**
+     * Parameters are chunk coordinates
+     */
+    ChunkOcclusionView getChunkOcclusionView(int chunkX, int chunkY, int chunkZ);
+
+    default ChunkOcclusionView getChunkOcclusionView(SpatialChunkSection chunkSection) {
+        return getChunkOcclusionView(chunkSection.chunkX(), chunkSection.chunkY(), chunkSection.chunkZ());
+    }
+
     boolean isBlockOccluding(BlockLocatable location);
 
     boolean isBlockOccluding(int x, int y, int z);

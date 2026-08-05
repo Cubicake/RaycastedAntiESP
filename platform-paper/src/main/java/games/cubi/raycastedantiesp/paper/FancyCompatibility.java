@@ -33,17 +33,23 @@ public class FancyCompatibility {
 
         @EventHandler(priority = EventPriority.LOWEST)
         public void npcLoad(NpcSpawnEvent event) {
-            EntityBypassRegistry.addEntity(event.getNpc().getEntityId());
+            int id = event.getNpc().getEntityId();
+            Logger.info("NpcSpawnEvent called, adding entity: " + id, 1);
+            EntityBypassRegistry.addEntity(id);
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
         public void npcLoad(NpcCreateEvent event) {
-            EntityBypassRegistry.addEntity(event.getNpc().getEntityId());
+            int id = event.getNpc().getEntityId();
+            Logger.info("NpcCreateEvent called, adding entity: " + id, 1);
+            EntityBypassRegistry.addEntity(id);
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
         public void npcLoad(NpcModifyEvent event) {
-            EntityBypassRegistry.addEntity(event.getNpc().getEntityId());
+            int id = event.getNpc().getEntityId();
+            Logger.info("NpcModifyEvent called, adding entity: " + id, 1);
+            EntityBypassRegistry.addEntity(id);
         }
     }
 
@@ -64,7 +70,9 @@ public class FancyCompatibility {
         }
 
         private void add(Hologram hologram) {
-            EntityBypassRegistry.addEntity(hologram.getEntityId());
+            int id = hologram.getEntityId();
+            Logger.info("Hologram event called, adding entity: " + id, 1);
+            EntityBypassRegistry.addEntity(id);
         }
     }
 }

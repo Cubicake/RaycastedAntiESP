@@ -1,11 +1,18 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.raycast;
 
-import games.cubi.locatables.api.BlockSpatial;
-import games.cubi.locatables.api.Locatable;
-import games.cubi.locatables.api.MutableFloatingSpatial;
-import games.cubi.locatables.api.Spatial;
+import games.cubi.locatables.api.*;
+import games.cubi.locatables.implementations.MutableChunkSection;
 import games.cubi.locatables.implementations.MutableSpatialImpl;
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.chunks.ChunkOcclusionView;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 
 public class RaycastUtil {
@@ -32,11 +39,17 @@ public class RaycastUtil {
         Spatial dir = clonedEnd.subtract(start).normalise().scalarMultiply(stepSize);
 
         MutableFloatingSpatial current = new MutableSpatialImpl(start.x(),start.y(),start.z());
+        MutableChunkSection currentChunk = new MutableChunkSection().updateFrom(current);
+        ChunkOcclusionView currentOcclusionView = snap.getChunkOcclusionView(currentChunk);
 
-        for (double traveled = 0; traveled < total; traveled += stepSize) { //benchmarking shows that for loop is marginally faster than while loop initially (after running for a while they are equal
+        for (double traveled = 0; traveled < total; traveled += stepSize) {
             current.add(dir);
+            if (!ChunkSectionEquality.equals(currentChunk, current)) {
+                currentChunk.updateFrom(current);
+                currentOcclusionView = snap.getChunkOcclusionView(currentChunk);
+            }
 
-            if (snap.isBlockOccluding(current.blockX(), current.blockY(), current.blockZ())) {
+            if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(current.blockX(), current.blockY(), current.blockZ())) {
                 maxOccluding--;
                 if (debug) particleSpawner.spawnParticleAt(start.world(), current, ParticleSpawner.Colour.RED);
                 if (maxOccluding < 1) return false;

@@ -1,10 +1,15 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.view.chunks;
 
 import ca.spottedleaf.concurrentutil.map.SWMRLong2ObjectHashTable;
-import games.cubi.raycastedantiesp.core.chunks.BlockChunkData;
-import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
-import games.cubi.raycastedantiesp.core.chunks.ChunkData;
-import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
+import games.cubi.raycastedantiesp.core.chunks.*;
 
 import static games.cubi.raycastedantiesp.core.view.chunks.ChunkSectionStore.packChunkCoords;
 import static games.cubi.raycastedantiesp.core.view.chunks.ChunkSectionStore.packGlobalCoords;
@@ -14,6 +19,12 @@ public final class OccludingChunkSectionStore extends SWMRLong2ObjectHashTable<O
 
     public OccludingChunkSectionStore(BlockInfoResolver blockInfoResolver) {
         this.blockInfoResolver = blockInfoResolver;
+    }
+
+    @Override
+    public ChunkOcclusionView getSection(int chunkX, int chunkY, int chunkZ) {
+        long key = packChunkCoords(chunkX, chunkY, chunkZ);
+        return get(key);
     }
 
     @Override
