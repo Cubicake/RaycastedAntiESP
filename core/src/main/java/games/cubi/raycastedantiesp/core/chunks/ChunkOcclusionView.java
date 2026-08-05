@@ -23,4 +23,8 @@ public interface ChunkOcclusionView {
     default boolean isOccludingGlobal(int x, int y, int z) {
         return isOccludingLocal(x & LOCAL_MASK, y & LOCAL_MASK, z & LOCAL_MASK);
     }
+
+    default boolean isSolid() {
+        return false;
+    }
 }
