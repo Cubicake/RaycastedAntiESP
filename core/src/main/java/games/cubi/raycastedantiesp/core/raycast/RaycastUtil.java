@@ -22,57 +22,19 @@ public class RaycastUtil {
     //Missing blocks is acceptable, as it will be assumed the player can see past those corners.
     //While this uses objects, JHM and in-game profiling have both shown that all objects used here are consistently scalarised by the JVM.
     public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, float stepSize, ParticleSpawner particleSpawner) {
-        if (debug) return debugRaycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, snap, 0f, stepSize, particleSpawner);
-        return raycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, snap, 0f, stepSize);
+        return raycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, snap, 0f, stepSize, particleSpawner);
     }
 
     public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, float yOffsetEnd, float stepSize, ParticleSpawner particleSpawner) {
-        if (debug) return debugRaycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, snap, yOffsetEnd, stepSize, particleSpawner);
-        return raycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, snap, yOffsetEnd, stepSize);
-    }
-
-    public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, BlockView snap, float yOffsetEnd, float stepSize) {
         double endOffset = end instanceof BlockSpatial ? 0.5 : 0.0;
         MutableFloatingSpatial clonedEnd = new MutableSpatialImpl(end.x() + endOffset, end.y() + endOffset + yOffsetEnd, end.z() + endOffset);
         //Equivalent to end.cloneAndIfBlockThenCentre(); but not used since the JVM was not reliably scalarising that method (probably due to the polymorphic overriding?). This causes 0 object allocations.
         float total = (float) (start.distance(clonedEnd) - stepSize); //benchmarking shows that calling distance() is faster than distanceSquared() then checking distanceSquared < stepSize*stepSize every time despite the latter replacing a square root with multiplication
         if (total <= alwaysShowRadius) return true;
         if (total > maxRaycastRadius) return false;
-
-        Spatial dir = clonedEnd.subtract(start).normalise().scalarMultiply(stepSize);
-
-        MutableFloatingSpatial current = new MutableSpatialImpl(start.x(),start.y(),start.z());
-        MutableChunkSection currentChunk = new MutableChunkSection().updateFrom(current);
-        ChunkOcclusionView currentOcclusionView = snap.getChunkOcclusionView(currentChunk);
-
-        for (float traveled = 0; traveled < total; traveled += stepSize) {
-            current.add(dir);
-            if (!ChunkSectionEquality.equals(currentChunk, current)) {
-                currentChunk.updateFrom(current);
-                currentOcclusionView = snap.getChunkOcclusionView(currentChunk);
-            }
-
-            if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(current.blockX(), current.blockY(), current.blockZ())) {
-                maxOccluding--;
-                if (maxOccluding < 1) return false;
-            }
-
-        }
-        return true;
-    }
-
-
-    public static boolean debugRaycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, BlockView snap, float yOffsetEnd, float stepSize, ParticleSpawner particleSpawner) {
-        double endOffset = end instanceof BlockSpatial ? 0.5 : 0.0;
-        MutableFloatingSpatial clonedEnd = new MutableSpatialImpl(end.x() + endOffset, end.y() + endOffset + yOffsetEnd, end.z() + endOffset);
-        //Equivalent to end.cloneAndIfBlockThenCentre(); but not used since the JVM was not reliably scalarising that method (probably due to the polymorphic overriding?). This causes 0 object allocations.
-        float total = (float) (start.distance(clonedEnd) - stepSize); //benchmarking shows that calling distance() is faster than distanceSquared() then checking distanceSquared < stepSize*stepSize every time despite the latter replacing a square root with multiplication
-        if (total <= alwaysShowRadius) return true;
-        if (total > maxRaycastRadius) return false;
-        if (particleSpawner == null) {
+        if (debug && particleSpawner == null) {
             Logger.errorAndReturn(new RuntimeException("raycast called with debug enabled but no ParticleSpawner supplied"), 2, RaycastUtil.class);
         }
-        assert particleSpawner != null;
 
         Spatial dir = clonedEnd.subtract(start).normalise().scalarMultiply(stepSize);
 
@@ -89,12 +51,12 @@ public class RaycastUtil {
 
             if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(current.blockX(), current.blockY(), current.blockZ())) {
                 maxOccluding--;
-                particleSpawner.spawnParticleAt(start.world(), current, ParticleSpawner.Colour.RED);
+                if (debug) particleSpawner.spawnParticleAt(start.world(), current, ParticleSpawner.Colour.RED);
                 if (maxOccluding < 1) return false;
                 continue;
             }
 
-            particleSpawner.spawnParticleAt(start.world(), current, ParticleSpawner.Colour.GREEN);
+            if (debug) particleSpawner.spawnParticleAt(start.world(), current, ParticleSpawner.Colour.GREEN);
         }
         return true;
     }
