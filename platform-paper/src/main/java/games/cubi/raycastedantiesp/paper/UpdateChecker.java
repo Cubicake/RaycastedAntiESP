@@ -123,7 +123,7 @@ public class UpdateChecker {
             connection.setConnectTimeout(5_000); //ms
             connection.setReadTimeout(5_000); //ms
             try (
-                final InputStreamReader reader = new InputStreamReader(new URI(VERSION_API_ENDPOINT).toURL().openConnection().getInputStream());
+                final InputStreamReader reader = new InputStreamReader(connection.getInputStream());
                 final BufferedReader bufferedReader = new BufferedReader(reader)
             ) {
                 future.complete(parseVersionEntries(bufferedReader));
