@@ -24,8 +24,8 @@ public class RaycastUtil {
     public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, float stepSize, ParticleSpawner particleSpawner) {
         //return raycastCubiNoAllocUnrolledLongBitsAccumulated(maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, 1, snap, start.x(), start.y(), start.z(), end.x(), end.y(), end.z());
 
-        return raycastCubiObjectsUnrolledLongBitsAccumulated(maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, 1, snap, start, end);
-        //return raycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, snap, 0f, stepSize, particleSpawner);
+        //return raycastUnrolledAccumulated(maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, 1, snap, start, end);
+        return raycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, snap, 0f, stepSize, particleSpawner);
     }
 
     public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, float yOffsetEnd, float stepSize, ParticleSpawner particleSpawner) {
@@ -180,8 +180,8 @@ public class RaycastUtil {
      * The local spatial and chunk-section objects do not escape this method, so the JVM
      * should be able to scalarise them while keeping the ray-stepping code easier to follow.
      */
-    public static boolean raycastCubiObjectsUnrolledLongBitsAccumulated(int maxOccluding, final int alwaysShowRadius, final int maxRaycastRadius, boolean debug,
-                                                                        final float stepSize, final BlockView snap, final Spatial start, final Spatial end) {
+    public static boolean raycastUnrolledAccumulated(int maxOccluding, final int alwaysShowRadius, final int maxRaycastRadius, boolean debug,
+                                                     final float stepSize, final BlockView snap, final Spatial start, final Spatial end) {
         RayPosition current = RayPosition.from(start);
         RayDirection direction = RayDirection.from(end, current);
         double total = direction.getLengthAndNormalise(stepSize);
