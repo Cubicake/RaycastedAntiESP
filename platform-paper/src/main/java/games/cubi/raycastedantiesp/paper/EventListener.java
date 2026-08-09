@@ -62,6 +62,8 @@ public class EventListener extends PaperListener {
     public void onPlayerJoin(PlayerClientLoadedWorldEvent e) {
         Player player = e.getPlayer();
 
+        if (player.hasMetadata("NPC")) return;
+
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
         if (playerData == null) {
             Logger.error("Player joined before packet state was registered. Kicking player=" + player.getName() + " uuid=" + player.getUniqueId(), 1, EventListener.class);
