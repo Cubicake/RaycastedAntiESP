@@ -22,4 +22,6 @@ public interface ParticleSpawner {
     void spawnParticleAt(Locatable locatable, Colour colour);
 
     void spawnParticleAt(UUID world, Spatial spatial, Colour colour);
+
+    void spawnParticleAt(UUID world, double x, double y, double z, Colour colour);
 }

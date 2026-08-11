@@ -32,6 +32,11 @@ public class PaperParticleSpawner implements ParticleSpawner {
         world.spawnParticle(Particle.DUST, spatial.x(), spatial.y(), spatial.z(), 0, toBukkitDust(colour));
     }
 
+    public void spawnParticleAt(UUID worldUUID, double x, double y, double z, Colour colour) {
+        World world = Logger.requireNonNull(LocatableAdapterUtils.getWorld(worldUUID), "UUID resolved to nonexistent world", 2, PaperParticleSpawner.class);
+        world.spawnParticle(Particle.DUST, x, y, z, 0, toBukkitDust(colour));
+    }
+
     private static final Particle.DustOptions RED_DUST = new Particle.DustOptions(Color.RED, 1);
     private static final Particle.DustOptions GREEN_DUST = new Particle.DustOptions(Color.GREEN, 1);
     private static final Particle.DustOptions BLUE_DUST = new Particle.DustOptions(Color.BLUE, 1);
