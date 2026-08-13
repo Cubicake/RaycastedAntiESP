@@ -73,7 +73,7 @@ public class EventListener extends PaperListener {
 
         if (ConfigManager.get().getUpdateConfig().notifyInGame()
                 && player.hasPermission("raycastedantiesp.updatecheck")
-                && (playerData.getJoinTick() - currentTickSupplier.getAsInt() < 10)) { //todo: centralise permission strings to prevent issues when perm names are changed
+                && (currentTickSupplier.getAsInt() - playerData.getJoinTick() < 10)) { //todo: centralise permission strings to prevent issues when perm names are changed
             checkForUpdates(plugin, player);
         }
 
