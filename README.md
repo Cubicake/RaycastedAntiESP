@@ -13,7 +13,7 @@ The supported minecraft versions are 1.21.4+. Only Paper and derivative software
 - Prevent cheating (anti-esp hacks)
   - This is the plugin's primary purpose. 
   - Block usage of pie-ray to locate underground bases or farms.
-  - Prevent mods such as mini-maps or cheat clients from displaying the locations of hidden entities.
+  - Prevent mods such as mini-maps or cheat clients from displaying the locations of entities which would not be visible to vanilla players.
 - Increase client-side performance for low-end devices
   - Massive megabases containing hundreds of armour stands, item frames, banners etc can cause performance issues on low-end devices unable to process so many entities. Raycasted AntiESP will cull those entities for the client, reducing the number of entities to process.
 - Reduce network load by limiting packets
