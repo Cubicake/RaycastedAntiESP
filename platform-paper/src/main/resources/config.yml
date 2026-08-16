@@ -71,7 +71,7 @@ checks:
         hide-on-spawn-distance: 24
         visible-recheck-interval-ticks: -1  # -1 disables visible rechecks. When set to -1, once an entity is shown by any mechanism, it will be permanently visible.
     sound-effects:
-        enabled: true
+        enabled: false
         max-occluding-count: 3
         always-play-radius: 8
         raycast-radius: 48

@@ -20,17 +20,21 @@ import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.yaml.NodeStyle;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
-import java.lang.invoke.VarHandle;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.annotation.Documented;
+import java.lang.invoke.VarHandle;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.function.Supplier;
 
 public class ConfigManager {
@@ -306,25 +310,10 @@ public class ConfigManager {
                     Files.createFile(configPath);
                 }
             }
-            prependConfigDocumentationHeaderIfMissing();
+            ConfigMigrations.prependConfigDocumentationHeaderIfMissing(configPath);
+            ConfigMigrations.migrateSoundEffectsEnabled(configPath);
         } catch (IOException e) {
             throw new ConfigLoadException("Failed to create config.yml", e);
-        }
-    }
-
-    private void prependConfigDocumentationHeaderIfMissing() {
-        try {
-            String content = Files.readString(configPath);
-
-            if (content.startsWith("#")) {
-                Logger.debug("Config starts with comment");
-                return;
-            }
-
-            Logger.debug("no starting comment");
-            Files.writeString(configPath, "# An explanation of this configuration file and what all the options do can be found at https://raycastedantiesp.cubi.games/config/" + System.lineSeparator() + content);
-        } catch (Exception e) {
-            Logger.warning(e,3, ConfigManager.class);
         }
     }
 
@@ -371,6 +360,108 @@ public class ConfigManager {
             loader.save(node);
         } catch (IOException e) {
             throw new ConfigLoadException("Failed to save config.yml", e);
+        }
+    }
+
+    /**
+     * Temporary text-level config mutations. Remove this class when these migrations are no longer needed.
+     */
+    private static final class ConfigMigrations {
+        private static final Pattern YAML_KEY = Pattern.compile("^([ \\t]*)([^:#\\s][^:]*):.*$");
+        private static final Pattern SOUND_EFFECTS_ENABLED_TRUE = Pattern.compile("^([ \\t]*enabled[ \\t]*:[ \\t]*)true([ \\t]*(?:#.*)?)$", Pattern.CASE_INSENSITIVE);
+
+        private ConfigMigrations() {
+        }
+
+        private static void prependConfigDocumentationHeaderIfMissing(Path configPath) {
+            try {
+                String content = Files.readString(configPath);
+
+                if (content.startsWith("#")) {
+                    Logger.debug("Config starts with comment");
+                    return;
+                }
+
+                Logger.debug("no starting comment");
+                Files.writeString(configPath, "# An explanation of this configuration file and what all the options do can be found at https://raycastedantiesp.cubi.games/config/" + System.lineSeparator() + content);
+            } catch (Exception e) {
+                Logger.warning(e,3, ConfigManager.class);
+            }
+        }
+
+        @Temporary(forRemovalIn = "0.8.0")
+        private static void migrateSoundEffectsEnabled(Path configPath) {
+            try {
+                String content = Files.readString(configPath, StandardCharsets.UTF_8);
+                String migrated = replaceSoundEffectsEnabled(content);
+                if (!content.equals(migrated)) {
+                    Files.writeString(configPath, migrated, StandardCharsets.UTF_8);
+                }
+            } catch (IOException e) {
+                throw new ConfigLoadException("Failed to migrate sound-effects.enabled in config.yml", e);
+            }
+        }
+
+        private static String replaceSoundEffectsEnabled(String content) {
+            StringBuilder migrated = new StringBuilder(content.length());
+            int lineStart = 0;
+            int checksIndent = -1;
+            int soundEffectsIndent = -1;
+            boolean changed = false;
+
+            while (lineStart < content.length()) {
+                int lineEnd = content.indexOf('\n', lineStart);
+                boolean hasLineEnding = lineEnd >= 0;
+                int contentEnd = hasLineEnding ? lineEnd : content.length();
+                int lineContentEnd = contentEnd > lineStart && content.charAt(contentEnd - 1) == '\r'
+                        ? contentEnd - 1 : contentEnd;
+                String line = content.substring(lineStart, lineContentEnd);
+                String lineEnding = content.substring(lineContentEnd, contentEnd) + (hasLineEnding ? "\n" : "");
+
+                Matcher key = YAML_KEY.matcher(line);
+                if (key.matches()) {
+                    int indent = key.group(1).length();
+                    String name = key.group(2).trim();
+
+                    if (checksIndent < 0) {
+                        if (name.equals("checks")) {
+                            checksIndent = indent;
+                        }
+                    } else if (indent <= checksIndent) {
+                        checksIndent = name.equals("checks") ? indent : -1;
+                        soundEffectsIndent = -1;
+                    } else if (soundEffectsIndent < 0) {
+                        if (name.equals("sound-effects")) {
+                            soundEffectsIndent = indent;
+                        }
+                    } else if (indent <= soundEffectsIndent) {
+                        soundEffectsIndent = name.equals("sound-effects") ? indent : -1;
+                    }
+                }
+
+                if (soundEffectsIndent >= 0 && key.matches()
+                        && key.group(2).trim().equals("enabled")
+                        && key.group(1).length() > soundEffectsIndent) {
+                    Matcher enabled = SOUND_EFFECTS_ENABLED_TRUE.matcher(line);
+                    if (enabled.matches()) {
+                        line = enabled.group(1) + "false" + enabled.group(2);
+                        changed = true;
+                    }
+                }
+
+                migrated.append(line).append(lineEnding);
+                if (!hasLineEnding) {
+                    break;
+                }
+                lineStart = contentEnd + 1;
+            }
+
+            return changed ? migrated.toString() : content;
+        }
+
+        @Documented
+        private @interface Temporary {
+            String forRemovalIn();
         }
     }
 

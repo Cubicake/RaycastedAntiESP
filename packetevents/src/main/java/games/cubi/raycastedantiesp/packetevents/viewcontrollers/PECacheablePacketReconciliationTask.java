@@ -8,6 +8,7 @@
 
 package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
+import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
 import games.cubi.logs.Logger;
@@ -33,6 +34,12 @@ final class PECacheablePacketReconciliationTask extends BaseEntitySpawnTask {
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
             Logger.error("Reconciliation fail: Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ".", 3, this.getClass());
+            if (packet instanceof WrapperPlayServerEntityMetadata metadataPacket) {
+                var data = metadataPacket.getEntityMetadata();
+                for (EntityData<?> eData : data) {
+                    Logger.debug("Index:"+eData.getIndex()+"Type:"+eData.getType()+"Value:"+eData.getValue());
+                }
+            }
             return;
         }
         if (packet instanceof WrapperPlayServerEntityMetadata metadataPacket) {
