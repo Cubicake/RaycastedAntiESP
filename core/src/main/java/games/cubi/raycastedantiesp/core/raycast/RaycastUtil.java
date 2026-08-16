@@ -189,72 +189,59 @@ public class RaycastUtil {
         if (total > maxRaycastRadius) return false;
         float finalDist = (float) (total - stepSize);
 
-        RayChunkSection currentChunk = new RayChunkSection().updateFrom(current);
-        ChunkOcclusionView currentOcclusionView = snap.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
-
-        int occluded = 0;
+        final RayAdvancer rayAdvancer = new RayAdvancer(current, direction, snap);
 
         float traveled = 0;
         final float fourSteps = stepSize * 4.0f;
         while (traveled + fourSteps <= finalDist) {
-            current.advance(direction);
-            int blockX = current.blockX();
-            int blockY = current.blockY();
-            int blockZ = current.blockZ();
-            if (blockX >> 4 != currentChunk.chunkX || blockY >> 4 != currentChunk.chunkY || blockZ >> 4 != currentChunk.chunkZ) {
-                currentChunk.updateFrom(current);
-                currentOcclusionView = snap.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
-            }
-            if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(blockX, blockY, blockZ)) occluded++;
+            rayAdvancer.advance();
 
-            current.advance(direction);
-            blockX = current.blockX();
-            blockY = current.blockY();
-            blockZ = current.blockZ();
-            if (blockX >> 4 != currentChunk.chunkX || blockY >> 4 != currentChunk.chunkY || blockZ >> 4 != currentChunk.chunkZ) {
-                currentChunk.updateFrom(current);
-                currentOcclusionView = snap.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
-            }
-            if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(blockX, blockY, blockZ)) occluded++;
+            rayAdvancer.advance();
 
-            current.advance(direction);
-            blockX = current.blockX();
-            blockY = current.blockY();
-            blockZ = current.blockZ();
-            if (blockX >> 4 != currentChunk.chunkX || blockY >> 4 != currentChunk.chunkY || blockZ >> 4 != currentChunk.chunkZ) {
-                currentChunk.updateFrom(current);
-                currentOcclusionView = snap.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
-            }
-            if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(blockX, blockY, blockZ)) occluded++;
+            rayAdvancer.advance();
 
-            current.advance(direction);
-            blockX = current.blockX();
-            blockY = current.blockY();
-            blockZ = current.blockZ();
-            if (blockX >> 4 != currentChunk.chunkX || blockY >> 4 != currentChunk.chunkY || blockZ >> 4 != currentChunk.chunkZ) {
-                currentChunk.updateFrom(current);
-                currentOcclusionView = snap.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
-            }
-            if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(blockX, blockY, blockZ)) occluded++;
+            rayAdvancer.advance();
 
-            if (occluded >= maxOccluding) return false;
+            if (rayAdvancer.occluded >= maxOccluding) return false;
 
             traveled += fourSteps;
         }
 
         for (; traveled < finalDist; traveled += stepSize) {
+            rayAdvancer.advance();
+        }
+
+        return rayAdvancer.occluded < maxOccluding;
+    }
+
+    private static final class RayAdvancer {
+        private final RayPosition current;
+        private final RayDirection direction;
+        private final RayChunkSection currentChunk;
+        private final BlockView blockView;
+
+        private ChunkOcclusionView currentOcclusionView;
+        private int occluded = 0;
+
+        private RayAdvancer(RayPosition rayPosition, RayDirection rayDirection, BlockView blockView) {
+            current = rayPosition;
+            direction = rayDirection;
+            currentChunk = new RayChunkSection().updateFrom(current);
+            currentOcclusionView = blockView.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
+            this.blockView = blockView;
+        }
+
+        private void advance() {
             current.advance(direction);
             int blockX = current.blockX();
             int blockY = current.blockY();
             int blockZ = current.blockZ();
             if (blockX >> 4 != currentChunk.chunkX || blockY >> 4 != currentChunk.chunkY || blockZ >> 4 != currentChunk.chunkZ) {
                 currentChunk.updateFrom(current);
-                currentOcclusionView = snap.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
+                currentOcclusionView = blockView.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
             }
             if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(blockX, blockY, blockZ)) occluded++;
         }
-
-        return occluded < maxOccluding;
     }
 
     private static final class RayPosition {
