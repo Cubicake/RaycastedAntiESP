@@ -15,6 +15,8 @@ import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.chunks.ChunkOcclusionView;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 
+import java.util.UUID;
+
 public class RaycastUtil {
 
     //True: Has line-of-sight
@@ -24,8 +26,8 @@ public class RaycastUtil {
     public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, float stepSize, ParticleSpawner particleSpawner) {
         //return raycastCubiNoAllocUnrolledLongBitsAccumulated(maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, 1, snap, start.x(), start.y(), start.z(), end.x(), end.y(), end.z());
 
-        //return raycastUnrolledAccumulated(maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, 1, snap, start, end);
-        return raycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, snap, 0f, stepSize, particleSpawner);
+        return raycastUnrolledAccumulated(maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, 1, snap, start, end, particleSpawner);
+        //return raycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, snap, 0f, stepSize, particleSpawner);
     }
 
     public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, float yOffsetEnd, float stepSize, ParticleSpawner particleSpawner) {
@@ -177,19 +179,21 @@ public class RaycastUtil {
     }*/
 
     /**
-     * The local spatial and chunk-section objects do not escape this method, so the JVM
-     * should be able to scalarise them while keeping the ray-stepping code easier to follow.
+     * Mutable position and chunk-section state is flattened into the advancer so C2 only
+     * needs to scalarise one state holder while retaining a readable ray-stepping method.
      */
     public static boolean raycastUnrolledAccumulated(int maxOccluding, final int alwaysShowRadius, final int maxRaycastRadius, boolean debug,
-                                                     final float stepSize, final BlockView snap, final Spatial start, final Spatial end) {
-        RayPosition current = RayPosition.from(start);
-        RayDirection direction = RayDirection.from(end, current);
+                                                     final float stepSize, final BlockView snap, final Locatable start, final Spatial end, ParticleSpawner spawner) {
+        double startX = start.x();
+        double startY = start.y();
+        double startZ = start.z();
+        RayDirection direction = RayDirection.from(end, startX, startY, startZ);
         double total = direction.getLengthAndNormalise(stepSize);
         if (total <= alwaysShowRadius) return true;
         if (total > maxRaycastRadius) return false;
         float finalDist = (float) (total - stepSize);
 
-        final RayAdvancer rayAdvancer = new RayAdvancer(current, direction, snap);
+        final RayAdvancer rayAdvancer = debug ? new DebugRayAdvancer(startX, startY, startZ, direction, snap, start.world(), spawner) : new RayAdvancer(startX, startY, startZ, direction, snap);
 
         float traveled = 0;
         final float fourSteps = stepSize * 4.0f;
@@ -214,68 +218,71 @@ public class RaycastUtil {
         return rayAdvancer.occluded < maxOccluding;
     }
 
-    private static final class RayAdvancer {
-        private final RayPosition current;
+    private static sealed class RayAdvancer extends RayPosition permits DebugRayAdvancer {
         private final RayDirection direction;
-        private final RayChunkSection currentChunk;
         private final BlockView blockView;
 
+        private int chunkX, chunkY, chunkZ;
         private ChunkOcclusionView currentOcclusionView;
         private int occluded = 0;
 
-        private RayAdvancer(RayPosition rayPosition, RayDirection rayDirection, BlockView blockView) {
-            current = rayPosition;
-            direction = rayDirection;
-            currentChunk = new RayChunkSection().updateFrom(current);
-            currentOcclusionView = blockView.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
+        private RayAdvancer(double startX, double startY, double startZ, RayDirection direction, BlockView blockView) {
+            super(startX, startY, startZ);
+            this.direction = direction;
+            chunkX = blockX() >> 4;
+            chunkY = blockY() >> 4;
+            chunkZ = blockZ() >> 4;
+            currentOcclusionView = blockView.getChunkOcclusionView(chunkX, chunkY, chunkZ);
             this.blockView = blockView;
         }
 
         private void advance() {
-            current.advance(direction);
-            int blockX = current.blockX();
-            int blockY = current.blockY();
-            int blockZ = current.blockZ();
-            if (blockX >> 4 != currentChunk.chunkX || blockY >> 4 != currentChunk.chunkY || blockZ >> 4 != currentChunk.chunkZ) {
-                currentChunk.updateFrom(current);
-                currentOcclusionView = blockView.getChunkOcclusionView(currentChunk.chunkX, currentChunk.chunkY, currentChunk.chunkZ);
+            add(direction);
+            int blockX = blockX();
+            int blockY = blockY();
+            int blockZ = blockZ();
+            if (!isCurrentChunk(blockX, blockY, blockZ)) {
+                moveToChunk(blockX, blockY, blockZ);
+                currentOcclusionView = blockView.getChunkOcclusionView(chunkX, chunkY, chunkZ);
             }
-            if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(blockX, blockY, blockZ)) occluded++;
+            if (currentOcclusionView != null && currentOcclusionView.isOccludingGlobal(blockX, blockY, blockZ)) {
+                occluded++;
+                particleRed();
+            } else particleGreen();
+        }
+
+        private boolean isCurrentChunk(int blockX, int blockY, int blockZ) {
+            return blockX >> 4 == chunkX && blockY >> 4 == chunkY && blockZ >> 4 == chunkZ;
+        }
+
+        private void moveToChunk(int blockX, int blockY, int blockZ) {
+            chunkX = blockX >> 4;
+            chunkY = blockY >> 4;
+            chunkZ = blockZ >> 4;
+        }
+
+        void particleGreen() {}
+        void particleRed() {}
+    }
+
+    private static final class DebugRayAdvancer extends RayAdvancer {
+        private final UUID world;
+        private final ParticleSpawner particleSpawner;
+        private DebugRayAdvancer(double startX, double startY, double startZ, RayDirection direction, BlockView blockView, UUID world, ParticleSpawner particleSpawner) {
+            super(startX, startY, startZ, direction, blockView);
+            this.world = world;
+            this.particleSpawner = particleSpawner;
+        }
+        void particleGreen() {
+            particleSpawner.spawnParticleAt(world, x(), y(), z(), ParticleSpawner.Colour.GREEN);
+        }
+        void particleRed() {
+            particleSpawner.spawnParticleAt(world, x(), y(), z(), ParticleSpawner.Colour.RED);
         }
     }
 
-    private static final class RayPosition {
+    private static class RayPosition {
         private double x, y, z;
-
-        private void advance(RayDirection direction) {
-            x += direction.x;
-            y += direction.y;
-            z += direction.z;
-        }
-
-        private int blockX() {
-            return (int) Math.floor(x);
-        }
-
-        private int blockY() {
-            return (int) Math.floor(y);
-        }
-
-        private int blockZ() {
-            return (int) Math.floor(z);
-        }
-
-        private int chunkX() {
-            return blockX() >> 4;
-        }
-
-        private int chunkY() {
-            return blockY() >> 4;
-        }
-
-        private int chunkZ() {
-            return blockZ() >> 4;
-        }
 
         private RayPosition(double x, double y, double z) {
             this.x = x;
@@ -283,8 +290,34 @@ public class RaycastUtil {
             this.z = z;
         }
 
-        private static RayPosition from(Spatial spatial) {
-            return new RayPosition(spatial.x(), spatial.y(), spatial.z());
+        final void add(RayDirection direction) {
+            x += direction.x;
+            y += direction.y;
+            z += direction.z;
+        }
+
+        final int blockX() {
+            return (int) Math.floor(x);
+        }
+
+        final int blockY() {
+            return (int) Math.floor(y);
+        }
+
+        final int blockZ() {
+            return (int) Math.floor(z);
+        }
+
+        final double x() {
+            return x;
+        }
+
+        final double y() {
+            return y;
+        }
+
+        final double z() {
+            return z;
         }
     }
 
@@ -297,8 +330,8 @@ public class RaycastUtil {
             this.z = z;
         }
 
-        private static RayDirection from(Spatial end, RayPosition start) {
-            return new RayDirection(end.x() - start.x, end.y() - start.y, end.z() - start.z);
+        private static RayDirection from(Spatial end, double startX, double startY, double startZ) {
+            return new RayDirection(end.x() - startX, end.y() - startY, end.z() - startZ);
         }
 
         private double getLengthAndNormalise(float stepSize) {
@@ -307,18 +340,6 @@ public class RaycastUtil {
             y = (y / len) * stepSize;
             z = (z / len) * stepSize;
             return len;
-        }
-    }
-
-    private static final class RayChunkSection {
-        private int chunkX, chunkY, chunkZ;
-
-        private RayChunkSection updateFrom(RayPosition other) {
-            this.chunkX = other.chunkX();
-            this.chunkY = other.chunkY();
-            this.chunkZ = other.chunkZ();
-
-            return this;
         }
     }
 }
