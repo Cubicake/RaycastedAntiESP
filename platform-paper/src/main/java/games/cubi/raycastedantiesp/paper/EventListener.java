@@ -17,9 +17,10 @@ import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.paper.utils.PaperListener;
+import games.cubi.utils.events.CancellableEvent;
+import games.cubi.utils.events.CancellableEventRegistry;
 import io.papermc.paper.event.player.PlayerClientLoadedWorldEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -44,6 +45,9 @@ public class EventListener extends PaperListener {
         this.plugin = plugin;
         this.engine = engine;
         this.currentTickSupplier = currentTickSupplier;
+        playerValidityCheckEventRegistry.register(CancellableEventRegistry.Order.NORMAL, (event) -> {
+            if (event.player.hasMetadata("NPC")) event.cancel();
+        });
     }
 
     public static EventListener initialise(RaycastedAntiESP plugin, PaperAsyncEngine engine, IntSupplier currentTickSupplier) {
@@ -58,11 +62,23 @@ public class EventListener extends PaperListener {
         EntityBypassRegistry.markEntityDespawned(event.getEntity().getEntityId());
     }
 
+    public static final class PlayerValidityCheckEvent extends CancellableEvent {
+        public final Player player;
+        PlayerValidityCheckEvent(Player player) {
+            this.player = player;
+        }
+    }
+
+    /**
+     * If this event is cancelled, player join processing will be skipped for this entity
+     */
+    public static final CancellableEventRegistry<PlayerValidityCheckEvent> playerValidityCheckEventRegistry = new CancellableEventRegistry<PlayerValidityCheckEvent>();
+
     @EventHandler(priority = EventPriority.LOWEST) //Runs first
     public void onPlayerJoin(PlayerClientLoadedWorldEvent e) {
         Player player = e.getPlayer();
 
-        if (player.hasMetadata("NPC")) return;
+        if (!playerValidityCheckEventRegistry.dispatch(new PlayerValidityCheckEvent(player))) return;
 
         PlayerData playerData = PlayerRegistry.getInstance().getPlayerData(player.getUniqueId());
         if (playerData == null) {
