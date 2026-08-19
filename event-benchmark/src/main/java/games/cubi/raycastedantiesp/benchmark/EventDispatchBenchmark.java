@@ -110,10 +110,12 @@ public class EventDispatchBenchmark {
     }
 
     @Benchmark
-    public long bukkit() {
+    public long bukkit() {/*
         boolean dispatched = bukkitEvent.callEvent();
         long handled = bukkitEvent.handledCount();
         return dispatched ? handled : ~handled;
+        */
+        return 0;
     }
 
     public static final class CubiBenchmarkEvent extends games.cubi.utils.events.CancellableEvent {

@@ -18,6 +18,16 @@ Run 2:
 [16:33:24 INFO]: [EventDispatchBenchmark]        32 |   23.392 ± 0.095    |    101.222 ± 0.228    | 4.33x
 [16:33:24 INFO]: [EventDispatchBenchmark]        64 |   41.709 ± 0.692    |    204.705 ± 2.331    | 4.91x
 
+Using CopyOnWriteArray `for (BaseEventHandler<E> eventHandler : handlers.eventHandlers)`, without special-pathing monitor.
+Ignore bukkit results, they were made to not fire the event.
+[21:01:41 INFO]: [EventDispatchBenchmark] listeners | cubi ns/op | bukkit ns/op | bukkit/cubi
+[21:01:41 INFO]: [EventDispatchBenchmark]         0 |    4.287 ± 0.036    |      1.526 ± 0.176    | 0.36x
+[21:01:41 INFO]: [EventDispatchBenchmark]         1 |    7.566 ± 0.046    |      1.609 ± 0.123    | 0.21x
+[21:01:41 INFO]: [EventDispatchBenchmark]         4 |    8.813 ± 0.019    |      1.576 ± 0.061    | 0.18x
+[21:01:41 INFO]: [EventDispatchBenchmark]        16 |   17.443 ± 0.018    |      1.564 ± 0.002    | 0.09x
+[21:01:41 INFO]: [EventDispatchBenchmark]        32 |   34.947 ± 1.051    |      1.575 ± 0.042    | 0.05x
+[21:01:41 INFO]: [EventDispatchBenchmark]        64 |   74.946 ± 0.066    |      1.572 ± 0.039    | 0.02x
+
 This benchmark is not a strictly apples-to-apples comparison because Bukkit’s event-dispatch path performs additional work, 
 including thread validation, plugin-state checks, listener/executor indirection, and exception handling. 
 The results therefore compare `games.cubi.utils.events`’s specialised handler registry with Bukkit’s broader public event infrastructure, 
