@@ -1,0 +1,6 @@
+name: EventDispatchBenchmark
+version: 1.0.0-SNAPSHOT
+main: games.cubi.raycastedantiesp.benchmark.EventBenchmarkPlugin
+api-version: '1.21.11'
+authors: [ _Cubicake ]
+description: Temporary JMH comparison of Cubi and Paper event dispatch.

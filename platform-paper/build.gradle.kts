@@ -11,9 +11,9 @@ import org.gradle.jvm.toolchain.JavaToolchainService
 
 plugins {
     id("java-library")
-    id("io.papermc.paperweight.userdev") version "2.0.0-beta.21"
-    id("xyz.jpenilla.run-paper") version "3.0.2"
-    id("com.gradleup.shadow") version "9.4.0"
+    id("io.papermc.paperweight.userdev")
+    id("xyz.jpenilla.run-paper")
+    id("com.gradleup.shadow")
 }
 
 repositories {
@@ -24,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.21.6-R0.1-SNAPSHOT")
     //paperweight.paperDevBundle("26.2.build.+")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.0")
     compileOnly("org.spongepowered:configurate-core:4.2.0")
@@ -105,10 +105,10 @@ tasks {
         // Your plugin's jar (or shadowJar if present) will be used automatically.
         javaLauncher = javaToolchainService.launcherFor {
             //languageVersion.set(paperRunJavaVersion.map(JavaLanguageVersion::of))
-            languageVersion.set(JavaLanguageVersion.of(25))
+            languageVersion.set(JavaLanguageVersion.of(21))
         }
-        minecraftVersion("26.1.2")
-        //minecraftVersion("1.21.11")
+        //minecraftVersion("26.1.2")
+        minecraftVersion("1.21.11")
         jvmArgs("-Xms4G", "-Xmx4G", "-Dcom.mojang.eula.agree=true")
     }
 
