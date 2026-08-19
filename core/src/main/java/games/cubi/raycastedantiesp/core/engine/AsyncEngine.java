@@ -8,7 +8,6 @@
 
 package games.cubi.raycastedantiesp.core.engine;
 
-import games.cubi.locatables.api.ImmutableSpatial;
 import games.cubi.locatables.api.Locatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
@@ -25,6 +24,8 @@ import games.cubi.raycastedantiesp.core.raycast.RaycastUtil;
 import games.cubi.raycastedantiesp.core.utils.PrimitiveIntArrayList;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
+import games.cubi.utils.events.CancellableEvent;
+import games.cubi.utils.events.CancellableEventRegistry;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -120,6 +121,9 @@ public abstract class AsyncEngine implements Engine {
         }
     }
 
+    public static class EngineTickEvent extends CancellableEvent {}
+
+    public final CancellableEventRegistry<EngineTickEvent> engineTickEventRegistry = new CancellableEventRegistry<>();
     /**
      * Claims worker capacity and either runs work immediately or schedules worker batches.
      *
@@ -127,6 +131,11 @@ public abstract class AsyncEngine implements Engine {
      * lifecycle; false if this attempt was skipped or cleaned up during setup.
      */
     private boolean dispatchTick(int scheduledTick, int startTick, long scheduledNanos) {
+        if (!engineTickEventRegistry.dispatch(EngineTickEvent::new)) {
+            Logger.debug("Skipping tick due to event being cancelled");
+            finishTickState();
+            return false;
+        }
         int threads = config.getEngineConfig().asyncConfig().asyncProcessingThreads();
         if (threads < 1) threads = 1;
 
