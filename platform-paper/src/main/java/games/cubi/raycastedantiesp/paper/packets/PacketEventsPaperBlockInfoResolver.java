@@ -69,7 +69,8 @@ public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
                 run = false;
                 continue;
             }
-            if (blockData.getMaterial() == Material.AIR) {
+            Material material = blockData.getMaterial();
+            if (material == Material.AIR) {
                 airs++;
                 if (airs > 80000) { // There is a sequence of ~40 air blocks around ID 100, and another of several hundred at ~3000. We scan forwards 80k to future-proof any mojank. Since it runs once at startup, perf is irrelevant here
                     run = false;
@@ -79,12 +80,12 @@ public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
             else {
                 airs = 0;
                 lastNonAirID = iterator;
-                if (materialToIDMode) {
-                    Logger.info(blockData.getAsString() + iterator,1);
-                }
             }
-
-            occlusion.put(iterator, blockData.getMaterial().isOccluding());
+            boolean occluding = material != Material.BARRIER && material.isOccluding();
+            if (materialToIDMode && material != Material.AIR) {
+                Logger.info(blockData.getAsString() + iterator + occluding,1);
+            }
+            occlusion.put(iterator, occluding);
             try {
                 if (blockData.createBlockState() instanceof TileState) {
                     //Logger.debug("tile at" + iterator + " is tile entity" + material.name());
