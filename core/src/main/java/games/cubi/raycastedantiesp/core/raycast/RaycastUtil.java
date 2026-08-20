@@ -336,9 +336,10 @@ public class RaycastUtil {
 
         private double getLengthAndNormalise(float stepSize) {
             double len = Math.sqrt(x * x + y * y + z * z);
-            x = (x / len) * stepSize;
-            y = (y / len) * stepSize;
-            z = (z / len) * stepSize;
+            double scale = stepSize / len;
+            x *= scale;
+            y *= scale;
+            z *= scale;
             return len;
         }
     }
