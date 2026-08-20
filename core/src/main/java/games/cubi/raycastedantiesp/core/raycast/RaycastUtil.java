@@ -26,7 +26,7 @@ public class RaycastUtil {
     public static boolean raycast(Locatable start, Spatial end, int maxOccluding, int alwaysShowRadius, int maxRaycastRadius, boolean debug, BlockView snap, float stepSize, ParticleSpawner particleSpawner) {
         //return raycastCubiNoAllocUnrolledLongBitsAccumulated(maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, 1, snap, start.x(), start.y(), start.z(), end.x(), end.y(), end.z());
 
-        return raycastUnrolledAccumulated(maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, 1, snap, start, end, particleSpawner);
+        return raycastUnrolledAccumulated(maxOccluding, alwaysShowRadius, maxRaycastRadius, debug,  snap, start, end, particleSpawner);
         //return raycast(start, end, maxOccluding, alwaysShowRadius, maxRaycastRadius, debug, snap, 0f, stepSize, particleSpawner);
     }
 
@@ -183,38 +183,28 @@ public class RaycastUtil {
      * needs to scalarise one state holder while retaining a readable ray-stepping method.
      */
     public static boolean raycastUnrolledAccumulated(int maxOccluding, final int alwaysShowRadius, final int maxRaycastRadius, boolean debug,
-                                                     final float stepSize, final BlockView snap, final Locatable start, final Spatial end, ParticleSpawner spawner) {
+                                                    /* final float stepSize,*/ final BlockView snap, final Locatable start, final Spatial end, ParticleSpawner spawner) {
         double startX = start.x();
         double startY = start.y();
         double startZ = start.z();
         RayDirection direction = RayDirection.from(end, startX, startY, startZ);
-        double total = direction.getLengthAndNormalise(stepSize);
+        double total = direction.getLengthAndNormalise();
         if (total <= alwaysShowRadius) return true;
         if (total > maxRaycastRadius) return false;
-        float finalDist = (float) (total - stepSize);
+        float finalDist = (float) (total - 1);
 
         final RayAdvancer rayAdvancer = debug ? new DebugRayAdvancer(startX, startY, startZ, direction, snap, start.world(), spawner) : new RayAdvancer(startX, startY, startZ, direction, snap);
 
-        float traveled = 0;
-        final float fourSteps = stepSize * 4.0f;
-        while (traveled + fourSteps <= finalDist) {
+        int remainingSteps = (int) Math.ceil(finalDist);
+        while (remainingSteps >= 4) {
             rayAdvancer.advance();
-
             rayAdvancer.advance();
-
             rayAdvancer.advance();
-
             rayAdvancer.advance();
-
             if (rayAdvancer.occluded >= maxOccluding) return false;
-
-            traveled += fourSteps;
+            remainingSteps -= 4;
         }
-
-        for (; traveled < finalDist; traveled += stepSize) {
-            rayAdvancer.advance();
-        }
-
+        while (remainingSteps-- > 0) rayAdvancer.advance();
         return rayAdvancer.occluded < maxOccluding;
     }
 
@@ -334,9 +324,9 @@ public class RaycastUtil {
             return new RayDirection(end.x() - startX, end.y() - startY, end.z() - startZ);
         }
 
-        private double getLengthAndNormalise(float stepSize) {
+        private double getLengthAndNormalise() {
             double len = Math.sqrt(x * x + y * y + z * z);
-            double scale = stepSize / len;
+            double scale = 1 / len;
             x *= scale;
             y *= scale;
             z *= scale;
