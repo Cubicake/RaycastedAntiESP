@@ -47,7 +47,7 @@ public class RaycastUtil {
             rayAdvancer.advance();
             rayAdvancer.advance();
             rayAdvancer.advance();
-            if (rayAdvancer.occluded >= maxOccluding) return false;
+            if (rayAdvancer.occluded > maxOccluding) return false;
             remainingSteps -= 4;
         }
         while (remainingSteps-- > 0) rayAdvancer.advance();
