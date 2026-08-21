@@ -23,6 +23,9 @@ public class RaycastConfig implements Config {
     private final short visibleRecheckIntervalTicks;
     private final boolean keepClientEntityWhenHidden;
 
+    public final int alwaysShowRadiusSquared;
+    public final int raycastRadiusSquared;
+
     public RaycastConfig(boolean enabled, boolean hideSoundsWhenHidden, int maxOccludingCount, int alwaysShowRadius,
                          int raycastRadius, int hideOnSpawnDistance, int visibleRecheckIntervalTicks) {
         this(enabled, hideSoundsWhenHidden, maxOccludingCount, alwaysShowRadius, raycastRadius, hideOnSpawnDistance,
@@ -40,6 +43,9 @@ public class RaycastConfig implements Config {
         this.hideOnSpawnDistance = (short) hideOnSpawnDistance;
         this.visibleRecheckIntervalTicks = (short) visibleRecheckIntervalTicks;
         this.keepClientEntityWhenHidden = keepClientEntityWhenHidden;
+
+        alwaysShowRadiusSquared = alwaysShowRadius * alwaysShowRadius;
+        raycastRadiusSquared = raycastRadius * raycastRadius;
     }
 
     protected static RaycastConfig load(ConfigurationNode node, String path, boolean hasHideSoundsWhenHidden) {

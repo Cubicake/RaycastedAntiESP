@@ -197,6 +197,7 @@ public class RaycastedAntiESPCommand {
                 }
                 BlockView blockView = playerData.blockView();
                 int maxRaycastRadius = Math.max(100, raycastDistance + 1);
+                int maxRaycastRadiusSquared = maxRaycastRadius * maxRaycastRadius;
                 player.sendRichMessage("Running deterministic raycast benchmark at distance " + raycastDistance + "...");
                 Bukkit.getAsyncScheduler().runNow(RaycastedAntiESP.get(), (ignored) -> {
                     java.lang.management.ThreadMXBean managementBean = ManagementFactory.getThreadMXBean();
@@ -210,7 +211,7 @@ public class RaycastedAntiESPCommand {
                     long warmupChecksum = 0;
                     int corpusIndex = 0;
                     for (int batch = 0; batch < BENCHMARK_WARMUP_BATCHES; batch++) {
-                        warmupChecksum += runRaycastBatch(playerLocatable, locatables, corpusIndex, maxRaycastRadius, blockView);
+                        warmupChecksum += runRaycastBatch(playerLocatable, locatables, corpusIndex, maxRaycastRadiusSquared, blockView);
                         corpusIndex = (corpusIndex + BENCHMARK_BATCH_SIZE) & BENCHMARK_CORPUS_MASK;
                     }
                     benchmarkSink = warmupChecksum;
@@ -228,7 +229,7 @@ public class RaycastedAntiESPCommand {
                         corpusIndex = 0;
                         for (int batch = 0; batch < BENCHMARK_MEASUREMENT_BATCHES; batch++) {
                             long batchStartTime = System.nanoTime();
-                            int batchChecksum = runRaycastBatch(playerLocatable, locatables, corpusIndex, maxRaycastRadius, blockView);
+                            int batchChecksum = runRaycastBatch(playerLocatable, locatables, corpusIndex, maxRaycastRadiusSquared, blockView);
                             long batchDuration = System.nanoTime() - batchStartTime;
                             checksum += batchChecksum;
                             batchNanosecondsPerRay[batchSampleIndex++] = batchDuration / (double) BENCHMARK_BATCH_SIZE;
@@ -294,10 +295,10 @@ public class RaycastedAntiESPCommand {
                 return sortedValues[lowerIndex] + (sortedValues[upperIndex] - sortedValues[lowerIndex]) * fraction;
             }
 
-            private static int runRaycastBatch(Locatable start, Locatable[] targets, int startIndex, int maxRaycastRadius, BlockView blockView) {
+            private static int runRaycastBatch(Locatable start, Locatable[] targets, int startIndex, int maxRaycastRadiusSquared, BlockView blockView) {
                 int successfulRays = 0;
                 for (int offset = 0; offset < BENCHMARK_BATCH_SIZE; offset++) {
-                    if (RaycastUtil.raycastUnrolledAccumulated(3, 0, maxRaycastRadius, false, 0f, blockView, start, targets[startIndex + offset], null)) successfulRays++;
+                    if (RaycastUtil.raycastUnrolledAccumulated(3, 0, maxRaycastRadiusSquared, false, 0f, blockView, start, targets[startIndex + offset], null)) successfulRays++;
                 }
                 return successfulRays;
             }

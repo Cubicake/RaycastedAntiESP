@@ -27,16 +27,17 @@ public class RaycastUtil {
      * Mutable position and chunk-section state is flattened into the advancer so C2 only
      * needs to scalarise one state holder while retaining a readable ray-stepping method.
      */
-    public static boolean raycastUnrolledAccumulated(int maxOccluding, final int alwaysShowRadius, final int maxRaycastRadius, boolean debug,
+    public static boolean raycastUnrolledAccumulated(int maxOccluding, final int alwaysShowRadiusSquared, final int maxRaycastRadiusSquared, boolean debug,
                                                      float yOffsetEnd, final BlockView snap, final Locatable start, final Spatial end, ParticleSpawner spawner) {
         double startX = start.x();
         double startY = start.y();
         double startZ = start.z();
         double endOffset = end instanceof BlockSpatial ? 0.5 : 0.0;
         RayDirection direction = RayDirection.from(end.x() + endOffset, end.y() + endOffset + yOffsetEnd, end.z() + endOffset, startX, startY, startZ);
-        double total = direction.getLengthAndNormalise();
-        if (total <= alwaysShowRadius) return true;
-        if (total > maxRaycastRadius) return false;
+        double lengthSquared = direction.getLengthSquared();
+        if (lengthSquared <= alwaysShowRadiusSquared) return true;
+        if (lengthSquared > maxRaycastRadiusSquared) return false;
+        double total = direction.normaliseAndGetLength(lengthSquared);
         float finalDist = (float) (total - 1);
 
         final RayAdvancer rayAdvancer = debug ? new DebugRayAdvancer(startX, startY, startZ, direction, snap, start.world(), spawner) : new RayAdvancer(startX, startY, startZ, direction, snap);
@@ -158,8 +159,12 @@ public class RaycastUtil {
             return new RayDirection(endX - startX, endY - startY, endZ - startZ);
         }
 
-        private double getLengthAndNormalise() {
-            double len = Math.sqrt(x * x + y * y + z * z);
+        private double getLengthSquared() {
+            return x * x + y * y + z * z;
+        }
+
+        private double normaliseAndGetLength(double lengthSquared) {
+            double len = Math.sqrt(lengthSquared);
             double scale = 1 / len;
             x *= scale;
             y *= scale;
