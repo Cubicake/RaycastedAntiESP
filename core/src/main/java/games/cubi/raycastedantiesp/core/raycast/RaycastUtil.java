@@ -8,10 +8,9 @@
 
 package games.cubi.raycastedantiesp.core.raycast;
 
-import games.cubi.locatables.api.*;
-import games.cubi.locatables.implementations.MutableChunkSection;
-import games.cubi.locatables.implementations.MutableSpatialImpl;
-import games.cubi.logs.Logger;
+import games.cubi.locatables.api.Locatable;
+import games.cubi.locatables.api.Spatial;
+import games.cubi.locatables.api.BlockSpatial;
 import games.cubi.raycastedantiesp.core.chunks.ChunkOcclusionView;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 
@@ -90,6 +89,7 @@ public class RaycastUtil {
 
         private boolean isCurrentChunk(int blockX, int blockY, int blockZ) {
             return blockX >> 4 == chunkX && blockY >> 4 == chunkY && blockZ >> 4 == chunkZ;
+            // ((nextChunkX ^ chunkX) | (nextChunkY ^ chunkY) | (nextChunkZ ^ chunkZ)) != 0 is slower than this
         }
 
         private void moveToChunk(int blockX, int blockY, int blockZ) {
