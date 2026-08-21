@@ -1,10 +1,21 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.config;
 
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.engine.EngineConfig;
+import games.cubi.raycastedantiesp.core.config.raycast.ChunkSectionConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
+import games.cubi.raycastedantiesp.core.config.raycast.SoundEffectsConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.TileEntityConfig;
+import games.cubi.raycastedantiesp.core.utils.VarHandler;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.yaml.NodeStyle;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
@@ -13,12 +24,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.annotation.Documented;
+import java.lang.invoke.VarHandle;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.function.Supplier;
 
 public class ConfigManager {
@@ -33,7 +49,7 @@ public class ConfigManager {
 
     private ConfigurationNode config;
     private RootConfig startupConfig;
-    private volatile RootConfig activeConfig;
+    private volatile RootConfig activeConfig; private static final VarHandle ACTIVE_CONFIG = VarHandler.get(ConfigManager.class, "activeConfig", RootConfig.class);
 
     private ConfigManager(Supplier<InputStream> resourceSupplier, Path dataFolder, List<ConfigExtension<? extends Config>> extensions) {
         this.resourceSupplier = resourceSupplier;
@@ -74,7 +90,7 @@ public class ConfigManager {
         if (startupConfig == null) {
             startupConfig = parsed;
         }
-        activeConfig = parsed;
+        ACTIVE_CONFIG.setOpaque(this, parsed);
     }
 
     public SetConfigResult setConfigValue(String path, String rawValue) {
@@ -149,38 +165,54 @@ public class ConfigManager {
         }
 
         config = candidate;
-        activeConfig = parsed;
+        ACTIVE_CONFIG.setOpaque(this, parsed);
         saveConfigNode(candidate);
         return SetConfigResult.ok();
     }
 
     public PlayerConfig getPlayerConfig() {
-        return activeConfig.checksConfig().playerConfig();
+        return activeConfig().checksConfig().playerConfig();
     }
 
     public EntityConfig getEntityConfig() {
-        return activeConfig.checksConfig().entityConfig();
+        return activeConfig().checksConfig().entityConfig();
     }
 
     public TileEntityConfig getTileEntityConfig() {
-        return activeConfig.checksConfig().tileEntityConfig();
+        return activeConfig().checksConfig().tileEntityConfig();
+    }
+
+    public SoundEffectsConfig getSoundEffectsConfig() {
+        return activeConfig().checksConfig().soundEffectsConfig();
+    }
+
+    public ChunkSectionConfig getChunkSectionConfig() {
+        return activeConfig().checksConfig().chunkSectionConfig();
     }
 
     public DebugConfig getDebugConfig() {
-        RootConfig current = activeConfig;
+        RootConfig current = activeConfig();
         return current == null ? null : current.debugConfig();
     }
 
+    public UpdateConfig getUpdateConfig() {
+        return activeConfig().updateConfig();
+    }
+
     public EngineConfig getEngineConfig() {
-        return activeConfig.engineConfig();
+        return activeConfig().engineConfig();
     }
 
     public BlockProcessorConfig getBlockProcessorConfig() {
-        return activeConfig.blockProcessorConfig();
+        return activeConfig().blockProcessorConfig();
     }
 
     public <T extends Config> T getExtensionConfig(Class<T> type) {
-        return activeConfig.extensionConfig(type);
+        return activeConfig().extensionConfig(type);
+    }
+
+    private RootConfig activeConfig() {
+        return (RootConfig) ACTIVE_CONFIG.getOpaque(this);
     }
 
     public ConfigurationNode getConfigFile() {
@@ -203,6 +235,7 @@ public class ConfigManager {
         EngineConfig engineConfig = EngineConfig.load(loaded);
         BlockProcessorConfig blockProcessorConfig = BlockProcessorConfig.load(loaded);
         DebugConfig debugConfig = DebugConfig.load(loaded);
+        UpdateConfig updateConfig = UpdateConfig.load(loaded);
         Map<Class<? extends Config>, Config> extensionConfigs = new LinkedHashMap<>();
         for (ConfigExtension<? extends Config> extension : extensions) {
             extensionConfigs.put(extension.type(), extension.load(loaded, blockProcessorConfig));
@@ -212,7 +245,7 @@ public class ConfigManager {
             throw new ConfigLoadException("checks.chunk-section.enabled must be false when block-processor.track-all-blocks is false");
         }
 
-        return new RootConfig(version, checksConfig, engineConfig, blockProcessorConfig, debugConfig, Map.copyOf(extensionConfigs));
+        return new RootConfig(version, checksConfig, engineConfig, blockProcessorConfig, debugConfig, updateConfig, Map.copyOf(extensionConfigs));
     }
 
     private void validateReload(RootConfig next) {
@@ -220,13 +253,16 @@ public class ConfigManager {
             return;
         }
         if (next.engineConfig().mode() != startupConfig.engineConfig().mode()) {
-            throw new RestartRequiredException("engine.mode cannot be changed without a restart");
+            throw new RestartRequiredException("engine.mode cannot be changed without a restart.");
         }
         if (!next.blockProcessorConfig().equals(startupConfig.blockProcessorConfig())) {
-            throw new RestartRequiredException("block-processor cannot be changed without a restart");
+            throw new RestartRequiredException("block-processor cannot be changed without a restart.");
         }
-        if (next.checksConfig().hasRestartOnlyChanges(startupConfig.checksConfig())) {
-            throw new RestartRequiredException("checks cannot be enabled or disabled without a restart");
+        if (!next.checksConfig().entityConfig().excludedTypes().equals(startupConfig.checksConfig().entityConfig().excludedTypes())) {
+            throw new RestartRequiredException("excluded entity types cannot be changed without a restart.");
+        }
+        if (next.checksConfig().hasEnabledStatusChanges(startupConfig.checksConfig())) {
+            throw new RestartRequiredException("player and entity checks cannot be enabled or disabled without a restart.");
         }
         for (ConfigExtension<? extends Config> extension : extensions) {
             validateExtensionReload(extension, next);
@@ -274,6 +310,8 @@ public class ConfigManager {
                     Files.createFile(configPath);
                 }
             }
+            ConfigMigrations.prependConfigDocumentationHeaderIfMissing(configPath);
+            ConfigMigrations.migrateSoundEffectsEnabled(configPath);
         } catch (IOException e) {
             throw new ConfigLoadException("Failed to create config.yml", e);
         }
@@ -322,6 +360,108 @@ public class ConfigManager {
             loader.save(node);
         } catch (IOException e) {
             throw new ConfigLoadException("Failed to save config.yml", e);
+        }
+    }
+
+    /**
+     * Temporary text-level config mutations. Remove this class when these migrations are no longer needed.
+     */
+    private static final class ConfigMigrations {
+        private static final Pattern YAML_KEY = Pattern.compile("^([ \\t]*)([^:#\\s][^:]*):.*$");
+        private static final Pattern SOUND_EFFECTS_ENABLED_TRUE = Pattern.compile("^([ \\t]*enabled[ \\t]*:[ \\t]*)true([ \\t]*(?:#.*)?)$", Pattern.CASE_INSENSITIVE);
+
+        private ConfigMigrations() {
+        }
+
+        private static void prependConfigDocumentationHeaderIfMissing(Path configPath) {
+            try {
+                String content = Files.readString(configPath);
+
+                if (content.startsWith("#")) {
+                    Logger.debug("Config starts with comment");
+                    return;
+                }
+
+                Logger.debug("no starting comment");
+                Files.writeString(configPath, "# An explanation of this configuration file and what all the options do can be found at https://raycastedantiesp.cubi.games/config/" + System.lineSeparator() + content);
+            } catch (Exception e) {
+                Logger.warning(e,3, ConfigManager.class);
+            }
+        }
+
+        @Temporary(forRemovalIn = "0.8.0")
+        private static void migrateSoundEffectsEnabled(Path configPath) {
+            try {
+                String content = Files.readString(configPath, StandardCharsets.UTF_8);
+                String migrated = replaceSoundEffectsEnabled(content);
+                if (!content.equals(migrated)) {
+                    Files.writeString(configPath, migrated, StandardCharsets.UTF_8);
+                }
+            } catch (IOException e) {
+                throw new ConfigLoadException("Failed to migrate sound-effects.enabled in config.yml", e);
+            }
+        }
+
+        private static String replaceSoundEffectsEnabled(String content) {
+            StringBuilder migrated = new StringBuilder(content.length());
+            int lineStart = 0;
+            int checksIndent = -1;
+            int soundEffectsIndent = -1;
+            boolean changed = false;
+
+            while (lineStart < content.length()) {
+                int lineEnd = content.indexOf('\n', lineStart);
+                boolean hasLineEnding = lineEnd >= 0;
+                int contentEnd = hasLineEnding ? lineEnd : content.length();
+                int lineContentEnd = contentEnd > lineStart && content.charAt(contentEnd - 1) == '\r'
+                        ? contentEnd - 1 : contentEnd;
+                String line = content.substring(lineStart, lineContentEnd);
+                String lineEnding = content.substring(lineContentEnd, contentEnd) + (hasLineEnding ? "\n" : "");
+
+                Matcher key = YAML_KEY.matcher(line);
+                if (key.matches()) {
+                    int indent = key.group(1).length();
+                    String name = key.group(2).trim();
+
+                    if (checksIndent < 0) {
+                        if (name.equals("checks")) {
+                            checksIndent = indent;
+                        }
+                    } else if (indent <= checksIndent) {
+                        checksIndent = name.equals("checks") ? indent : -1;
+                        soundEffectsIndent = -1;
+                    } else if (soundEffectsIndent < 0) {
+                        if (name.equals("sound-effects")) {
+                            soundEffectsIndent = indent;
+                        }
+                    } else if (indent <= soundEffectsIndent) {
+                        soundEffectsIndent = name.equals("sound-effects") ? indent : -1;
+                    }
+                }
+
+                if (soundEffectsIndent >= 0 && key.matches()
+                        && key.group(2).trim().equals("enabled")
+                        && key.group(1).length() > soundEffectsIndent) {
+                    Matcher enabled = SOUND_EFFECTS_ENABLED_TRUE.matcher(line);
+                    if (enabled.matches()) {
+                        line = enabled.group(1) + "false" + enabled.group(2);
+                        changed = true;
+                    }
+                }
+
+                migrated.append(line).append(lineEnding);
+                if (!hasLineEnding) {
+                    break;
+                }
+                lineStart = contentEnd + 1;
+            }
+
+            return changed ? migrated.toString() : content;
+        }
+
+        @Documented
+        private @interface Temporary {
+            String forRemovalIn();
         }
     }
 

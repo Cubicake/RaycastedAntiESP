@@ -1,6 +1,17 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.raycast;
 
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.Locatable;
+import games.cubi.locatables.api.Spatial;
+
+import java.util.UUID;
 
 public interface ParticleSpawner {
 
@@ -8,5 +19,9 @@ public interface ParticleSpawner {
         RED, GREEN, BLUE,
     }
 
-    void spawnParticleAt(Locatable locatable, Colour color);
+    void spawnParticleAt(Locatable locatable, Colour colour);
+
+    void spawnParticleAt(UUID world, Spatial spatial, Colour colour);
+
+    void spawnParticleAt(UUID world, double x, double y, double z, Colour colour);
 }

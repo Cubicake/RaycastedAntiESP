@@ -12,7 +12,8 @@ import games.cubi.raycastedantiesp.core.Core;
 import games.cubi.raycastedantiesp.paper.commands.Attribution;
 import games.cubi.raycastedantiesp.paper.commands.AttributionBrigadier;
 import games.cubi.raycastedantiesp.paper.commands.RaycastedAntiESPCommandBrigadier;
-import games.cubi.raycastedantiesp.paper.engine.PaperSimpleEngine;
+import games.cubi.raycastedantiesp.paper.config.PaperEntityTypeExclusionResolver;
+import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
 import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcessorConfig;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsEntityView;
@@ -21,6 +22,7 @@ import games.cubi.raycastedantiesp.packetevents.viewcontrollers.PacketEventsComm
 import games.cubi.raycastedantiesp.paper.packets.PaperPacketEventsBlockViewController;
 import games.cubi.raycastedantiesp.paper.packets.PaperPacketEventsCommonViewController;
 import games.cubi.raycastedantiesp.paper.packets.PaperPacketEventsEntityViewController;
+import games.cubi.raycastedantiesp.paper.packets.PacketEventsPaperBlockInfoResolver;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.paper.bStats.MetricsCollector;
 import games.cubi.logs.Logger;
@@ -45,7 +47,7 @@ import java.util.List;
 public final class RaycastedAntiESP extends JavaPlugin implements CommandExecutor {
     private static ConfigManager config;
     private static PaperPacketEventsEntityViewController packetEventsController;
-    private static PaperSimpleEngine engine;
+    private static PaperAsyncEngine engine;
     private static MetricsCollector metricsCollector;
     private static RaycastedAntiESP instance;
     private static PaperLoggerAdapter loggerAdapter;
@@ -90,12 +92,15 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
         else {
             currentTickSupplier = new PaperTicker();
         }
-        ViewRegistry.initialise(PacketEventsBlockView::new, PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
+        PaperEntityTypeExclusionResolver.resolveAndInitialise(config.getEntityConfig().excludedTypes());
+        PacketEventsPaperBlockInfoResolver blockInfoResolver = new PacketEventsPaperBlockInfoResolver();
+        boolean trackAllBlocks = config.getBlockProcessorConfig().trackAllBlocks();
+        ViewRegistry.initialise(worldEpoch -> new PacketEventsBlockView(blockInfoResolver, trackAllBlocks, worldEpoch), PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
         PacketEventsCommonViewController.initialise(new PaperPacketEventsCommonViewController(currentTickSupplier));
         packetEventsController = new PaperPacketEventsEntityViewController(currentTickSupplier);
-        new PaperPacketEventsBlockViewController(currentTickSupplier);
+        new PaperPacketEventsBlockViewController(blockInfoResolver, trackAllBlocks, currentTickSupplier);
 
-        engine = new PaperSimpleEngine(this, config, currentTickSupplier);
+        engine = new PaperAsyncEngine(this, config, currentTickSupplier);
         UpdateChecker.checkForUpdates(this, Bukkit.getConsoleSender());
         EventListener.initialise(this, engine, currentTickSupplier);
 
@@ -115,6 +120,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
             }
         }, 1200, 1200);*/
         /*Do not delete, this is a legal notice*/Attribution.sendAttributionMessage(Bukkit.getConsoleSender()); // Legal notice as required by AGPLv3, it prominently offers users of this plugin the source code and displays an appropriate copyright notice. If you are a fork developer, do NOT remove this unless you have a thorough understanding of the AGPL and have replaced it with a suitable equivalent notice which is "prominently visible", displays the copyright notice, and includes a link to the source code of your fork which is accessible to all users of the plugin.
+        new FancyCompatibility();
     }
 
     private String parseTrackers(Set<Player> trackers) {
@@ -142,7 +148,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
     public static PaperPacketEventsEntityViewController getPacketEventsController() {
         return packetEventsController;
     }
-    public static PaperSimpleEngine getEngine() {
+    public static PaperAsyncEngine getEngine() {
         return engine;
     }
     public static RaycastedAntiESP get() {

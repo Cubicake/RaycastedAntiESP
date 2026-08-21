@@ -1,31 +1,40 @@
-### Latest stable version: v1.6.5 | Latest alpha version: Download from the Discord or compile from `main`
+RaycastedAntiESP is a packet-based plugin for Paper, Folia, and its forks that hides entities (including players) and tile entities (blocks such as chests, banners, signs, etc) from players if they would not be visible to a legitimate player. It is **unbypassable** by design, as packets sent by the server are blocked from reaching the client unless the block/entity has been confirmed to be visible.
+This limits the usefulness of unfair advantages such as cheat clients, freecam, and x-ray, and completely blocks pie-ray.
 
-The latest stable version can currently only be found on Modrinth https://modrinth.com/plugin/raycasted-anti-esp/ or by compiling from `v1.6.x`. The latest alpha version can be found on the [Discord](https://discord.gg/hGTRAK2hNM) or by compiling from `main`.
+### Supported Versions
+While the current "stable" plugin version is v1.6.5, it is strongly recommended that you use the [alpha-channel builds](https://modrinth.com/plugin/raycasted-anti-esp/versions?c=alpha) instead. Since v1.6.5, RaycastedAntiESP has been:
+- Renamed from RaycastedEntityOcclusions to RaycastedAntiESP
+- Been almost completely rewritten to be faster and more correct
 
-This is an async plugin for PaperMC and its forks that hides entities (including players) and tile entities (blocks such as chests, banners, signs, etc) from players if they do not have line-of-sight.
-
-The supported versions are 1.21.0+, with MC 26.x support in v2 only. Only Paper and derivative software is supported, not Spigot.
+The supported minecraft versions are 1.21.4+. Only Paper and derivative software (including Folia/Canvas) is supported, not Spigot.
 
 ## Use cases:
 
 - Prevent cheating (anti-esp hacks)
-  - Block usage of pie-ray to locate underground bases
-  - Prevent mods such as mini-maps or cheat clients from displaying the locations of hidden entities
+  - This is the plugin's primary purpose. 
+  - Block usage of pie-ray to locate underground bases or farms.
+  - Prevent mods such as mini-maps or cheat clients from displaying the locations of entities which would not be visible to vanilla players.
 - Increase client-side performance for low-end devices
   - Massive megabases containing hundreds of armour stands, item frames, banners etc can cause performance issues on low-end devices unable to process so many entities. Raycasted AntiESP will cull those entities for the client, reducing the number of entities to process.
+- Reduce network load by limiting packets
+  - With `keep-client-entity-when-hidden` set to true, running RaycastedAntiESP will significantly reduce the number of entity packets sent to the client.
+  - While entity packets are only a small portion of network bandwidth, this will still have a measurable impact and may be useful on extremely bandwidth-limited servers.
+    - Unless you are extremely limited by bandwidth, this will probably be unnoticeable.
 - Hide nametags behind walls
-  - Yes, this plugin is a bit overkill for doing that, yes you can do it anyways.
+  - Yes, this plugin is overkill for doing that, yes you can do it anyways.
+
+## Configuration
+RaycastedAntiESP has many configuration options. A full list with explanations can be found at https://raycastedantiesp.cubi.games/config/.
  
 ## Dependencies:
 - Packetevents
-  - In v1: Only needed if you are using the cull-players option and wish for the players to remain in the tablist
-  - In v2: Required for all features
+  - Required for all features, as packets are intercepted and rewritten to make sure that clients never learn about anything they should not be able to see.
 
 ## Known issues:
-- Due to the nature of the plugin, there will be a short delay once an entity should be visible before it appears, causing it to appear like it "popped" into view.
+- There will be a short delay once an entity should be visible before it appears, causing it to appear like it "popped" into view. Various config options exist to partially address this issue, though all such options necessarily weaken the plugin's ability to block cheaters.
 
 ## Versioning:
-Note that the following versioning information only applies to v2 and beyond.
+Note that the following versioning information only applies to v2 and beyond, and alpha versions of v2 start with a major version number of 0 rather than 2.
 
 RaycastedAntiESP binaries are composed of four distinct modules: the core, Locatable-lib (used for platform-independent location objects), [CubiLogging](https://github.com/Cubicake/CubiLogging/tree/main), and a platform adapter.
 
@@ -35,7 +44,7 @@ In addition to the versions for each module, there is also an overall version fo
 
 ## Credits:
 
-- Cubicake (Sole developer, creator and maintainer of RaycastedAntiESP)
+- Cubicake (Sole developer and maintainer of RaycastedAntiESP)
 
 ### Special mentions:
 
@@ -74,7 +83,7 @@ In summary, translated into layman, plugin-specific terms, the most important re
 `games.cubi.raycastedantiesp.paper.commands.Attribution` has been written with forks in mind, and a template has been left for forks to modify so that the AGPLv3 license can be obeyed with minimal effort.
 
 ## Copyright and Disclaimer:
-Copyright © 2025-2026 Cubicake and Contributors
+Copyright © 2025-2026 Cubicake
 
 This project is licensed under the GNU Affero General Public License v3.0 only (AGPLv3). You may copy, modify, and redistribute this software only in compliance with the terms of that licence. A copy of the licence is provided in the [LICENSE](LICENSE) file.
 

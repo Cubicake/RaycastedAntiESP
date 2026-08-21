@@ -21,19 +21,24 @@ repositories {
     maven { url = uri("https://repo.codemc.io/repository/maven-releases/") }
     maven { url = uri("https://repo.codemc.io/repository/maven-snapshots/") }
     maven { url = uri("https://eldonexus.de/repository/maven-public/") }
+    maven("https://repo.fancyinnovations.com/releases")
 }
 
 dependencies {
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
-    //paperweight.paperDevBundle("26.1.2.build.+")
+    //paperweight.paperDevBundle("26.2.build.+")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.0")
     compileOnly("org.spongepowered:configurate-core:4.2.0")
     compileOnly("org.spongepowered:configurate-yaml:4.2.0")
+
+    compileOnly("de.oliver:FancyHolograms:2.9.1")
+    compileOnly("de.oliver:FancyNpcs:2.9.2")
 
     compileOnly("net.strokkur.commands:annotations-paper:2.1.2")
     annotationProcessor("net.strokkur.commands:processor-paper:2.1.2")
 
     implementation("org.jetbrains:annotations:24.0.1")
+    implementation("org.bstats:bstats-bukkit:3.2.1")
 
     implementation(project(":leafpile"))
     implementation(project(":locatables"))
@@ -59,7 +64,7 @@ val javaToolchainService = project.extensions.getByType(JavaToolchainService::cl
 
 group = "games.cubi.raycastedantiesp.paper"
 
-val platformPaperVersion: String = "0.8.1-SNAPSHOT"
+val platformPaperVersion: String = "0.10.1-SNAPSHOT"
 val coreVersion = project(":core").version.toString()
 
 val commitShort = providers.exec {
@@ -142,10 +147,16 @@ tasks.shadowJar {
         include(project(":packetevents"))
 
         include(project(":leafpile"))
+        include(dependency("org.bstats:bstats-base:3.2.1"))
+        include(dependency("org.bstats:bstats-bukkit:3.2.1"))
     }
     relocate(
         "ca.spottedleaf",
         "games.cubi.libs.raycastedantiesp.spottedleaf"
+    )
+    relocate(
+        "org.bstats",
+        "games.cubi.libs.raycastedantiesp.bstats"
     )
     minimize {} // get rid of leafpile bloat
     archiveBaseName.set("RaycastedAntiESP")

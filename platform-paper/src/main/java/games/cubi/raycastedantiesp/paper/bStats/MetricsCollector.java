@@ -1,160 +1,201 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.paper.bStats;
 
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
+import games.cubi.raycastedantiesp.core.config.raycast.ChunkSectionConfig;
+import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
+import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
+import games.cubi.raycastedantiesp.core.config.raycast.SoundEffectsConfig;
+import games.cubi.raycastedantiesp.core.config.raycast.TileEntityConfig;
+import games.cubi.raycastedantiesp.core.players.PlayerData;
+import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
+import org.bstats.bukkit.Metrics;
+import org.bstats.charts.SimplePie;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.concurrent.Callable;
+import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 
 public class MetricsCollector {
-    private final RaycastedAntiESP plugin;
+    private static final int PLUGIN_ID = 24553;
+    private static final String ALWAYS_VISIBLE = "Always visible";
+
     private final Metrics metrics;
     private final ConfigManager config;
 
-    private List<Integer> playersOnline = new ArrayList<>();
-    private List<Integer> entities = new ArrayList<>();
-
     public MetricsCollector(RaycastedAntiESP plugin, ConfigManager config) {
-        this.plugin = plugin;
-        int pluginId = 24553;
-        metrics = new Metrics(plugin, pluginId);
-        this.config = config;/*
+        this.config = config;
+        metrics = new Metrics(plugin, PLUGIN_ID);
         registerCustomMetrics();
-            TODO: Re-enable metrics
-        plugin.getServer().getScheduler().runTaskTimer(plugin, this::collectMetrics, 0L, 6000L); // 6000 ticks = 5 minutes*/
     }
 
     public void shutdown() {
         metrics.shutdown();
     }
-/*
-    public void registerCustomMetrics() {
-        metrics.addCustomChart(new Metrics.SimplePie("max_occluding_count", () -> String.valueOf(config.maxOccludingCount)));
 
-        metrics.addCustomChart(new Metrics.SimplePie("cull_players", this::getCullPlayersStatus));
+    private void registerCustomMetrics() {
+        /*
+        // Raycast radii
+        addNumericChart("v2_player_raycast_radius", () -> config.getPlayerConfig().getRaycastRadius());
+        addNumericChart("v2_entity_raycast_radius", () -> config.getEntityConfig().getRaycastRadius());
+        addNumericChart("v2_tile_entity_raycast_radius", () -> config.getTileEntityConfig().getRaycastRadius());
+        //addNumericChart("v2_sound_effects_raycast_radius", () -> config.getSoundEffectsConfig().raycastRadius());
 
-        metrics.addCustomChart(new Metrics.SimplePie("raycast_radius", () -> getRoundedValue(config.raycastRadius, ConfigManager.RAYCAST_RADIUS_DEFAULT)));
-        metrics.addCustomChart(new Metrics.SimplePie("search_radius", () -> getRoundedValue(config.searchRadius, ConfigManager.SEARCH_RADIUS_DEFAULT)));
-        metrics.addCustomChart(new Metrics.SimplePie("always_show_radius", () -> getRoundedValue(config.alwaysShowRadius, ConfigManager.ALWAYS_SHOW_RADIUS_DEFAULT)));
+        // Hide-on-spawn distances
+        addNumericChart("v2_player_hide_on_spawn_distance", () -> config.getPlayerConfig().hideOnSpawnDistance());
+        addNumericChart("v2_entity_hide_on_spawn_distance", () -> config.getEntityConfig().hideOnSpawnDistance());
+        addNumericChart("v2_tile_entity_hide_on_spawn_distance", () -> config.getTileEntityConfig().hideOnSpawnDistance());
 
-        metrics.addCustomChart(new Metrics.SimplePie("engine_mode", () -> String.valueOf(config.engineMode)));
+        // Visible recheck intervals
+        addNumericChart("v2_player_visible_recheck_interval_ticks", () -> config.getPlayerConfig().getVisibleRecheckIntervalTicks());
+        addNumericChart("v2_entity_visible_recheck_interval_ticks", () -> config.getEntityConfig().getVisibleRecheckIntervalTicks());
+        addNumericChart("v2_tile_entity_visible_recheck_interval_ticks", () -> config.getTileEntityConfig().getVisibleRecheckIntervalTicks());
+        //addNumericChart("v2_chunk_section_visible_recheck_interval_ticks", () -> config.getChunkSectionConfig().visibleRecheckIntervalTicks());
 
-        metrics.addCustomChart(new Metrics.SimplePie("snapshot_refresh_interval", () -> getRoundedValue(config.snapshotRefreshInterval, ConfigManager.SNAPSHOT_REFRESH_INTERVAL_DEFAULT)));
-        metrics.addCustomChart(new Metrics.SimplePie("entity_recheck_interval", () -> getRoundedValue(config.recheckInterval, ConfigManager.RECHECK_INTERVAL_DEFAULT)));
-        metrics.addCustomChart(new Metrics.SimplePie("tile_entity_recheck_interval", this::tileEntityCheckStatus));
+        // Occlusion limits
+        addNumericChart("v2_player_max_occluding_count", () -> config.getPlayerConfig().getMaxOccludingCount());
+        addNumericChart("v2_entity_max_occluding_count", () -> config.getEntityConfig().getMaxOccludingCount());
+        addNumericChart("v2_tile_entity_max_occluding_count", () -> config.getTileEntityConfig().getMaxOccludingCount());
 
-        metrics.addCustomChart(new Metrics.SimplePie("server_size", this::getPlayersOnline));
-        metrics.addCustomChart(new Metrics.SimplePie("entities", this::getEntities));
+        // Entity hide mode
+        addBooleanChart("v2_entity_keep_client_entity_when_hidden", () -> config.getEntityConfig().keepClientEntityWhenHidden());
+        addBooleanChart("v2_player_keep_client_entity_when_hidden", () -> config.getPlayerConfig().keepClientEntityWhenHidden());
+
+        // Always-visible radii also communicate whether each check is enabled.
+        metrics.addCustomChart(new SimplePie("v2_player_always_show_radius", () -> {
+            PlayerConfig playerConfig = config.getPlayerConfig();
+            return alwaysVisible(playerConfig.enabled(), playerConfig.getAlwaysShowRadius());
+        }));
+        metrics.addCustomChart(new SimplePie("v2_entity_always_show_radius", () -> {
+            EntityConfig entityConfig = config.getEntityConfig();
+            return alwaysVisible(entityConfig.enabled(), entityConfig.getAlwaysShowRadius());
+        }));
+        metrics.addCustomChart(new SimplePie("v2_tile_entity_always_show_radius", () -> {
+            TileEntityConfig tileEntityConfig = config.getTileEntityConfig();
+            return alwaysVisible(tileEntityConfig.enabled(), tileEntityConfig.getAlwaysShowRadius());
+        }));
+        metrics.addCustomChart(new SimplePie("v2_sound_effects_always_play_radius", () -> {
+            SoundEffectsConfig soundEffectsConfig = config.getSoundEffectsConfig();
+            return alwaysVisible(soundEffectsConfig.enabled(), soundEffectsConfig.alwaysPlayRadius());
+        }));
+        metrics.addCustomChart(new SimplePie("v2_chunk_section_always_show_radius_chunks", () -> {
+            ChunkSectionConfig chunkSectionConfig = config.getChunkSectionConfig();
+            return alwaysVisible(chunkSectionConfig.enabled(), chunkSectionConfig.alwaysShowRadiusChunks());
+        }));
+         */ // these charts may be added at a future date
+
+        // Runtime metrics
+        metrics.addCustomChart(new SimplePie("server_size", this::getPlayerCount));
+        metrics.addCustomChart(new SimplePie("v2_median_tracked_entities_per_player", this::getMedianEntityCount));
     }
 
-    public String getCullPlayersStatus() {
-        if (config.cullPlayers) {
-            if (config.onlyCullSneakingPlayers) {
-                return "Sneaking";
-            } else {
-                return "Always";
-            }
-        } else {
-            return "Never";
+    private void addNumericChart(String chartID, IntMetric metric) {
+        metrics.addCustomChart(new SimplePie(chartID, metric));
+    }
+
+    private void addBooleanChart(String chartID, BooleanMetric metric) {
+        metrics.addCustomChart(new SimplePie(chartID, metric));
+    }
+
+    private String getPlayerCount() {
+        return bucketPlayerCount(PlayerRegistry.getInstance().getAllPlayerData().size());
+    }
+
+    private String getMedianEntityCount() {
+        return bucketMedianEntityCounts(
+                PlayerRegistry.getInstance().getAllPlayerData(),
+                PlayerData::isConnected,
+                playerData -> playerData.entityView().size()
+        );
+    }
+
+    private static String alwaysVisible(boolean enabled, int radius) {
+        return enabled ? String.valueOf(radius) : ALWAYS_VISIBLE;
+    }
+
+    static String bucketPlayerCount(int playerCount) {
+        if (playerCount < 0) {
+            throw new IllegalArgumentException("Player count cannot be negative");
+        }
+        if (playerCount <= 3) return String.valueOf(playerCount);
+        if (playerCount <= 6) return "4-6";
+        if (playerCount <= 10) return "7-10";
+        if (playerCount <= 15) return "11-15";
+        if (playerCount <= 25) return "16-25";
+        if (playerCount <= 40) return "26-40";
+        if (playerCount <= 70) return "41-70";
+        if (playerCount <= 100) return "71-100";
+        if (playerCount <= 200) return "101-200";
+        if (playerCount <= 300) return "201-300";
+        if (playerCount <= 500) return "301-500";
+        if (playerCount <= 1000) return "501-1000";
+        if (playerCount <= 5000) return "1001-5000";
+        return "5001+";
+    }
+
+    static String bucketMedianEntityCounts(int[] entityCounts) {
+        if (entityCounts.length == 0) {
+            return null;
+        }
+
+        Arrays.sort(entityCounts);
+        int middle = entityCounts.length / 2;
+        double median = entityCounts.length % 2 == 1
+                ? entityCounts[middle]
+                : ((long) entityCounts[middle - 1] + entityCounts[middle]) / 2.0;
+        return bucketMedianEntityCount(median);
+    }
+
+    static <T> String bucketMedianEntityCounts(Collection<T> samples, Predicate<T> isConnected, ToIntFunction<T> entityCount) {
+        int[] entityCounts = samples.stream()
+                .filter(isConnected)
+                .mapToInt(entityCount)
+                .toArray();
+        return bucketMedianEntityCounts(entityCounts);
+    }
+
+    static String bucketMedianEntityCount(double entityCount) {
+        if (entityCount < 0) {
+            throw new IllegalArgumentException("Entity count cannot be negative");
+        }
+        if (entityCount <= 20) return "0-20";
+        if (entityCount <= 50) return "21-50";
+        if (entityCount <= 100) return "51-100";
+        if (entityCount <= 300) return "101-300";
+        if (entityCount <= 500) return "301-500";
+        if (entityCount <= 1000) return "501-1000";
+        if (entityCount <= 2000) return "1001-2000";
+        if (entityCount <= 5000) return "2001-5000";
+        return "5001+";
+    }
+
+    @FunctionalInterface
+    private interface IntMetric extends Callable<String> {
+        int getAsInt();
+
+        @Override
+        default String call() {
+            return String.valueOf(getAsInt());
         }
     }
 
-    public String tileEntityCheckStatus() {
-        if (config.checkTileEntities) {
-            return getRoundedValue(config.tileEntityRecheckInterval, ConfigManager.TILE_ENTITY_RECHECK_INTERVAL_DEFAULT);
-        } else {
-            return "Disabled";
+    @FunctionalInterface
+    private interface BooleanMetric extends Callable<String> {
+        boolean getAsBool();
+
+        @Override
+        default String call() {
+            return String.valueOf(getAsBool());
         }
     }
-
-    public String getRoundedValue(int value, int defaultValue) {
-        if (value == defaultValue) {
-            return defaultValue + ".0";
-        } else {
-            int roundedValue = Math.round(value / 5.0f) * 5;
-            return String.valueOf(roundedValue);
-        }
-    }
-
-    public void collectMetrics() {
-        playersOnline.add(Bukkit.getServer().getOnlinePlayers().size());
-        // TODO: Cache all entities in Engine, and also use that here
-        int totalEntities = 0;
-        for (World world : Bukkit.getWorlds()) {
-            totalEntities += world.getEntities().size();
-        }
-        entities.add(totalEntities);
-    }
-    public String getPlayersOnline() {
-        if (playersOnline == null) {
-            return "Null";
-        }
-        int averaged = (int) playersOnline.stream()
-                .mapToInt(Integer::intValue)
-                .average()
-                .orElse(-1);
-        playersOnline.clear();
-
-        if (averaged < 0) {
-            return "Null";
-        } else if (averaged < 4) {
-            return String.valueOf(averaged);
-        } else if (averaged < 7) {
-            return "4-6";
-        } else if (averaged < 11) {
-            return "7-10";
-        } else if (averaged < 16) {
-            return "11-15";
-        } else if (averaged < 26) {
-            return "15-25";
-        } else if (averaged < 40) {
-            return "26-40";
-        } else if (averaged < 71) {
-            return "41-70";
-        } else if (averaged < 101) {
-            return "71-100";
-        } else if (averaged < 201) {
-            return "101-200";
-        } else if (averaged < 301) {
-            return "201-300";
-        } else if (averaged < 501) {
-            return "301-500";
-        } else {
-            return "500+";
-        }
-
-    }
-    public String getEntities() {
-        if (entities == null) {
-            return "Null";
-        }
-        int averaged = (int) entities.stream()
-                .mapToInt(Integer::intValue)
-                .average()
-                .orElse(-1);
-        entities.clear();
-
-        if (averaged < 0) {
-            return "Null";
-        } else if (averaged < 21) {
-            return "0-20";
-        } else if (averaged < 51) {
-            return "21-50";
-        } else if (averaged < 101) {
-            return "51-100";
-        } else if (averaged < 301) {
-            return "101-300";
-        } else if (averaged < 501) {
-            return "301-500";
-        } else if (averaged < 1001) {
-            return "501-1000";
-        } else if (averaged < 2001) {
-            return "1001-2000";
-        } else if (averaged < 5000) {
-            return "2001-5000";
-        } else {
-            return "5000+";
-        }
-    }
- */
 }

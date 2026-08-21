@@ -1,38 +1,58 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.players;
 
-import games.cubi.locatables.Locatable;
+import games.cubi.locatables.api.Locatable;
 import games.cubi.locatables.implementations.ThreadSafeLocatable;
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
+import games.cubi.raycastedantiesp.core.utils.VarHandler;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
 import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
+import org.jetbrains.annotations.Nullable;
 
+import java.lang.invoke.VarHandle;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.function.IntSupplier;
 
 public class PlayerData {
+    public static final int INVALID_WORLD_EPOCH = -1;
+
     private final UUID playerUUID;
     private final int joinTick;
     private volatile boolean hasBypassPermission;
-    private volatile boolean connected = true;
+    private volatile boolean connected;
     private final ThreadSafeLocatable ownLocation;
 
     private final BlockView blockView;
     private final EntityView<?> entityView;
     private final EntityView<?> playerView;
     private final NettyData nettyData;
+    // Even positive values are stable world sessions; odd values mean the views are being replaced.
+    private volatile int worldEpoch; private static final VarHandle WORLD_EPOCH = VarHandler.get(PlayerData.class, "worldEpoch", int.class);
+    private UUID viewWorld;
 
     PlayerData(UUID player, boolean hasBypassPermission, int joinTick, int selfEntityID, PlayerRegistry.SelfEntityCreator selfEntityCreator) {
         this.joinTick = joinTick;
         this.playerUUID = player;
         this.hasBypassPermission = hasBypassPermission;
+        connected = true;
 
-        blockView = ViewRegistry.createBlockView();
-        entityView = ViewRegistry.createEntityView();
-        playerView = ViewRegistry.createPlayerEntityView();
+        IntSupplier worldEpochSupplier = this::acquireWorldEpoch;
+        blockView = ViewRegistry.createBlockView(worldEpochSupplier);
+        entityView = ViewRegistry.createEntityView(worldEpochSupplier);
+        playerView = ViewRegistry.createPlayerEntityView(worldEpochSupplier);
         ownLocation = new ThreadSafeLocatable(null, 0, 0, 0);
-        NettyEntityLocatable<?, ?> selfEntity = Logger.requireNonNull(
+        NettyEntity<?> selfEntity = Logger.requireNonNull(
                 selfEntityCreator.createSelfEntity(this, selfEntityID, player),
                 "Self entity creator returned null",
                 3,
@@ -57,13 +77,63 @@ public class PlayerData {
         return blockView;
     }
 
+    /** Acquire-reads the current player-wide view epoch. */
+    public int acquireWorldEpoch() {
+        return (int) WORLD_EPOCH.getAcquire(this);
+    }
+
+    /**
+     * Returns a stable epoch for {@code expectedWorld}, or {@link #INVALID_WORLD_EPOCH} when the world session is not usable.
+     */
+    public int tryAcquireWorldEpochFor(UUID expectedWorld) {
+        int before = acquireWorldEpoch();
+        if (!isStableWorldEpoch(before)) {
+            return INVALID_WORLD_EPOCH;
+        }
+        UUID currentWorld = viewWorld;
+        int after = acquireWorldEpoch();
+        if (before != after || !Objects.equals(currentWorld, expectedWorld)) {
+            return INVALID_WORLD_EPOCH;
+        }
+        return before;
+    }
+
+    public static boolean isStableWorldEpoch(int epoch) {
+        return epoch != 0 && (epoch & 1) == 0;
+    }
+
+    /** Structural-writer operation performed before clearing all world-scoped views. */
+    public void beginWorldTransition() {
+        int current = acquireWorldEpoch();
+        if ((current & 1) != 0) { //current is odd
+            throw new IllegalStateException("World transition already in progress");
+        }
+        WORLD_EPOCH.setRelease(this, current + 1);
+        // Keep subsequent view-clearing writes behind the invalidating odd epoch.
+        VarHandle.releaseFence();
+        viewWorld = null;
+    }
+
+    /** Structural-writer operation performed after all world-scoped views have been cleared. */
+    public void completeWorldTransition(UUID world) {
+        int current = acquireWorldEpoch();
+        if ((current & 1) == 0) { //current is even
+            throw new IllegalStateException("No world transition in progress");
+        }
+        viewWorld = world;
+        WORLD_EPOCH.setRelease(this, current + 1);
+    }
+
     public void updateOwnLocation(UUID world, double x, double y, double z) {
         ownLocation.set(x, y, z, world);
     }
 
+    /**
+     * Returns a live, thread-safe view of the player's current location.
+     * Casting the result to a mutable type and modifying it is unsupported.
+     */
     public Locatable ownLocation() {
-        ThreadSafeLocatable existing = ownLocation;
-        return existing == null ? null : existing.clonePlainAndCentreIfBlockLocation();
+        return ownLocation;
     }
 
     public UUID getPlayerUUID() {
@@ -84,6 +154,10 @@ public class PlayerData {
 
     public void markDisconnected() {
         connected = false;
+        int current = acquireWorldEpoch();
+        if ((current & 1) == 0) {
+            WORLD_EPOCH.setRelease(this, current + 1);
+        }
     }
 
     /**
@@ -100,7 +174,7 @@ public class PlayerData {
         return null;
     }
 
-    public NettyEntityLocatable<?,?> entityFromID(int entityID) {
+    public @Nullable NettyEntity<?> entityFromID(int entityID) {
         if (nettyData.isSelfEntityID(entityID)) {
             return nettyData.getSelfEntity();
         }
@@ -108,7 +182,7 @@ public class PlayerData {
         if (entityView == null) {
             return null;
         }
-        return (NettyEntityLocatable<?, ?>) entityView.getEntity(entityID);
+        return (NettyEntity<?>) entityView.getEntity(entityID);
     }
 
     public void setBypassPermission(boolean hasBypassPermission) {
@@ -120,7 +194,7 @@ public class PlayerData {
         return "PlayerData{" +
                 "playerUUID=" + playerUUID +
                 ", joinTick=" + joinTick +
-                ", hasBypassPermission=" + hasBypassPermission +
+                ", hasBypassPermission=" + hasBypassPermission() +
                 ", ownLocation=" + ownLocation +
                 ", blockView=" + blockView +
                 ", entityView=" + entityView +

@@ -1,3 +1,11 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.engine;
 
 final class TickTimings {
@@ -19,11 +27,9 @@ final class TickTimings {
 
     private int entityChecked;
     private int entityRaycasts;
-    private int entityNullTargets;
 
     private int playerChecked;
     private int playerRaycasts;
-    private int playerNullTargets;
 
     private int tileChecked;
     private int tileRaycasts;
@@ -52,11 +58,9 @@ final class TickTimings {
 
         entityChecked += batch.entityChecked;
         entityRaycasts += batch.entityRaycasts;
-        entityNullTargets += batch.entityNullTargets;
 
         playerChecked += batch.playerChecked;
         playerRaycasts += batch.playerRaycasts;
-        playerNullTargets += batch.playerNullTargets;
 
         tileChecked += batch.tileChecked;
         tileRaycasts += batch.tileRaycasts;
@@ -82,10 +86,8 @@ final class TickTimings {
                 nullLocationSkippedPlayers,
                 entityChecked,
                 entityRaycasts,
-                entityNullTargets,
                 playerChecked,
                 playerRaycasts,
-                playerNullTargets,
                 tileChecked,
                 tileRaycasts,
                 tileWorldSkipped,

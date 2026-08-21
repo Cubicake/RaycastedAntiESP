@@ -30,12 +30,15 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation(project(":leafpile"))
+    testImplementation(project(":logging"))
+    testImplementation("org.spongepowered:configurate-core:4.2.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("it.unimi.dsi:fastutil:8.5.18")
 }
 
-val coreVersion = "0.5.5-SNAPSHOT"
+val coreVersion = "0.7.1-SNAPSHOT"
 
 val isRelease = gradle.startParameter.taskNames.any {
     it.contains("buildRelease")

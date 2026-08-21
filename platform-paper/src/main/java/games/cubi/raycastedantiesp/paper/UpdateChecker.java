@@ -17,6 +17,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.config.ConfigManager;
+import games.cubi.raycastedantiesp.core.config.UpdateConfig;
 import games.cubi.raycastedantiesp.core.utils.BuildProperties;
 import games.cubi.raycastedantiesp.core.utils.BuildProperties.Version;
 import games.cubi.raycastedantiesp.paper.utils.PaperScheduler;
@@ -26,17 +28,17 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.net.URI;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 
 public class UpdateChecker {
     private static final String VERSION_API_ENDPOINT = "https://api.modrinth.com/v2/project/bCjNZu0C/version?include_changelog=false";
     private static final String PLATFORM_NAME = "Paper";
     private static final String MODRINTH_PAGE_URL = "https://modrinth.com/project/bCjNZu0C";
-    private static final boolean CHECK_BETA_RELEASES = true;
-    private static final boolean CHECK_ALPHA_RELEASES = true;
 
     enum UpdateChannel {
         STABLE("release", "release"),
@@ -116,16 +118,21 @@ public class UpdateChecker {
         CompletableFuture<List<VersionEntry>> future = new CompletableFuture<>();
 
         Bukkit.getAsyncScheduler().runNow(plugin, ignored -> {
+            try {
+            URLConnection connection = new URI(VERSION_API_ENDPOINT).toURL().openConnection();
+            connection.setConnectTimeout(5_000); //ms
+            connection.setReadTimeout(5_000); //ms
             try (
-                final InputStreamReader reader = new InputStreamReader(new URI(VERSION_API_ENDPOINT).toURL().openConnection().getInputStream());
+                final InputStreamReader reader = new InputStreamReader(connection.getInputStream());
                 final BufferedReader bufferedReader = new BufferedReader(reader)
             ) {
                 future.complete(parseVersionEntries(bufferedReader));
+            }
             } catch (IOException | URISyntaxException e) {
                 future.completeExceptionally(new IllegalStateException("Unable to fetch latest version", e));
             }
         });
-        return future;
+        return future.orTimeout(10_000, TimeUnit.MILLISECONDS);
     }
 
     private static List<VersionEntry> parseVersionEntries(BufferedReader reader) throws IOException {
@@ -152,20 +159,32 @@ public class UpdateChecker {
     }
 
     private static CompletableFuture<UpdateCheckReport> fetchUpdateCheck(RaycastedAntiESP plugin) {
-        return fetchVersions(plugin).thenApply(versionEntries -> checkVersions(BuildProperties.CORE.version(), BuildProperties.PLATFORM.version(), versionEntries));
+        UpdateConfig updateConfig = ConfigManager.get().getUpdateConfig();
+        if (!updateConfig.anyChannelEnabled()) {
+            return CompletableFuture.completedFuture(new UpdateCheckReport(List.of()));
+        }
+
+        return fetchVersions(plugin).thenApply(versionEntries -> checkVersions(
+                BuildProperties.CORE.version(),
+                BuildProperties.PLATFORM.version(),
+                versionEntries,
+                updateConfig.checkRelease(),
+                updateConfig.checkBeta(),
+                updateConfig.checkAlpha()
+        ));
     }
 
     static UpdateCheckReport checkVersions(Version currentCoreVersion, Version currentPlatformVersion, List<VersionEntry> versionEntries) {
-        return checkVersions(currentCoreVersion, currentPlatformVersion, versionEntries, CHECK_BETA_RELEASES, CHECK_ALPHA_RELEASES);
+        return checkVersions(currentCoreVersion, currentPlatformVersion, versionEntries, true, true, true);
     }
 
-    static UpdateCheckReport checkVersions(Version currentCoreVersion, Version currentPlatformVersion, List<VersionEntry> versionEntries, boolean checkBetaReleases, boolean checkAlphaReleases) {
+    static UpdateCheckReport checkVersions(Version currentCoreVersion, Version currentPlatformVersion, List<VersionEntry> versionEntries, boolean checkRelease, boolean checkBetaReleases, boolean checkAlphaReleases) {
         if (isErrorVersion(currentCoreVersion) || isErrorVersion(currentPlatformVersion)) {
             return UpdateCheckReport.invalidCurrentVersion();
         }
 
         List<UpdateCheckResult> results = new ArrayList<>();
-        for (UpdateChannel channel : enabledChannels(checkBetaReleases, checkAlphaReleases)) {
+        for (UpdateChannel channel : enabledChannels(checkRelease, checkBetaReleases, checkAlphaReleases)) {
             ApiVersion apiVersion = findComparablePaperVersion(versionEntries, channel);
             if (apiVersion == null) {
                 results.add(UpdateCheckResult.noComparableVersion(channel));
@@ -185,9 +204,9 @@ public class UpdateChecker {
         return new UpdateCheckReport(results);
     }
 
-    private static List<UpdateChannel> enabledChannels(boolean checkBetaReleases, boolean checkAlphaReleases) {
+    private static List<UpdateChannel> enabledChannels(boolean checkRelease, boolean checkBetaReleases, boolean checkAlphaReleases) {
         List<UpdateChannel> channels = new ArrayList<>();
-        channels.add(UpdateChannel.STABLE);
+        if (checkRelease) channels.add(UpdateChannel.STABLE);
         if (checkBetaReleases) channels.add(UpdateChannel.BETA);
         if (checkAlphaReleases) channels.add(UpdateChannel.ALPHA);
         return channels;
@@ -278,6 +297,9 @@ public class UpdateChecker {
 
     public static void checkForUpdates(RaycastedAntiESP plugin, CommandSender audience) {
         fetchUpdateCheck(plugin).thenAccept(report -> {
+            if (report.results().isEmpty()) {
+                return;
+            }
             PaperScheduler.runForAudience(plugin, audience, () -> audience.sendRichMessage(formatUpdateMessage(report)));
         }).exceptionally(ex -> {
             Logger.error("An error occurred while checking for plugin updates", ex, 4, UpdateChecker.class);

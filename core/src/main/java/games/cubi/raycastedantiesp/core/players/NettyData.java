@@ -9,19 +9,20 @@
 package games.cubi.raycastedantiesp.core.players;
 
 import games.cubi.logs.Logger;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.utils.*;
 import games.cubi.raycastedantiesp.core.utils.Packet.Packets;
+import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
-import static games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable.NO_VEHICLE;
+import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_LEASHER;
+import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_VEHICLE;
 
 /**
  * Per-player mutable state intended for Netty-side packet tracking and deferred reconciliation.
@@ -33,8 +34,13 @@ public class NettyData implements Clearable {
     // START Leash tracking:
     //
     private final Int2ObjectArrayMap<int[]> unresolvedLeashedEntityIDsByHolderID = new Int2ObjectArrayMap<>(DEFAULT_MAP_SIZE);
+    private final Int2IntArrayMap unresolvedHolderIDsByLeashedEntityID = new Int2IntArrayMap(DEFAULT_MAP_SIZE);
 
     public void addUnresolvedLeash(int holderEntityID, int leashedEntityID) {
+        int previousHolderEntityID = unresolvedHolderIDsByLeashedEntityID.put(leashedEntityID, holderEntityID);
+        if (previousHolderEntityID != NO_LEASHER && previousHolderEntityID != holderEntityID) {
+            removeLeashedEntityFromUnresolvedHolder(previousHolderEntityID, leashedEntityID);
+        }
         unresolvedLeashedEntityIDsByHolderID.compute(holderEntityID, (ignored, existing) -> {
             if (PrimitiveIntArrayList.contains(existing, leashedEntityID)) {
                 return existing;
@@ -44,37 +50,49 @@ public class NettyData implements Clearable {
     }
 
     public boolean removeUnresolvedLeash(int holderEntityID, int leashedEntityID) {
-        final boolean[] removed = new boolean[1];
-        unresolvedLeashedEntityIDsByHolderID.computeIfPresent(holderEntityID, (ignored, existing) -> {
-            if (!PrimitiveIntArrayList.contains(existing, leashedEntityID)) {
-                return existing;
-            }
-            removed[0] = true;
-            int[] updated = PrimitiveIntArrayList.remove(existing, leashedEntityID);
-            return PrimitiveIntArrayList.isEmpty(updated) ? null : updated;
-        });
-        return removed[0];
+        if (unresolvedHolderIDsByLeashedEntityID.get(leashedEntityID) != holderEntityID) {
+            return false;
+        }
+        unresolvedHolderIDsByLeashedEntityID.remove(leashedEntityID);
+        removeLeashedEntityFromUnresolvedHolder(holderEntityID, leashedEntityID);
+        return true;
+    }
+
+    public int getUnresolvedHolderForLeashedEntity(int leashedEntityID) {
+        return unresolvedHolderIDsByLeashedEntityID.get(leashedEntityID);
+    }
+
+    public int[] getUnresolvedLeashes(int holderEntityID) {
+        return PrimitiveIntArrayList.getCopyOrNull(unresolvedLeashedEntityIDsByHolderID.get(holderEntityID));
     }
 
     public int[] consumeUnresolvedLeashes(int holderEntityID) {
-        return unresolvedLeashedEntityIDsByHolderID.remove(holderEntityID);
+        int[] existing = unresolvedLeashedEntityIDsByHolderID.remove(holderEntityID);
+        if (PrimitiveIntArrayList.isEmpty(existing)) {
+            return existing;
+        }
+        for (int leashedEntityID : existing) {
+            if (unresolvedHolderIDsByLeashedEntityID.get(leashedEntityID) == holderEntityID) {
+                unresolvedHolderIDsByLeashedEntityID.remove(leashedEntityID);
+            }
+        }
+        return existing;
     }
 
-    public void removeUnresolvedLeashedEntityFromAll(int leashedEntityID) {
-        ObjectIterator<Int2ObjectMap.Entry<int @IntArrayListMarker []>> iterator = unresolvedLeashedEntityIDsByHolderID.int2ObjectEntrySet().fastIterator();
-        while (iterator.hasNext()) {
-            Int2ObjectMap.Entry<int @IntArrayListMarker []> entry = iterator.next();
-            int[] existing = entry.getValue();
-            if (!PrimitiveIntArrayList.contains(existing, leashedEntityID)) {
-                continue;
-            }
-            int[] updated = PrimitiveIntArrayList.remove(existing, leashedEntityID);
-            if (PrimitiveIntArrayList.isEmpty(updated)) {
-                iterator.remove();
-                continue;
-            }
-            entry.setValue(updated);
+    public int consumeUnresolvedHolderForLeashedEntity(int leashedEntityID) {
+        int holderEntityID = unresolvedHolderIDsByLeashedEntityID.remove(leashedEntityID);
+        if (holderEntityID == NO_LEASHER) {
+            return NO_LEASHER;
         }
+        removeLeashedEntityFromUnresolvedHolder(holderEntityID, leashedEntityID);
+        return holderEntityID;
+    }
+
+    private void removeLeashedEntityFromUnresolvedHolder(int holderEntityID, int leashedEntityID) {
+        unresolvedLeashedEntityIDsByHolderID.computeIfPresent(holderEntityID, (ignored, existing) -> {
+            int[] updated = PrimitiveIntArrayList.remove(existing, leashedEntityID);
+            return PrimitiveIntArrayList.isEmpty(updated) ? null : updated;
+        });
     }
     //
     // END Leash tracking.
@@ -86,18 +104,21 @@ public class NettyData implements Clearable {
     // START Passenger tracking:
     //
     /**
-     * Latest unresolved full passenger list for a vehicle.
-     * This is only needed while at least one referenced passenger or the vehicle-side reconciliation has still not been spawned in for the client. The actual client deals with this somehow but we need the entity to have been spawned in before we can register the passenger relationship.
+     * Latest full passenger list for a vehicle that is not represented by a tracked entity.
+     * Normally this is temporary reconciliation state while a vehicle or passenger is waiting to spawn.
+     * Bypassed vehicles remain untracked, so their authoritative passenger list stays here until it is
+     * replaced by another passenger packet or cleared by the vehicle's destroy packet.
      */
     private final Int2ObjectArrayMap<int[]> unresolvedPassengerIDsByVehicleID = new Int2ObjectArrayMap<>(DEFAULT_MAP_SIZE);
     /**
-     * Reverse lookup for unresolved passenger relationships.
-     * Lets a later passenger spawn discover which vehicle most recently claimed it as a passenger.
+     * Reverse lookup for passenger relationships stored above.
+     * Lets a later passenger spawn discover which untracked vehicle most recently claimed it as a passenger.
      * This may grow larger than {@link #unresolvedPassengerIDsByVehicleID} if vehicles have several passengers, so it's an open hash map.
      */
     private final Int2IntOpenHashMap unresolvedVehicleIDsByPassengerID = new Int2IntOpenHashMap(DEFAULT_MAP_SIZE);
 
     {
+        unresolvedHolderIDsByLeashedEntityID.defaultReturnValue(NO_LEASHER);
         unresolvedVehicleIDsByPassengerID.defaultReturnValue(NO_VEHICLE);
     }
 
@@ -178,15 +199,7 @@ public class NettyData implements Clearable {
     // START Netty entity spawn task queue:
     //
     private final Int2ObjectArrayMap<EntitySpawnTask> pendingPostEntitySpawnTasksByEntityID = new Int2ObjectArrayMap<>(16); // shot in the dark guess at capacity here. Can't be the more generic Int2ObjectMap because that doesn't expose a fast iterator.
-    private volatile boolean evictPendingPostSpawnTasksOnNextPacket = false;
-    private static final VarHandle EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE; //TBH there is minimal advantage to using a VarHandle over an AtomicBoolean here, just felt like it.
-    static {
-        try {
-            EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE = MethodHandles.lookup().findVarHandle( NettyData.class, "evictPendingPostSpawnTasksOnNextPacket", boolean.class);
-        } catch (ReflectiveOperationException e) {
-            throw new ExceptionInInitializerError(e);
-        }
-    }
+    private volatile boolean evictPendingPostSpawnTasksOnNextPacket; private static final VarHandle EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE = VarHandler.get(NettyData.class, "evictPendingPostSpawnTasksOnNextPacket", boolean.class);
     /**
      * This is intended for reconciliation tasks due to Minecraft sending packets out of order. For example, {@link Packets#ENTITY_EQUIPMENT} is sent before the corresponding {@link Packets#SPAWN_ENTITY} packet, so caching of the equipment packet must await the spawn packet.
      * @param entityID The entity ID to associate the task with. Immediately after a {@link Packets#SPAWN_ENTITY} packet is processed for this entity ID, the task will be consumed and run.
@@ -212,11 +225,12 @@ public class NettyData implements Clearable {
     }
 
     public void evictPendingPostSpawnTasksIfRequired(int currentTick) {
-        if (EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE.compareAndSet(this, true, false)) evictOldPendingPostSpawnTasks(currentTick);
+        if ((boolean) EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE.getOpaque(this)
+                && (boolean) EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE.compareAndExchangeAcquire(this, true, false)) evictOldPendingPostSpawnTasks(currentTick);
     }
 
     public void markPendingPostSpawnTasksForEviction() {
-        evictPendingPostSpawnTasksOnNextPacket = true;
+        EVICT_PENDING_POST_SPAWN_TASKS_ON_NEXT_PACKET_HANDLE.setOpaque(this, true);
     }
 
     public EntitySpawnTask consumePendingPostSpawnTasksForEntity(int entityID) {
@@ -249,15 +263,15 @@ public class NettyData implements Clearable {
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // START Self entity tracking:
     //
-    private final NettyEntityLocatable<?, ?> selfEntity;
+    private final NettyEntity<?> selfEntity;
     private final int selfEntityID;
 
-    public NettyData(NettyEntityLocatable<?, ?> selfEntity) {
+    public NettyData(NettyEntity<?> selfEntity) {
         this.selfEntity = selfEntity;
         this.selfEntityID = selfEntity.entityID();
     }
 
-    public NettyEntityLocatable<?, ?> getSelfEntity() {
+    public NettyEntity<?> getSelfEntity() {
         return selfEntity;
     }
 
@@ -342,6 +356,7 @@ public class NettyData implements Clearable {
 
     public void clearPendingReconciliationState() {
         unresolvedLeashedEntityIDsByHolderID.clear();
+        unresolvedHolderIDsByLeashedEntityID.clear();
         unresolvedPassengerIDsByVehicleID.clear();
         unresolvedVehicleIDsByPassengerID.clear();
         pendingPostEntitySpawnTasksByEntityID.clear();

@@ -1,7 +1,14 @@
+/*
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright © 2026 Cubicake.
+ * This file is part of RaycastedAntiESP.
+ * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
+ * See README.md for warranty disclaimer and further information.
+ */
+
 package games.cubi.raycastedantiesp.core.players;
 
-import games.cubi.locatables.Locatable;
-import games.cubi.raycastedantiesp.core.locatables.NettyEntityLocatable;
+import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -11,17 +18,14 @@ public class PlayerRegistry {
 
     @FunctionalInterface
     public interface SelfEntityCreator {
-        NettyEntityLocatable<?, ?> createSelfEntity(PlayerData playerData, int selfEntityID, UUID playerUUID);
+        NettyEntity<?> createSelfEntity(PlayerData playerData, int selfEntityID, UUID playerUUID);
     }
 
-    private static PlayerRegistry instance;
+    private static final PlayerRegistry instance = new PlayerRegistry();
 
     private PlayerRegistry() {}
 
     public static PlayerRegistry getInstance() {
-        if (instance == null) {
-            instance = new PlayerRegistry();
-        }
         return instance;
     }
 
