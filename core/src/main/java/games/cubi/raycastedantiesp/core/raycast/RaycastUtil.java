@@ -110,15 +110,15 @@ public class RaycastUtil {
             this.particleSpawner = particleSpawner;
         }
         void particleGreen() {
-            particleSpawner.spawnParticleAt(world, x(), y(), z(), ParticleSpawner.Colour.GREEN);
+            particleSpawner.spawnParticleAt(world, x, y, z, ParticleSpawner.Colour.GREEN);
         }
         void particleRed() {
-            particleSpawner.spawnParticleAt(world, x(), y(), z(), ParticleSpawner.Colour.RED);
+            particleSpawner.spawnParticleAt(world, x, y, z, ParticleSpawner.Colour.RED);
         }
     }
 
-    private static class RayPosition {
-        private double x, y, z;
+    private static sealed class RayPosition permits RayAdvancer {
+        double x, y, z;
 
         private RayPosition(double x, double y, double z) {
             this.x = x;
@@ -142,18 +142,6 @@ public class RaycastUtil {
 
         final int blockZ() {
             return (int) Math.floor(z);
-        }
-
-        final double x() {
-            return x;
-        }
-
-        final double y() {
-            return y;
-        }
-
-        final double z() {
-            return z;
         }
     }
 
