@@ -27,8 +27,8 @@ public class RaycastUtil {
      * Mutable position and chunk-section state is flattened into the advancer so C2 only
      * needs to scalarise one state holder while retaining a readable ray-stepping method.
      */
-    public static boolean raycastUnrolledAccumulated(int maxOccluding, final int alwaysShowRadius, final int maxRaycastRadius, boolean debug, float yOffsetEnd,
-                                                    /* final float stepSize,*/ final BlockView snap, final Locatable start, final Spatial end, ParticleSpawner spawner) {
+    public static boolean raycastUnrolledAccumulated(int maxOccluding, final int alwaysShowRadius, final int maxRaycastRadius, boolean debug,
+                                                     float yOffsetEnd, final BlockView snap, final Locatable start, final Spatial end, ParticleSpawner spawner) {
         double startX = start.x();
         double startY = start.y();
         double startZ = start.z();
