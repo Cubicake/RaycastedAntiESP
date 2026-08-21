@@ -104,7 +104,7 @@ public abstract class AsyncEngine implements Engine {
             int latestTick = currentTickSupplier.getAsInt();
             if (latestTick > startTick) {
                 // If running behind, don't yield the thread, just run the next tick immediately
-                Logger.warning("Tick thread completed tick #" + startTick + " after tick #" + latestTick + " had already begun. Starting next tick immediately instead of yielding thread to scheduler. This is probably safe to ignore but may suggest that your server is overloaded.", 5);
+                Logger.warning("Tick thread completed tick #" + startTick + " after tick #" + latestTick + " had already begun. Starting next tick immediately instead of yielding thread to scheduler. This is probably safe to ignore but may suggest that your server is overloaded.", 5, AsyncEngine.class);
                 startTick = latestTick;
                 scheduledNanos = System.nanoTime();
                 scheduledTick = latestTick;
