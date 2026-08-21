@@ -297,7 +297,7 @@ public class RaycastedAntiESPCommand {
             private static int runRaycastBatch(Locatable start, Locatable[] targets, int startIndex, int maxRaycastRadius, BlockView blockView) {
                 int successfulRays = 0;
                 for (int offset = 0; offset < BENCHMARK_BATCH_SIZE; offset++) {
-                    if (RaycastUtil.raycast(start, targets[startIndex + offset], 3, 0, maxRaycastRadius, false, blockView, 1, null)) successfulRays++;
+                    if (RaycastUtil.raycastUnrolledAccumulated(3, 0, maxRaycastRadius, false, 0f, blockView, start, targets[startIndex + offset], null)) successfulRays++;
                 }
                 return successfulRays;
             }
