@@ -51,7 +51,7 @@ public class RaycastUtil {
             remainingSteps -= 4;
         }
         while (remainingSteps-- > 0) rayAdvancer.advance();
-        return rayAdvancer.occluded < maxOccluding;
+        return rayAdvancer.occluded <= maxOccluding;
     }
 
     private static sealed class RayAdvancer extends RayPosition permits DebugRayAdvancer {
