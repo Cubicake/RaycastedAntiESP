@@ -539,7 +539,8 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         }
         WrapperPlayServerSetPassengers packet = new WrapperPlayServerSetPassengers(vehicle, passengers.toIntArray());
         Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(playerData.getPlayerUUID());
-        PacketEvents.getAPI().getProtocolManager().getUser(channel).writePacketSilently(packet);
+        User user = channel == null ? null : PacketEvents.getAPI().getProtocolManager().getUser(channel);
+        COMMON.writeIfPresent(user, packet);
     }
 
     private PacketEventsEntity trackEntitySpawn(PlayerData playerData, UUID entityUUID, int entityID, UUID world, double x, double y, double z, EntityType entityType) {
