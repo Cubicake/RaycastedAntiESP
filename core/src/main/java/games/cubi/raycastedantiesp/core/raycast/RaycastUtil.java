@@ -41,7 +41,7 @@ public class RaycastUtil {
 
         final RayAdvancer rayAdvancer = debug ? new DebugRayAdvancer(startX, startY, startZ, direction, snap, start.world(), spawner) : new RayAdvancer(startX, startY, startZ, direction, snap);
 
-        int remainingSteps = (int) Math.ceil(finalDist);
+        int remainingSteps = (int) Math.floor(finalDist);
         while (remainingSteps >= 4) {
             rayAdvancer.advance();
             rayAdvancer.advance();
