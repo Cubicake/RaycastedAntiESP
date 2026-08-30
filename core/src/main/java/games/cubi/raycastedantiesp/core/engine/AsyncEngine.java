@@ -10,6 +10,7 @@ package games.cubi.raycastedantiesp.core.engine;
 
 import games.cubi.locatables.api.Locatable;
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.AsyncRunner;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.config.DebugConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
@@ -26,7 +27,6 @@ import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;

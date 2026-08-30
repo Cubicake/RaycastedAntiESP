@@ -1,27 +1,14 @@
-/*
- * SPDX-License-Identifier: AGPL-3.0-only
- * Copyright © 2026 Cubicake.
- * This file is part of RaycastedAntiESP.
- * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
- * See README.md for warranty disclaimer and further information.
- */
-
-package games.cubi.raycastedantiesp.paper;
-
+package games.cubi.raycastedantiesp.core;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import org.bukkit.Bukkit;
-import org.bukkit.command.CommandSender;
 
-import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.config.UpdateConfig;
 import games.cubi.raycastedantiesp.core.utils.BuildProperties;
 import games.cubi.raycastedantiesp.core.utils.BuildProperties.Version;
-import games.cubi.raycastedantiesp.paper.utils.PaperScheduler;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,6 +26,8 @@ public class UpdateChecker {
     private static final String VERSION_API_ENDPOINT = "https://api.modrinth.com/v2/project/bCjNZu0C/version?include_changelog=false";
     private static final String PLATFORM_NAME = "Paper";
     private static final String MODRINTH_PAGE_URL = "https://modrinth.com/project/bCjNZu0C/";
+    private static final String MODRINTH_MM_LINK = "<hover:show_text:'" + MODRINTH_PAGE_URL + "'><aqua><u><click:open_url:'" + MODRINTH_PAGE_URL + "'>" + MODRINTH_PAGE_URL + "</click></u></aqua></hover>";
+
 
     enum UpdateChannel {
         STABLE("release", "release"),
@@ -82,8 +71,8 @@ public class UpdateChecker {
 
     record ApiVersion(String rawVersion, Version coreVersion, Version platformVersion) {}
 
-    record UpdateCheckReport(List<UpdateCheckResult> results) {
-        UpdateCheckReport {
+    public record UpdateCheckReport(List<UpdateCheckResult> results) {
+        public UpdateCheckReport {
             results = List.copyOf(results);
         }
 
@@ -114,20 +103,20 @@ public class UpdateChecker {
         }
     }
 
-    private static CompletableFuture<List<VersionEntry>> fetchVersions(RaycastedAntiESP plugin) {
+    private static CompletableFuture<List<VersionEntry>> fetchVersions(AsyncRunner runner) {
         CompletableFuture<List<VersionEntry>> future = new CompletableFuture<>();
 
-        Bukkit.getAsyncScheduler().runNow(plugin, ignored -> {
+        runner.runNow(() -> {
             try {
-            URLConnection connection = new URI(VERSION_API_ENDPOINT).toURL().openConnection();
-            connection.setConnectTimeout(5_000); //ms
-            connection.setReadTimeout(5_000); //ms
-            try (
-                final InputStreamReader reader = new InputStreamReader(connection.getInputStream());
-                final BufferedReader bufferedReader = new BufferedReader(reader)
-            ) {
-                future.complete(parseVersionEntries(bufferedReader));
-            }
+                URLConnection connection = new URI(VERSION_API_ENDPOINT).toURL().openConnection();
+                connection.setConnectTimeout(5_000); //ms
+                connection.setReadTimeout(5_000); //ms
+                try (
+                        final InputStreamReader reader = new InputStreamReader(connection.getInputStream());
+                        final BufferedReader bufferedReader = new BufferedReader(reader)
+                ) {
+                    future.complete(parseVersionEntries(bufferedReader));
+                }
             } catch (IOException | URISyntaxException e) {
                 future.completeExceptionally(new IllegalStateException("Unable to fetch latest version", e));
             }
@@ -158,13 +147,13 @@ public class UpdateChecker {
         return List.copyOf(versionEntries);
     }
 
-    private static CompletableFuture<UpdateCheckReport> fetchUpdateCheck(RaycastedAntiESP plugin) {
+    public static CompletableFuture<UpdateCheckReport> fetchUpdateCheck(AsyncRunner runner) {
         UpdateConfig updateConfig = ConfigManager.get().getUpdateConfig();
         if (!updateConfig.anyChannelEnabled()) {
             return CompletableFuture.completedFuture(new UpdateCheckReport(List.of()));
         }
 
-        return fetchVersions(plugin).thenApply(versionEntries -> checkVersions(
+        return fetchVersions(runner).thenApply(versionEntries -> checkVersions(
                 BuildProperties.CORE.version(),
                 BuildProperties.PLATFORM.version(),
                 versionEntries,
@@ -275,35 +264,19 @@ public class UpdateChecker {
 
     static String formatUpdateMessage(UpdateCheckResult result) {
         return switch (result.status()) {
-            case BEHIND -> "<red>You are behind the latest " + result.channel().messageName() + " of RaycastedAntiESP. Please upgrade to <green>v" + result.apiVersion().rawVersion() + "<red> at " + modrinthLink() + "<red>.";
+            case BEHIND -> "<red>You are behind the latest " + result.channel().messageName() + " of RaycastedAntiESP. Please upgrade to <green>v" + result.apiVersion().rawVersion() + "<red> at " + MODRINTH_MM_LINK + "<red>.";
             case UP_TO_DATE -> "<green>You are up to date with the latest " + result.channel().messageName() + " of RaycastedAntiESP.";
             case AHEAD, NO_COMPARABLE_VERSION -> "<yellow>You are ahead of the latest " + result.channel().messageName() + " of RaycastedAntiESP.";
             case INVALID_CURRENT_VERSION -> "<red>Unable to check for updates to RaycastedAntiESP, invalid current version format.";
         };
     }
 
-    static String formatUpdateMessage(UpdateCheckReport report) {
+    public static String formatUpdateMessage(UpdateCheckReport report) {
         List<String> messages = new ArrayList<>();
         for (UpdateCheckResult result : report.results()) {
             messages.add(formatUpdateMessage(result));
         }
 
         return String.join("\n", messages);
-    }
-
-    private static String modrinthLink() {
-        return "<hover:show_text:'" + MODRINTH_PAGE_URL + "'><aqua><u><click:open_url:'" + MODRINTH_PAGE_URL + "'>" + MODRINTH_PAGE_URL + "</click></u></aqua></hover>";
-    }
-
-    public static void checkForUpdates(RaycastedAntiESP plugin, CommandSender audience) {
-        fetchUpdateCheck(plugin).thenAccept(report -> {
-            if (report.results().isEmpty()) {
-                return;
-            }
-            PaperScheduler.runForAudience(plugin, audience, () -> audience.sendRichMessage(formatUpdateMessage(report)));
-        }).exceptionally(ex -> {
-            Logger.error("An error occurred while checking for plugin updates", ex, 4, UpdateChecker.class);
-            return null;
-        });
     }
 }

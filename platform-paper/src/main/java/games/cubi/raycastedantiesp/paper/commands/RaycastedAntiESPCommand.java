@@ -23,7 +23,6 @@ import games.cubi.raycastedantiesp.core.view.AbstractBlockView;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
-import games.cubi.raycastedantiesp.paper.UpdateChecker;
 import games.cubi.raycastedantiesp.paper.packets.PacketEventsPaperBlockInfoResolver;
 
 import games.cubi.raycastedantiesp.paper.utils.PaperScheduler;
@@ -115,7 +114,7 @@ public class RaycastedAntiESPCommand {
 
     @Executes("check-for-updates")
     void checkForUpdatesCommand(CommandSender sender) {
-        UpdateChecker.checkForUpdates(RaycastedAntiESP.get(), sender);
+        RaycastedAntiESP.checkForUpdates(RaycastedAntiESP.get(), sender);
     }
 
     @Executes("print-block-ids")

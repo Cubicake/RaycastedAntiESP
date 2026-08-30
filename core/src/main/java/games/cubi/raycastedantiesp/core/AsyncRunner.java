@@ -6,7 +6,7 @@
  * See README.md for warranty disclaimer and further information.
  */
 
-package games.cubi.raycastedantiesp.core.engine;
+package games.cubi.raycastedantiesp.core;
 
 public interface AsyncRunner {
     void runNow(Runnable task);

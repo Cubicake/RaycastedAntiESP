@@ -6,7 +6,7 @@
  * See README.md for warranty disclaimer and further information.
  */
 
-package games.cubi.raycastedantiesp.paper;
+package games.cubi.raycastedantiesp.core;
 
 import games.cubi.raycastedantiesp.core.utils.BuildProperties.Version;
 import org.junit.jupiter.api.Test;

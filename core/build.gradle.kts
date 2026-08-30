@@ -36,6 +36,8 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("it.unimi.dsi:fastutil:8.5.18")
+
+    compileOnly("com.google.code.gson:gson:2.11.0")
 }
 
 val coreVersion = "0.7.2-SNAPSHOT"

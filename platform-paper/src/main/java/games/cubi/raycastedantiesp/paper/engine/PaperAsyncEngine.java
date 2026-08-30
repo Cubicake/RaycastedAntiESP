@@ -9,7 +9,7 @@
 package games.cubi.raycastedantiesp.paper.engine;
 
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
-import games.cubi.raycastedantiesp.core.engine.AsyncRunner;
+import games.cubi.raycastedantiesp.core.AsyncRunner;
 import games.cubi.raycastedantiesp.core.engine.AsyncEngine;
 import games.cubi.raycastedantiesp.paper.PaperParticleSpawner;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;

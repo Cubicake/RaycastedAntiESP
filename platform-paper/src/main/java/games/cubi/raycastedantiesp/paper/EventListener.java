@@ -31,7 +31,7 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 
 import java.util.function.IntSupplier;
 
-import static games.cubi.raycastedantiesp.paper.UpdateChecker.checkForUpdates;
+import static games.cubi.raycastedantiesp.paper.RaycastedAntiESP.checkForUpdates;
 
 public class EventListener extends PaperListener {
     private final RaycastedAntiESP plugin;

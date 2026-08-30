@@ -9,6 +9,7 @@
 package games.cubi.raycastedantiesp.paper;
 
 import games.cubi.raycastedantiesp.core.Core;
+import games.cubi.raycastedantiesp.core.UpdateChecker;
 import games.cubi.raycastedantiesp.paper.commands.Attribution;
 import games.cubi.raycastedantiesp.paper.commands.AttributionBrigadier;
 import games.cubi.raycastedantiesp.paper.commands.RaycastedAntiESPCommandBrigadier;
@@ -28,12 +29,14 @@ import games.cubi.raycastedantiesp.paper.bStats.MetricsCollector;
 import games.cubi.logs.Logger;
 
 import games.cubi.raycastedantiesp.paper.utils.FoliaTicker;
+import games.cubi.raycastedantiesp.paper.utils.PaperScheduler;
 import games.cubi.raycastedantiesp.paper.utils.PaperTicker;
 
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -103,7 +106,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
         new PaperPacketEventsBlockViewController(blockInfoResolver, trackAllBlocks, currentTickSupplier);
 
         engine = new PaperAsyncEngine(this, config, currentTickSupplier);
-        UpdateChecker.checkForUpdates(this, Bukkit.getConsoleSender());
+        checkForUpdates(this, Bukkit.getConsoleSender());
         EventListener.initialise(this, engine, currentTickSupplier);
 
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS.newHandler(event -> {
@@ -141,6 +144,18 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
     public void onDisable() {
         metricsCollector.shutdown();
         loggerAdapter.forceFlushToFileNow();
+    }
+
+    public static void checkForUpdates(RaycastedAntiESP plugin, CommandSender audience) {
+        UpdateChecker.fetchUpdateCheck(new PaperAsyncEngine.PaperAsyncRunner(plugin.getServer().getAsyncScheduler())).thenAccept(report -> {
+            if (report.results().isEmpty()) {
+                return;
+            }
+            PaperScheduler.runForAudience(plugin, audience, () -> audience.sendRichMessage(UpdateChecker.formatUpdateMessage(report)));
+        }).exceptionally(ex -> {
+            Logger.error("An error occurred while checking for plugin updates", ex, 4, UpdateChecker.class);
+            return null;
+        });
     }
 
 
