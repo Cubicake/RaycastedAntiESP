@@ -1,0 +1,9 @@
+name: RaycastedAntiESP
+prefix: RaycastedAntiESP
+version: '$version'
+
+main: games.cubi.raycastedantiesp.spigot.RaycastedAntiESP
+api-version: '1.21'
+load: STARTUP
+
+authors: [_Cubicake]

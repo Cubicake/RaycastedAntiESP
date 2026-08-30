@@ -1,41 +1,25 @@
-/*
- * SPDX-License-Identifier: AGPL-3.0-only
- * Copyright © 2026 Cubicake.
- * This file is part of RaycastedAntiESP.
- * RaycastedAntiESP is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License v3.0 only, which can be accessed at https://www.gnu.org/licenses/agpl-3.0.html.
- * See README.md for warranty disclaimer and further information.
- */
-
 import java.time.Instant
 import org.gradle.jvm.toolchain.JavaToolchainService
 
 plugins {
     id("java-library")
-    id("io.papermc.paperweight.userdev")
-    id("xyz.jpenilla.run-paper")
     id("com.gradleup.shadow") version "9.4.0"
+    id("xyz.jpenilla.run-paper")
 }
 
 repositories {
     mavenCentral()
+    maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
     maven { url = uri("https://repo.codemc.io/repository/maven-releases/") }
     maven { url = uri("https://repo.codemc.io/repository/maven-snapshots/") }
     maven { url = uri("https://eldonexus.de/repository/maven-public/") }
-    maven("https://repo.fancyinnovations.com/releases")
 }
 
 dependencies {
-    paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
-    //paperweight.paperDevBundle("26.2.build.+")
+    compileOnly("org.spigotmc:spigot-api:1.21.2-R0.1-SNAPSHOT")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.0")
     compileOnly("org.spongepowered:configurate-core:4.2.0")
     compileOnly("org.spongepowered:configurate-yaml:4.2.0")
-
-    compileOnly("de.oliver:FancyHolograms:2.9.1")
-    compileOnly("de.oliver:FancyNpcs:2.9.2")
-
-    compileOnly("net.strokkur.commands:annotations-paper:2.1.2")
-    annotationProcessor("net.strokkur.commands:processor-paper:2.1.2")
 
     implementation("org.jetbrains:annotations:24.0.1")
     implementation("org.bstats:bstats-bukkit:3.2.1")
@@ -62,9 +46,9 @@ java {
 
 val javaToolchainService = project.extensions.getByType(JavaToolchainService::class.java)
 
-group = "games.cubi.raycastedantiesp.paper"
+group = "games.cubi.raycastedantiesp.spigot"
 
-val platformPaperVersion: String = "0.10.2-SNAPSHOT"
+val platformPaperVersion: String = "0.0.1-SNAPSHOT"
 val coreVersion = project(":core").version.toString()
 
 val commitShort = providers.exec {
@@ -80,15 +64,15 @@ val buildTime = providers.provider {
 }
 
 val isRelease = gradle.startParameter.taskNames.any {
-    it.contains("buildRelease")
+    it.contains("buildSpigotRelease")
 }
 
 fun getVersionString(): String {
     if (isRelease) {
         val paperVersion = platformPaperVersion.substringBefore("-") // Remove any suffixes like "-SNAPSHOT"
-        return "${coreVersion}-Paper-${paperVersion}-RELEASE"
+        return "${coreVersion}-Spigot-${paperVersion}-RELEASE"
     } else {
-        return "${coreVersion}-Paper-${platformPaperVersion}+build-${buildTime.get()}+git-${commitShort.get()}"
+        return "${coreVersion}-Spigot-${platformPaperVersion}+build-${buildTime.get()}+git-${commitShort.get()}"
     }
 }
 
@@ -168,21 +152,14 @@ tasks.jar {
 }
 
 // This is the task to run to test if changes to the plugin are working
-tasks.register("buildSnapshot") {
+tasks.register("buildSpigotSnapshot") {
     group = "raycasted anti-esp" //Not caps sensitive so using spacing and hyphen
     description = "Builds a snapshot version of the plugin with git and build-time metadata included in the file name."
     dependsOn("shadowJar")
 }
 
-tasks.register("buildRelease") {
+tasks.register("buildSpigotRelease") {
     group = "raycasted anti-esp"
     description = "Builds a release version of the plugin with a clean version number (no git or build-time metadata) included in the file name."
     dependsOn("shadowJar")
-}
-
-tasks.register("runPaper") {
-    // alias for runServer to put it in the same group as the build tasks
-    group = "raycasted anti-esp"
-    description = "Runs a Paper server with the plugin loaded for testing purposes."
-    dependsOn("runServer")
 }
