@@ -34,6 +34,7 @@ import net.strokkur.commands.*;
 import net.strokkur.commands.arguments.IntArg;
 import net.strokkur.commands.arguments.StringArg;
 import net.strokkur.commands.arguments.StringArgType;
+import net.strokkur.commands.paper.DefaultToExecutor;
 import net.strokkur.commands.paper.Description;
 import net.strokkur.commands.permission.Permission;
 
@@ -49,6 +50,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.SplittableRandom;
 import java.util.UUID;
+import java.util.OptionalInt;
 
 // Credit to Strokkur for making StrokkCommands, a non-hideous way to use the power of brigadier.
 
@@ -175,12 +177,8 @@ public class RaycastedAntiESPCommand {
             private static volatile long benchmarkSink;
 
             @DefaultExecutes
-            void benchmark(Player player) {
-                benchmark(player, DEFAULT_RAYCAST_DISTANCE);
-            }
-
-            @DefaultExecutes
-            void benchmark(Player player, @IntArg(min = 1, max = Short.MAX_VALUE - 1) int raycastDistance) {
+            void benchmark(@DefaultToExecutor Player player, @IntArg(min = 1, max = Short.MAX_VALUE - 1) OptionalInt overrideRaycastDistance) {
+                int raycastDistance = overrideRaycastDistance.orElse(DEFAULT_RAYCAST_DISTANCE);
                 Locatable[] locatables = new Locatable[BENCHMARK_CORPUS_SIZE];
                 PlayerData playerData = PlayerRegistry.get().getPlayerData(player.getUniqueId());
                 Locatable currentPlayerLocation = playerData.ownLocation();
@@ -305,7 +303,7 @@ public class RaycastedAntiESPCommand {
         }
 
         @Executes("loaded-chunks")
-        void loadedChunksCommand(Player player) {
+        void loadedChunksCommand(@DefaultToExecutor Player player) {
             PlayerData playerData = PlayerRegistry.get().getPlayerData(player.getUniqueId());
             AbstractBlockView<?, ?> pbsm = (AbstractBlockView<?, ?>) playerData.blockView();
             player.sendMessage(pbsm.loadedChunkCount() +"chunks loaded");

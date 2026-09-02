@@ -34,8 +34,8 @@ dependencies {
     compileOnly("de.oliver:FancyHolograms:2.9.1")
     compileOnly("de.oliver:FancyNpcs:2.9.2")
 
-    compileOnly("net.strokkur.commands:annotations-paper:2.2.0")
-    annotationProcessor("net.strokkur.commands:processor-paper:2.2.0")
+    compileOnly("net.strokkur.commands:annotations-paper:2.3.0")
+    annotationProcessor("net.strokkur.commands:processor-paper:2.3.0")
 
     implementation("org.jetbrains:annotations:24.0.1")
     implementation("org.bstats:bstats-bukkit:3.2.1")
