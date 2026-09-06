@@ -52,7 +52,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         this.blockInfoResolver = blockInfoResolver;
         this.currentTickSupplier = currentTickSupplier;
         common = PacketEventsCommonViewController.get(currentTickSupplier);
-        if (trackAllBlocks) {
+        if (false/*trackAllBlocks*/) {
             mutatingChunkParser = new BlockChunkParser(blockInfoResolver, this::getHiddenBlockId);
             nonMutatingChunkParser = new NonMutatingBlockChunkParser(blockInfoResolver, this::getHiddenBlockId);
         } else {
