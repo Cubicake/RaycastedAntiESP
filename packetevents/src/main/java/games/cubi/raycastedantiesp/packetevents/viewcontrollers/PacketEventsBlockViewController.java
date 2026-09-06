@@ -175,8 +175,8 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         }
     }
 
-    static class MutableVector3i extends Vector3i {
-        int x,y,z;
+    private static class MutableVector3i extends Vector3i {
+        private int x,y,z;
 
         public int getX() {
             return x;
