@@ -63,9 +63,6 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
 
     protected abstract int getHiddenBlockId(int blockY);
 
-    public void removeViewer(UUID viewerUUID) {
-    }
-
     @Override
     public void onPacketSend(PacketSendEvent event) {
         UUID viewerUUID = event.getUser().getUUID();
