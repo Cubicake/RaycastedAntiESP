@@ -33,7 +33,7 @@ import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.utils.lists.PrimitiveIntArrayList;
 import games.cubi.raycastedantiesp.core.view.EntityView;
-import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
+import games.cubi.raycastedantiesp.core.view.TransitionType;
 import games.cubi.raycastedantiesp.core.view.controller.PacketEntityViewController;
 import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsEntityReplayData;
@@ -308,7 +308,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     protected void processDirectEntityShow(PlayerData playerData, EntityView<?> view, NettyEntity<?> entity, int worldEpoch) {
         Object channel = PacketEvents.getAPI().getProtocolManager().getChannel(playerData.getPlayerUUID());
         User viewer = PacketEvents.getAPI().getProtocolManager().getUser(channel);
-        processEntityTransition(playerData, viewer, cast(view), worldEpoch, EntityViewTransition.Type.SHOW, entity, worldEpoch);
+        processEntityTransition(playerData, viewer, cast(view), worldEpoch, TransitionType.Entity.SHOW, entity, worldEpoch);
     }
 
     @Override
@@ -559,7 +559,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     private void processEntityTransition(PlayerData data, User viewer, EntityView<PacketEventsEntity> entityView,
-            int worldEpoch, EntityViewTransition.Type type, TrackedEntity<?> transitionEntity, int transitionWorldEpoch) {
+            int worldEpoch, TransitionType.Entity type, TrackedEntity<?> transitionEntity, int transitionWorldEpoch) {
         if (!(transitionEntity instanceof PacketEventsEntity entity)
                 || transitionWorldEpoch != worldEpoch
                 || entityView.getEntity(entity.entityUUID()) != entity) {
@@ -594,7 +594,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         }
     }
 
-    static boolean transitionMatchesCurrentVisibility(EntityViewTransition.Type type, boolean visible) {
+    static boolean transitionMatchesCurrentVisibility(TransitionType.Entity type, boolean visible) {
         return switch (type) {
             case SHOW -> visible;
             case HIDE -> !visible;
@@ -602,7 +602,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         };
     }
 
-    static ClientTransitionAction resolveClientTransitionAction(EntityViewTransition.Type type, boolean clientVisible,
+    static ClientTransitionAction resolveClientTransitionAction(TransitionType.Entity type, boolean clientVisible,
                                                                   boolean keepClientEntityWhenHidden) {
         return switch (type) {
             case HIDE -> clientVisible && !keepClientEntityWhenHidden ? ClientTransitionAction.DESTROY : ClientTransitionAction.NONE;

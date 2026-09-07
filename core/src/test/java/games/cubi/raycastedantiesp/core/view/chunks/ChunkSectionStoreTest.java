@@ -23,7 +23,7 @@ import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.utils.Clearable;
 import games.cubi.raycastedantiesp.core.view.AbstractBlockView;
 import games.cubi.raycastedantiesp.core.view.BlockView;
-import games.cubi.raycastedantiesp.core.view.BlockViewTransition;
+import games.cubi.raycastedantiesp.core.view.TransitionType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -397,7 +397,7 @@ class ChunkSectionStoreTest {
                 }
             });
 
-            AtomicReference<BlockViewTransition.Type> transitionType = new AtomicReference<>();
+            AtomicReference<TransitionType.Tile> transitionType = new AtomicReference<>();
             AtomicReference<TrackedTileEntity<?>> transitionTileEntity = new AtomicReference<>();
             boolean[] drained = {false};
             for (int tick = 1; tick <= transitions; tick++) {
@@ -411,7 +411,7 @@ class ChunkSectionStoreTest {
                 } while (!drained[0]);
 
                 boolean expectedVisible = (tick & 1) == 0;
-                assertEquals(expectedVisible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE, transitionType.get());
+                assertEquals(expectedVisible ? TransitionType.Tile.SHOW : TransitionType.Tile.HIDE, transitionType.get());
                 assertSame(tileEntity, transitionTileEntity.get());
                 assertEquals(expectedVisible, tileEntity.visible());
                 assertEquals(tick, tileEntity.lastChecked());

@@ -15,7 +15,7 @@ import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.utils.SingleThreadedGuard;
 import games.cubi.raycastedantiesp.core.view.EntityView;
-import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
+import games.cubi.raycastedantiesp.core.view.TransitionType;
 import games.cubi.raycastedantiesp.core.view.PackedEntityTransitionQueue;
 import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -166,7 +166,7 @@ public class PacketEventsEntityView extends SingleThreadedGuard implements Entit
         }
         if (visibilityChanged) {
             transitions.add(
-                    visible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE,
+                    visible ? TransitionType.Entity.SHOW : TransitionType.Entity.HIDE,
                     entity,
                     expectedWorldEpoch
             );

@@ -155,7 +155,7 @@ public abstract class AbstractBlockView<R extends Clearable, T extends NettyTile
         tileEntity.setVisible(shouldBeVisible);
         tileEntity.setLastChecked(currentTick);
         if (visibilityChanged) {
-            BlockViewTransition.Type type = shouldBeVisible ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE;
+            TransitionType.Tile type = shouldBeVisible ? TransitionType.Tile.SHOW : TransitionType.Tile.HIDE;
             transitions.add(type, tileEntity, modeToken, expectedWorldEpoch);
         }
     }

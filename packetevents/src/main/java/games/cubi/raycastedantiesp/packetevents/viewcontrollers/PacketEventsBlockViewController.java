@@ -28,7 +28,7 @@ import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.view.BlockView;
-import games.cubi.raycastedantiesp.core.view.BlockViewTransition;
+import games.cubi.raycastedantiesp.core.view.TransitionType;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsTileEntityReplayData;
 import games.cubi.raycastedantiesp.packetevents.viewcontrollers.chunkparser.BlockChunkParser;
 import games.cubi.raycastedantiesp.packetevents.viewcontrollers.chunkparser.ChunkParser;
@@ -217,7 +217,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
     }
 
     private void processTileEntityTransition(User viewer, BlockView blockView, int worldEpoch,
-            BlockViewTransition.Type type, TrackedTileEntity<?> tileEntity, long modeToken, int transitionWorldEpoch) {
+            TransitionType.Tile type, TrackedTileEntity<?> tileEntity, long modeToken, int transitionWorldEpoch) {
         TrackedTileEntity<PacketEventsTileEntityReplayData> state = resolveCurrentTransitionState(tileEntity, transitionWorldEpoch, worldEpoch);
         if (state == null || state.blockID() == 0) {
             return;
@@ -312,7 +312,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         );
     }
 
-    static boolean transitionMatchesCurrentVisibility(BlockViewTransition.Type type, boolean visible) {
+    static boolean transitionMatchesCurrentVisibility(TransitionType.Tile type, boolean visible) {
         return switch (type) {
             case SHOW -> visible;
             case HIDE -> !visible;
@@ -322,11 +322,6 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
     @SuppressWarnings("unchecked")
     private static TrackedTileEntity<PacketEventsTileEntityReplayData> getTrackedTileEntity(BlockView blockView, UUID world, BlockSpatial position) {
         return (TrackedTileEntity<PacketEventsTileEntityReplayData>) blockView.getTrackedTileEntity(world, position);
-    }
-
-    @SuppressWarnings("unchecked")
-    static @Nullable TrackedTileEntity<PacketEventsTileEntityReplayData> resolveCurrentTransitionState(BlockViewTransition transition, int currentWorldEpoch) {
-        return resolveCurrentTransitionState(transition.tileEntity(), transition.worldEpoch(), currentWorldEpoch);
     }
 
     @SuppressWarnings("unchecked")

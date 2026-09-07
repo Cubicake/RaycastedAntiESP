@@ -28,7 +28,7 @@ public final class PackedEntityTransitionQueue { //todo: potentially merge this 
     private final IntrusiveSPSCQueue<QueueEntry> publishedEntries = new IntrusiveSPSCQueue<>();
     private final PendingBatch pending = new PendingBatch();
 
-    public void add(EntityViewTransition.Type type, TrackedEntity<?> entity, int worldEpoch) {
+    public void add(TransitionType.Entity type, TrackedEntity<?> entity, int worldEpoch) {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(entity, "entity");
 
@@ -95,11 +95,11 @@ public final class PackedEntityTransitionQueue { //todo: potentially merge this 
     }
 
     private static final class SingleEntry extends QueueEntry {
-        private final EntityViewTransition.Type type;
+        private final TransitionType.Entity type;
         private final TrackedEntity<?> entity;
         private final int worldEpoch;
 
-        private SingleEntry(EntityViewTransition.Type type, TrackedEntity<?> entity, int worldEpoch) {
+        private SingleEntry(TransitionType.Entity type, TrackedEntity<?> entity, int worldEpoch) {
             this.type = type;
             this.entity = entity;
             this.worldEpoch = worldEpoch;
@@ -112,12 +112,12 @@ public final class PackedEntityTransitionQueue { //todo: potentially merge this 
     }
 
     private static final class PendingBatch implements Clearable {
-        private EntityViewTransition.Type t1, t2, t3, t4, t5, t6, t7, t8;
+        private TransitionType.Entity t1, t2, t3, t4, t5, t6, t7, t8;
         private TrackedEntity<?> e1, e2, e3, e4, e5, e6, e7, e8;
         private int worldEpoch;
         private int count;
 
-        private void add(EntityViewTransition.Type type, TrackedEntity<?> entity) {
+        private void add(TransitionType.Entity type, TrackedEntity<?> entity) {
             switch (++count) {
                 case 1 -> { t1 = type; e1 = entity; }
                 case 2 -> { t2 = type; e2 = entity; }
@@ -144,7 +144,7 @@ public final class PackedEntityTransitionQueue { //todo: potentially merge this 
     }
 
     private static final class BatchEntry extends QueueEntry {
-        private final EntityViewTransition.Type t1, t2, t3, t4, t5, t6, t7, t8;
+        private final TransitionType.Entity t1, t2, t3, t4, t5, t6, t7, t8;
         private final TrackedEntity<?> e1, e2, e3, e4, e5, e6, e7, e8;
         private final int worldEpoch;
         private final int count;

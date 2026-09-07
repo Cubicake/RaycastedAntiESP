@@ -28,7 +28,7 @@ public final class PackedBlockTransitionQueue {
     private final IntrusiveSPSCQueue<QueueEntry> publishedEntries = new IntrusiveSPSCQueue<>();
     private final PendingBatch pending = new PendingBatch();
 
-    public void add(BlockViewTransition.Type type, TrackedTileEntity<?> tileEntity, long modeToken, int worldEpoch) {
+    public void add(TransitionType.Tile type, TrackedTileEntity<?> tileEntity, long modeToken, int worldEpoch) {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(tileEntity, "tileEntity");
 
@@ -96,12 +96,12 @@ public final class PackedBlockTransitionQueue {
     }
 
     private static final class SingleEntry extends QueueEntry {
-        private final BlockViewTransition.Type type;
+        private final TransitionType.Tile type;
         private final TrackedTileEntity<?> tileEntity;
         private final long modeToken;
         private final int worldEpoch;
 
-        private SingleEntry(BlockViewTransition.Type type, TrackedTileEntity<?> tileEntity, long modeToken, int worldEpoch) {
+        private SingleEntry(TransitionType.Tile type, TrackedTileEntity<?> tileEntity, long modeToken, int worldEpoch) {
             this.type = type;
             this.tileEntity = tileEntity;
             this.modeToken = modeToken;
@@ -115,13 +115,13 @@ public final class PackedBlockTransitionQueue {
     }
 
     private static final class PendingBatch implements Clearable {
-        private BlockViewTransition.Type t1, t2, t3, t4, t5, t6, t7, t8;
+        private TransitionType.Tile t1, t2, t3, t4, t5, t6, t7, t8;
         private TrackedTileEntity<?> e1, e2, e3, e4, e5, e6, e7, e8;
         private long modeToken;
         private int worldEpoch;
         private int count;
 
-        private void add(BlockViewTransition.Type type, TrackedTileEntity<?> tileEntity) {
+        private void add(TransitionType.Tile type, TrackedTileEntity<?> tileEntity) {
             switch (++count) {
                 case 1 -> { t1 = type; e1 = tileEntity; }
                 case 2 -> { t2 = type; e2 = tileEntity; }
@@ -149,7 +149,7 @@ public final class PackedBlockTransitionQueue {
     }
 
     private static final class BatchEntry extends QueueEntry {
-        private final BlockViewTransition.Type t1, t2, t3, t4, t5, t6, t7, t8;
+        private final TransitionType.Tile t1, t2, t3, t4, t5, t6, t7, t8;
         private final TrackedTileEntity<?> e1, e2, e3, e4, e5, e6, e7, e8;
         private final long modeToken;
         private final int worldEpoch;

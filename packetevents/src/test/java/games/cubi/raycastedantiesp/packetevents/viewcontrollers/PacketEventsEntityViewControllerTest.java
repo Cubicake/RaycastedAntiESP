@@ -9,7 +9,7 @@
 package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
-import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
+import games.cubi.raycastedantiesp.core.view.TransitionType;
 import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;
 import org.junit.jupiter.api.Test;
 
@@ -29,43 +29,43 @@ class PacketEventsEntityViewControllerTest {
     @Test
     void retainingSeenEntitySuppressesHideWithoutDestroying() {
         assertEquals(NONE, PacketEventsEntityViewController.resolveClientTransitionAction(
-                EntityViewTransition.Type.HIDE, true, true));
+                TransitionType.Entity.HIDE, true, true));
         assertEquals(SYNC, PacketEventsEntityViewController.resolveClientTransitionAction(
-                EntityViewTransition.Type.SHOW, true, true));
+                TransitionType.Entity.SHOW, true, true));
     }
 
     @Test
     void disablingRetentionUsesDestroyAndRespawn() {
         assertEquals(DESTROY, PacketEventsEntityViewController.resolveClientTransitionAction(
-                EntityViewTransition.Type.HIDE, true, false));
+                TransitionType.Entity.HIDE, true, false));
         assertEquals(SPAWN_AND_SYNC, PacketEventsEntityViewController.resolveClientTransitionAction(
-                EntityViewTransition.Type.SHOW, false, false));
+                TransitionType.Entity.SHOW, false, false));
     }
 
     @Test
     void unseenEntityIsNeverDestroyedAndRequiresFirstSpawn() {
         assertEquals(NONE, PacketEventsEntityViewController.resolveClientTransitionAction(
-                EntityViewTransition.Type.HIDE, false, true));
+                TransitionType.Entity.HIDE, false, true));
         assertEquals(SPAWN_AND_SYNC, PacketEventsEntityViewController.resolveClientTransitionAction(
-                EntityViewTransition.Type.SHOW, false, true));
+                TransitionType.Entity.SHOW, false, true));
     }
 
     @Test
     void forgetTransitionDoesNotWriteClientPackets() {
         assertEquals(NONE, PacketEventsEntityViewController.resolveClientTransitionAction(
-                EntityViewTransition.Type.FORGET, true, false));
+                TransitionType.Entity.FORGET, true, false));
     }
 
     @Test
     void staleVisibilityTransitionsAreIgnored() {
         assertFalse(PacketEventsEntityViewController.transitionMatchesCurrentVisibility(
-                EntityViewTransition.Type.SHOW, false));
+                TransitionType.Entity.SHOW, false));
         assertFalse(PacketEventsEntityViewController.transitionMatchesCurrentVisibility(
-                EntityViewTransition.Type.HIDE, true));
+                TransitionType.Entity.HIDE, true));
         assertTrue(PacketEventsEntityViewController.transitionMatchesCurrentVisibility(
-                EntityViewTransition.Type.SHOW, true));
+                TransitionType.Entity.SHOW, true));
         assertTrue(PacketEventsEntityViewController.transitionMatchesCurrentVisibility(
-                EntityViewTransition.Type.HIDE, false));
+                TransitionType.Entity.HIDE, false));
     }
 
     @Test

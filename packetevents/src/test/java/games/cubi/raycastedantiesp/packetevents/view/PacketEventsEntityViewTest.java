@@ -8,7 +8,7 @@
 
 package games.cubi.raycastedantiesp.packetevents.view;
 
-import games.cubi.raycastedantiesp.core.view.EntityViewTransition;
+import games.cubi.raycastedantiesp.core.view.TransitionType;
 import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;
 import games.cubi.raycastedantiesp.packetevents.replaydata.PacketEventsEntityReplayData;
 import org.junit.jupiter.api.Test;
@@ -154,7 +154,7 @@ class PacketEventsEntityViewTest {
 
         view.setVisibility(entity, false, 1, epoch);
         view.flushPendingTransitions();
-        AtomicReference<EntityViewTransition.Type> transitionType = new AtomicReference<>();
+        AtomicReference<TransitionType.Entity> transitionType = new AtomicReference<>();
         AtomicReference<PacketEventsEntity> transitionEntity = new AtomicReference<>();
         AtomicInteger transitionWorldEpoch = new AtomicInteger();
         view.drainTransitions((type, queuedEntity, queuedWorldEpoch) -> {
@@ -165,7 +165,7 @@ class PacketEventsEntityViewTest {
 
         assertSame(entity, transitionEntity.get());
         assertEquals(epoch, transitionWorldEpoch.get());
-        assertEquals(EntityViewTransition.Type.HIDE, transitionType.get());
+        assertEquals(TransitionType.Entity.HIDE, transitionType.get());
         assertFalse(entity.visible());
         assertEquals(1, entity.lastChecked());
     }
@@ -191,7 +191,7 @@ class PacketEventsEntityViewTest {
                 }
             });
 
-            AtomicReference<EntityViewTransition.Type> transitionType = new AtomicReference<>();
+            AtomicReference<TransitionType.Entity> transitionType = new AtomicReference<>();
             boolean[] drained = {false};
             for (int tick = 1; tick <= transitions; tick++) {
                 do {
@@ -204,7 +204,7 @@ class PacketEventsEntityViewTest {
                 } while (!drained[0]);
 
                 boolean expectedVisible = (tick & 1) == 0;
-                assertEquals(expectedVisible ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE, transitionType.get());
+                assertEquals(expectedVisible ? TransitionType.Entity.SHOW : TransitionType.Entity.HIDE, transitionType.get());
                 assertEquals(expectedVisible, entity.visible());
                 assertEquals(tick, entity.lastChecked());
                 acknowledgedTick.setRelease(tick);

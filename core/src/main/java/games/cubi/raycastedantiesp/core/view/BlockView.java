@@ -113,7 +113,7 @@ public interface BlockView extends Clearable {
 
     @FunctionalInterface
     interface TransitionConsumer {
-        void accept(BlockViewTransition.Type type, TrackedTileEntity<?> tileEntity, long modeToken, int worldEpoch);
+        void accept(TransitionType.Tile type, TrackedTileEntity<?> tileEntity, long modeToken, int worldEpoch);
     }
 
     void drainTransitions(TransitionConsumer consumer);

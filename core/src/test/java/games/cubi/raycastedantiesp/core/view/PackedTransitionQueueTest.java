@@ -33,7 +33,7 @@ class PackedTransitionQueueTest {
             for (int index = 0; index < count; index++) {
                 TrackedEntity<?> entity = entity();
                 entities.add(entity);
-                queue.add(index % 2 == 0 ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE, entity, 7);
+                queue.add(index % 2 == 0 ? TransitionType.Entity.SHOW : TransitionType.Entity.HIDE, entity, 7);
             }
 
             queue.flushPendingTransitions();
@@ -45,7 +45,7 @@ class PackedTransitionQueueTest {
             for (int index = 0; index < count; index++) {
                 EntityObservation observation = observed.get(index);
                 assertSame(entities.get(index), observation.entity());
-                assertEquals(index % 2 == 0 ? EntityViewTransition.Type.SHOW : EntityViewTransition.Type.HIDE, observation.type());
+                assertEquals(index % 2 == 0 ? TransitionType.Entity.SHOW : TransitionType.Entity.HIDE, observation.type());
                 assertEquals(7, observation.worldEpoch());
             }
             assertFalse(queue.hasPendingTransitions());
@@ -58,9 +58,9 @@ class PackedTransitionQueueTest {
         TrackedEntity<?> first = entity();
         TrackedEntity<?> second = entity();
         TrackedEntity<?> third = entity();
-        queue.add(EntityViewTransition.Type.HIDE, first, 2);
-        queue.add(EntityViewTransition.Type.SHOW, second, 2);
-        queue.add(EntityViewTransition.Type.HIDE, third, 4);
+        queue.add(TransitionType.Entity.HIDE, first, 2);
+        queue.add(TransitionType.Entity.SHOW, second, 2);
+        queue.add(TransitionType.Entity.HIDE, third, 4);
         queue.flushPendingTransitions();
 
         List<EntityObservation> observed = new ArrayList<>();
@@ -79,7 +79,7 @@ class PackedTransitionQueueTest {
         for (int index = 0; index < 9; index++) {
             TrackedTileEntity<?> tileEntity = tileEntity();
             tiles.add(tileEntity);
-            queue.add(index % 2 == 0 ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE, tileEntity, 13L, 5);
+                queue.add(index % 2 == 0 ? TransitionType.Tile.SHOW : TransitionType.Tile.HIDE, tileEntity, 13L, 5);
         }
 
         queue.flushPendingTransitions();
@@ -91,7 +91,7 @@ class PackedTransitionQueueTest {
         for (int index = 0; index < observed.size(); index++) {
             BlockObservation observation = observed.get(index);
             assertSame(tiles.get(index), observation.tileEntity());
-            assertEquals(index % 2 == 0 ? BlockViewTransition.Type.SHOW : BlockViewTransition.Type.HIDE, observation.type());
+            assertEquals(index % 2 == 0 ? TransitionType.Tile.SHOW : TransitionType.Tile.HIDE, observation.type());
             assertEquals(13L, observation.modeToken());
             assertEquals(5, observation.worldEpoch());
         }
@@ -103,9 +103,9 @@ class PackedTransitionQueueTest {
         TrackedTileEntity<?> first = tileEntity();
         TrackedTileEntity<?> second = tileEntity();
         TrackedTileEntity<?> third = tileEntity();
-        queue.add(BlockViewTransition.Type.HIDE, first, 3L, 2);
-        queue.add(BlockViewTransition.Type.SHOW, second, 3L, 2);
-        queue.add(BlockViewTransition.Type.SHOW, third, 5L, 2);
+        queue.add(TransitionType.Tile.HIDE, first, 3L, 2);
+        queue.add(TransitionType.Tile.SHOW, second, 3L, 2);
+        queue.add(TransitionType.Tile.SHOW, third, 5L, 2);
         queue.flushPendingTransitions();
 
         List<BlockObservation> observed = new ArrayList<>();
@@ -119,7 +119,7 @@ class PackedTransitionQueueTest {
     @Test
     void clearDiscardsPublishedEntries() {
         PackedEntityTransitionQueue entityQueue = new PackedEntityTransitionQueue();
-        entityQueue.add(EntityViewTransition.Type.SHOW, entity(), 1);
+        entityQueue.add(TransitionType.Entity.SHOW, entity(), 1);
         entityQueue.flushPendingTransitions();
         entityQueue.clearPublishedTransitions();
         assertFalse(entityQueue.hasPendingTransitions());
@@ -128,13 +128,13 @@ class PackedTransitionQueueTest {
         });
 
         for (int index = 0; index < 8; index++) {
-            entityQueue.add(EntityViewTransition.Type.SHOW, entity(), 1);
+            entityQueue.add(TransitionType.Entity.SHOW, entity(), 1);
         }
         entityQueue.clearPublishedTransitions();
         assertFalse(entityQueue.hasPendingTransitions());
 
         PackedBlockTransitionQueue blockQueue = new PackedBlockTransitionQueue();
-        blockQueue.add(BlockViewTransition.Type.HIDE, tileEntity(), 1L, 1);
+        blockQueue.add(TransitionType.Tile.HIDE, tileEntity(), 1L, 1);
         blockQueue.flushPendingTransitions();
         blockQueue.clearPublishedTransitions();
         assertFalse(blockQueue.hasPendingTransitions());
@@ -148,9 +148,9 @@ class PackedTransitionQueueTest {
         PackedEntityTransitionQueue queue = new PackedEntityTransitionQueue();
         TrackedEntity<?> published = entity();
         TrackedEntity<?> pending = entity();
-        queue.add(EntityViewTransition.Type.SHOW, published, 3);
+        queue.add(TransitionType.Entity.SHOW, published, 3);
         queue.flushPendingTransitions();
-        queue.add(EntityViewTransition.Type.HIDE, pending, 17);
+        queue.add(TransitionType.Entity.HIDE, pending, 17);
 
         queue.clearPublishedTransitions();
         assertFalse(queue.hasPendingTransitions());
@@ -168,9 +168,9 @@ class PackedTransitionQueueTest {
         PackedBlockTransitionQueue queue = new PackedBlockTransitionQueue();
         TrackedTileEntity<?> published = tileEntity();
         TrackedTileEntity<?> pending = tileEntity();
-        queue.add(BlockViewTransition.Type.SHOW, published, 2L, 3);
+        queue.add(TransitionType.Tile.SHOW, published, 2L, 3);
         queue.flushPendingTransitions();
-        queue.add(BlockViewTransition.Type.HIDE, pending, 19L, 23);
+        queue.add(TransitionType.Tile.HIDE, pending, 19L, 23);
 
         queue.clearPublishedTransitions();
         assertFalse(queue.hasPendingTransitions());
@@ -188,7 +188,7 @@ class PackedTransitionQueueTest {
     @Test
     void entityAppendDoesNotWaitForConsumerCallback() throws Exception {
         PackedEntityTransitionQueue queue = new PackedEntityTransitionQueue();
-        queue.add(EntityViewTransition.Type.SHOW, entity(), 1);
+        queue.add(TransitionType.Entity.SHOW, entity(), 1);
         queue.flushPendingTransitions();
         CountDownLatch callbackStarted = new CountDownLatch(1);
         CountDownLatch releaseCallback = new CountDownLatch(1);
@@ -209,7 +209,7 @@ class PackedTransitionQueueTest {
 
         assertTrue(callbackStarted.await(5, TimeUnit.SECONDS));
         Thread producer = Thread.startVirtualThread(() -> {
-            queue.add(EntityViewTransition.Type.HIDE, entity(), 1);
+            queue.add(TransitionType.Entity.HIDE, entity(), 1);
             queue.flushPendingTransitions();
             appendCompleted.countDown();
         });
@@ -224,7 +224,7 @@ class PackedTransitionQueueTest {
     void callbackFailureHasAtMostOnceClaimedEntrySemantics() {
         PackedEntityTransitionQueue queue = new PackedEntityTransitionQueue();
         for (int index = 0; index < 3; index++) {
-            queue.add(EntityViewTransition.Type.SHOW, entity(), 1);
+            queue.add(TransitionType.Entity.SHOW, entity(), 1);
         }
         queue.flushPendingTransitions();
 
@@ -235,7 +235,7 @@ class PackedTransitionQueueTest {
         }));
         assertEquals(1, callbacks[0]);
 
-        queue.add(EntityViewTransition.Type.HIDE, entity(), 1);
+        queue.add(TransitionType.Entity.HIDE, entity(), 1);
         queue.flushPendingTransitions();
         assertTrue(queue.hasPendingTransitions());
     }
@@ -247,13 +247,13 @@ class PackedTransitionQueueTest {
         TrackedEntity<?> second = entity();
 
         Thread firstProducer = Thread.startVirtualThread(() -> {
-            queue.add(EntityViewTransition.Type.SHOW, first, 1);
+            queue.add(TransitionType.Entity.SHOW, first, 1);
             queue.flushPendingTransitions();
         });
         firstProducer.join();
 
         Thread secondProducer = Thread.startVirtualThread(() -> {
-            queue.add(EntityViewTransition.Type.HIDE, second, 1);
+            queue.add(TransitionType.Entity.HIDE, second, 1);
             queue.flushPendingTransitions();
         });
         secondProducer.join();
@@ -286,10 +286,10 @@ class PackedTransitionQueueTest {
         });
     }
 
-    private record EntityObservation(EntityViewTransition.Type type, TrackedEntity<?> entity, int worldEpoch) {
+    private record EntityObservation(TransitionType.Entity type, TrackedEntity<?> entity, int worldEpoch) {
     }
 
-    private record BlockObservation(BlockViewTransition.Type type, TrackedTileEntity<?> tileEntity, long modeToken,
+    private record BlockObservation(TransitionType.Tile type, TrackedTileEntity<?> tileEntity, long modeToken,
             int worldEpoch) {
     }
 }

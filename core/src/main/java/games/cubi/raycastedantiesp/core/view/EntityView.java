@@ -86,7 +86,7 @@ public interface EntityView<T extends TrackedEntity<?>>  extends Clearable {
 
     @FunctionalInterface
     interface TransitionConsumer {
-        void accept(EntityViewTransition.Type type, TrackedEntity<?> entity, int worldEpoch);
+        void accept(TransitionType.Entity type, TrackedEntity<?> entity, int worldEpoch);
     }
 
     void drainTransitions(TransitionConsumer consumer);
