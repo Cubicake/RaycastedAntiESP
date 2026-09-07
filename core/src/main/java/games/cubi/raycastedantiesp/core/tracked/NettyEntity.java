@@ -277,7 +277,7 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
     }
 
     /**
-     * @return the passenger ID array, which may be null
+     * @return a clone of the passenger ID array, which may be null
      */
     @Override
     public int[] passengerIDs() {

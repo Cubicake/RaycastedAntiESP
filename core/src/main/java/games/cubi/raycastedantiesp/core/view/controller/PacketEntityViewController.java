@@ -420,7 +420,7 @@ public abstract class PacketEntityViewController<P> {
             NettyEntity<?> unresolvedVehicle = playerData.entityFromID(unresolvedVehicleID);
             if (unresolvedVehicle != null) {
                 // this can occur if the vehicle existed at the time of the passenger packet but not the passenger, and somehow the passenger never got resolved to the vehicle (missing spawn packets etc). In reality this should never happen.
-                unresolvedVehicle.setPassengerIDs(PrimitiveIntArrayList.remove(unresolvedVehicle.passengerIDs(), entityID));
+                unresolvedVehicle.setPassengerIDs(PrimitiveIntArrayList.remove(unresolvedVehicle.passengerIDsNoAlloc(), entityID));
             }
         }
 
@@ -445,7 +445,7 @@ public abstract class PacketEntityViewController<P> {
         }
         NettyEntity<?> vehicle = playerData.entityFromID(vehicleID);
         if (vehicle != null) {
-            vehicle.setPassengerIDs(PrimitiveIntArrayList.remove(vehicle.passengerIDs(), entityID));
+            vehicle.setPassengerIDs(PrimitiveIntArrayList.remove(vehicle.passengerIDsNoAlloc(), entityID));
         }
         entity.setVehicleID(NO_VEHICLE);
     }
