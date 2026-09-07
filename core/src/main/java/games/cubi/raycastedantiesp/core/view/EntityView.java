@@ -45,9 +45,6 @@ public interface EntityView<T extends TrackedEntity<?>>  extends Clearable {
      */
     int size();
 
-    @Deprecated
-    boolean isVisible(UUID entityUUID, int currentTick);
-
     boolean isVisible(UUID entityUUID);
 
     boolean isVisible(int entityID);
