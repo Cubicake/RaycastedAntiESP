@@ -341,7 +341,7 @@ public abstract class PacketEntityViewController<P> {
                 return previousPassengerIDs;
             }
         }
-        return playerData.nettyData().getUnresolvedPassengers(vehicleID);
+        return playerData.nettyData().getUnresolvedPassengersNoAlloc(vehicleID);
     }
 
     /**
@@ -481,7 +481,7 @@ public abstract class PacketEntityViewController<P> {
         }
 
         // A tracked entity owns the same two relationship directions in its resolved state.
-        int[] currentLeashedEntityIDs = entity.leashedEntityIDsOrNull();
+        final int[] currentLeashedEntityIDs = entity.leashedEntityIDsOrNullNoAlloc();
         if (!PrimitiveIntArrayList.isEmpty(currentLeashedEntityIDs)) {
             for (int leashedEntityID : currentLeashedEntityIDs) {
                 NettyEntity<?> leashedEntity = playerData.entityFromID(leashedEntityID);
@@ -630,7 +630,7 @@ public abstract class PacketEntityViewController<P> {
      * 2. this entity is the passenger and the vehicle was already known.
      */
     protected void reconcileUnresolvedPassengers(NettyEntity<?> insertedEntity, PlayerData playerData) {
-        int[] pendingPassengers = playerData.nettyData().getUnresolvedPassengers(insertedEntity.entityID());
+        int[] pendingPassengers = playerData.nettyData().getUnresolvedPassengersNoAlloc(insertedEntity.entityID());
         if (!PrimitiveIntArrayList.isEmpty(pendingPassengers)) {
             playerData.nettyData().consumeUnresolvedPassengers(insertedEntity.entityID());
             handleEntityPassengersNow(insertedEntity, pendingPassengers, playerData, insertedEntity.lastChecked());
@@ -665,7 +665,7 @@ public abstract class PacketEntityViewController<P> {
         // Vanilla may send entity state before its spawn packet, and those packets were already
         // forwarded to the client. Discard deferred tracking work rather than replaying duplicates.
         playerData.nettyData().clearPendingPostSpawnTasksForEntity(entityID);
-        int[] pendingPassengers = playerData.nettyData().getUnresolvedPassengers(entityID);
+        int[] pendingPassengers = playerData.nettyData().getUnresolvedPassengersNoAlloc(entityID);
         if (!PrimitiveIntArrayList.isEmpty(pendingPassengers)) {
             for (int passengerID : pendingPassengers) {
                 NettyEntity<?> passenger = playerData.entityFromID(passengerID);
@@ -684,7 +684,7 @@ public abstract class PacketEntityViewController<P> {
                 holder.addLeashedEntity(entityID);
             }
         }
-        int[] pendingLeashedEntityIDs = playerData.nettyData().getUnresolvedLeashes(entityID);
+        int[] pendingLeashedEntityIDs = playerData.nettyData().getUnresolvedLeashesNoAlloc(entityID);
         if (!PrimitiveIntArrayList.isEmpty(pendingLeashedEntityIDs)) {
             for (int leashedEntityID : pendingLeashedEntityIDs) {
                 NettyEntity<?> leashedEntity = playerData.entityFromID(leashedEntityID);
@@ -714,7 +714,7 @@ public abstract class PacketEntityViewController<P> {
             }
         }
 
-        int[] pendingLeashedEntityIDs = playerData.nettyData().getUnresolvedLeashes(entityID);
+        int[] pendingLeashedEntityIDs = playerData.nettyData().getUnresolvedLeashesNoAlloc(entityID);
         if (PrimitiveIntArrayList.isEmpty(pendingLeashedEntityIDs)) {
             return;
         }

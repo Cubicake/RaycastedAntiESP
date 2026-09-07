@@ -19,6 +19,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -85,6 +87,27 @@ class NettyEntityTrackedStateTest {
 
             assertFalse(lostUpdate.get());
         });
+    }
+
+    @Test
+    void relationshipSnapshotsRemainDefensiveWhileInternalAccessorsDoNotCopy() {
+        TestEntity entity = new TestEntity();
+        entity.setPassengerIDs(new int[]{2, 3});
+        entity.addLeashedEntity(4);
+
+        int[] passengerSnapshot = entity.passengerIDs();
+        int[] passengerInternal = entity.passengerIDsNoAlloc();
+        assertNotSame(passengerSnapshot, passengerInternal);
+        passengerSnapshot[0] = 99;
+        assertEquals(2, passengerInternal[0]);
+        assertSame(passengerInternal, entity.passengerIDsNoAlloc());
+
+        int[] leashSnapshot = entity.leashedEntityIDsOrNull();
+        int[] leashInternal = entity.leashedEntityIDsOrNullNoAlloc();
+        assertNotSame(leashSnapshot, leashInternal);
+        leashSnapshot[0] = 99;
+        assertEquals(4, leashInternal[0]);
+        assertSame(leashInternal, entity.leashedEntityIDsOrNullNoAlloc());
     }
 
     private static final class TestEntity extends NettyEntity<Clearable> {

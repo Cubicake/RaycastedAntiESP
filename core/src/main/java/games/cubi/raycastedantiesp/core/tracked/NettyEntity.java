@@ -330,6 +330,17 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
         return PrimitiveIntArrayList.getCopyOrNull(leashedIDs);
     }
 
+    /**
+     * Returns internal Netty-thread leash state without copying it.
+     * Callers must not mutate the returned array.
+     * <p>
+     *     This is not considered public API.
+     * </p>
+     */
+    public int@Nullable[] leashedEntityIDsOrNullNoAlloc() {
+        return leashedIDs;
+    }
+
     @Override
     public int leashingEntity() {
         return (int) LEASHER_ID.getOpaque(this);

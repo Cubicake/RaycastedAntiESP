@@ -73,6 +73,14 @@ public class NettyData implements Clearable {
         return PrimitiveIntArrayList.getCopyOrNull(unresolvedLeashedEntityIDsByHolderID.get(holderEntityID));
     }
 
+    /**
+     * Returns internal Netty-thread reconciliation state without copying it.
+     * Callers must not mutate the returned array.
+     */
+    public int[] getUnresolvedLeashesNoAlloc(int holderEntityID) {
+        return unresolvedLeashedEntityIDsByHolderID.get(holderEntityID);
+    }
+
     public int[] consumeUnresolvedLeashes(int holderEntityID) {
         int[] existing = unresolvedLeashedEntityIDsByHolderID.remove(holderEntityID);
         if (PrimitiveIntArrayList.isEmpty(existing)) {
@@ -131,6 +139,14 @@ public class NettyData implements Clearable {
 
     public int[] getUnresolvedPassengers(int vehicleEntityID) {
         return PrimitiveIntArrayList.getCopyOrNull(unresolvedPassengerIDsByVehicleID.get(vehicleEntityID));
+    }
+
+    /**
+     * Returns internal Netty-thread reconciliation state without copying it.
+     * Callers must not mutate the returned array.
+     */
+    public int[] getUnresolvedPassengersNoAlloc(int vehicleEntityID) {
+        return unresolvedPassengerIDsByVehicleID.get(vehicleEntityID);
     }
 
     /**

@@ -661,7 +661,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         if (!isBypassed(vehicleID)) {
             return null;
         }
-        int[] passengerIDs = playerData.nettyData().getUnresolvedPassengers(vehicleID);
+        int[] passengerIDs = playerData.nettyData().getUnresolvedPassengersNoAlloc(vehicleID);
         if (PrimitiveIntArrayList.isEmpty(passengerIDs)) {
             return null;
         }
@@ -690,7 +690,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         if (holderEntityID != NO_LEASHER && relationshipEndpointIsVisible(holderEntityID, playerData)) {
             viewer.writePacketSilently(new WrapperPlayServerAttachEntity(entityID, holderEntityID, true));
         }
-        int[] leashedEntityIDs = playerData.nettyData().getUnresolvedLeashes(entityID);
+        int[] leashedEntityIDs = playerData.nettyData().getUnresolvedLeashesNoAlloc(entityID);
         if (!PrimitiveIntArrayList.isEmpty(leashedEntityIDs)) {
             for (int leashedEntityID : leashedEntityIDs) {
                 if (relationshipEndpointIsVisible(leashedEntityID, playerData)) {
@@ -712,7 +712,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     private @Nullable WrapperPlayServerAttachEntity[] buildLeashPackets(PacketEventsEntity entity, PlayerData playerData, int entityBeingShownID) {
-        int[] leashedIDs = entity.leashedEntityIDsOrNull();
+        final int[] leashedIDs = entity.leashedEntityIDsOrNullNoAlloc();
         int leashingID = entity.leashingEntity();
         WrapperPlayServerAttachEntity leashingShow = null;
         if (leashingID != NO_LEASHER) {
