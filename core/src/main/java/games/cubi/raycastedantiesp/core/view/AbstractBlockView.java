@@ -37,9 +37,6 @@ import java.util.function.IntSupplier;
 import static games.cubi.raycastedantiesp.core.chunks.ChunkData.packUncheckedGuarded;
 
 public abstract class AbstractBlockView<R extends Clearable, T extends NettyTileEntity<R>> implements BlockView {
-    public static final int CHUNK_SIZE = 16;
-    public static final int LOCAL_MASK = CHUNK_SIZE - 1;
-
     private final ChunkSectionStore chunks;
     private final boolean trackAllBlocks;
     /**
