@@ -646,7 +646,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         if (!clientAndEngineVisibleOrBeingShown(entity, entityBeingShownID)) {
             return null;
         }
-        int[] passengerIDs = entity.passengerIDs();
+        int[] passengerIDs = entity.passengerIDsNoAlloc();
         if (passengerIDs == null || passengerIDs.length == 0) {
             return null;
         }

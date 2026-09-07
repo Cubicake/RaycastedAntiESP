@@ -253,7 +253,7 @@ public abstract class PacketEntityViewController<P> {
     protected boolean handleEntityPassengers(int entityID, int[] passengers, PlayerData playerData, int currentTick) {
         boolean bypassedVehicle = EntityBypassRegistry.isBypassed(entityID);
         NettyEntity<?> vehicle = bypassedVehicle ? null : playerData.entityFromID(entityID);
-        int[] previousPassengers = getPreviousPassengerState(entityID, vehicle, playerData);
+        final int[] previousPassengers = getPreviousPassengerState(entityID, vehicle, playerData);
         playerData.nettyData().consumeUnresolvedPassengers(entityID); // throw away any unresolved passengers as this new packet will have the correct passenger list
         // "Stale" passengers are passengers that the previous authoritative state said were mounted,
         // but the new full replacement passenger list no longer contains.
@@ -336,7 +336,7 @@ public abstract class PacketEntityViewController<P> {
 
     private int[] getPreviousPassengerState(int vehicleID, NettyEntity<?> vehicle, PlayerData playerData) {
         if (vehicle != null) {
-            int[] previousPassengerIDs = vehicle.passengerIDs();
+            final int[] previousPassengerIDs = vehicle.passengerIDsNoAlloc();
             if (!PrimitiveIntArrayList.isEmpty(previousPassengerIDs)) {
                 return previousPassengerIDs;
             }
@@ -348,7 +348,7 @@ public abstract class PacketEntityViewController<P> {
      * Clears reverse vehicle links for passengers that were part of the previous vehicle state,
      * but are absent from the new authoritative replacement list.
      */
-    private void clearStalePassengerReferences(int vehicleID, int[] previousPassengers, int[] newPassengers, PlayerData playerData) {
+    private void clearStalePassengerReferences(int vehicleID, final int[] previousPassengers, int[] newPassengers, PlayerData playerData) {
         if (PrimitiveIntArrayList.isEmpty(previousPassengers)) {
             return;
         }
@@ -429,7 +429,7 @@ public abstract class PacketEntityViewController<P> {
             return;
         }
 
-        int[] currentPassengerIDs = entity.passengerIDs();
+        int[] currentPassengerIDs = entity.passengerIDsNoAlloc();
         if (!PrimitiveIntArrayList.isEmpty(currentPassengerIDs)) {
             for (int passengerID : currentPassengerIDs) {
                 NettyEntity<?> passenger = playerData.entityFromID(passengerID);
@@ -747,15 +747,15 @@ public abstract class PacketEntityViewController<P> {
         if (!vehicle.clientVisible() || (keepingClientEntityWhenHidden(vehicle, playerData) && !vehicle.visible())) {
             return;
         }
-        sendEntityPassengerPacket(vehicle.entityID(), collectClientVisiblePassengers(vehicle.passengerIDs(), playerData), playerData);
+        sendEntityPassengerPacket(vehicle.entityID(), collectClientVisiblePassengers(vehicle.passengerIDsNoAlloc(), playerData), playerData);
     }
 
-    protected IntArrayList collectClientVisiblePassengers(int[] passengerIDs, PlayerData playerData) {
+    protected IntArrayList collectClientVisiblePassengers(final int[] passengerIDs, PlayerData playerData) {
         // HackyEntityIDGuard reserves -1, so it cannot accidentally match an entity being shown.
         return collectClientVisiblePassengers(passengerIDs, playerData, -1);
     }
 
-    protected IntArrayList collectClientVisiblePassengers(int[] passengerIDs, PlayerData playerData, int entityBeingShownID) {
+    protected IntArrayList collectClientVisiblePassengers(final int[] passengerIDs, PlayerData playerData, int entityBeingShownID) {
         int size = passengerIDs == null ? 0 : passengerIDs.length;
         IntArrayList visiblePassengers = new IntArrayList(size);
         if (passengerIDs == null) {

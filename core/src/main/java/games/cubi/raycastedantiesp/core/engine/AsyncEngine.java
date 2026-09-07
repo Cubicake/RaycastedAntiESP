@@ -427,7 +427,7 @@ public abstract class AsyncEngine implements Engine {
         if (!player.nettyData().isSelfEntityID(entity.leashingEntity())
                 && !player.nettyData().isSelfEntityID(entity.vehicleID())
                 && !EntityBypassRegistry.isBypassed(entity.vehicleID())
-                && !PrimitiveIntArrayList.contains(entity.passengerIDs(), selfEntityID)) {
+                && !PrimitiveIntArrayList.contains(entity.passengerIDsNoAlloc(), selfEntityID)) {
             return false;
         }
         view.setVisibility(entity, true, currentTick, worldEpoch);

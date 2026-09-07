@@ -276,10 +276,25 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
         return this;
     }
 
+    /**
+     * @return the passenger ID array, which may be null
+     */
     @Override
     public int[] passengerIDs() {
         int[] current = passengerIDsAcquire();
         return current == null ? null : current.clone();
+    }
+
+    /**
+     * Do not mutate this.
+     * <p></p>
+     * This method is not considered public api.
+     * <p>
+     *     Returned array may be null
+     * </p>
+     */
+    public int[] passengerIDsNoAlloc() {
+        return passengerIDsAcquire();
     }
 
     @Override
