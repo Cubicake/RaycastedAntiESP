@@ -11,7 +11,7 @@ package games.cubi.raycastedantiesp.core.view;
 import games.cubi.raycastedantiesp.core.tracked.TrackedEntity;
 import games.cubi.locatables.api.Spatial;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 
 import java.util.Collection;
 import java.util.UUID;

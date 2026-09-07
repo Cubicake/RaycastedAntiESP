@@ -12,7 +12,7 @@ import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.raycastedantiesp.core.tracked.TrackedEntity;
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;

@@ -10,7 +10,7 @@ package games.cubi.raycastedantiesp.packetevents.replaydata;
 
 import com.github.retrooper.packetevents.protocol.nbt.NBTCompound;
 import com.github.retrooper.packetevents.protocol.world.blockentity.BlockEntityType;
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 
 public final class PacketEventsTileEntityReplayData implements Clearable {
     private BlockEntityType blockEntityType;

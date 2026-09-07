@@ -9,14 +9,11 @@
 package games.cubi.raycastedantiesp.packetevents.replaydata;
 
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerPlayerInfoUpdate;
 
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 
 import java.util.ArrayDeque;
-import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public sealed interface PacketEventsEntityReplayData extends Clearable permits PacketEventsEntityReplayData.Impl {
 

@@ -6,7 +6,7 @@
  * https://www.gnu.org/licenses/agpl-3.0.html. See README.md for warranty disclaimer and further information.
  */
 
-package games.cubi.raycastedantiesp.core.utils;
+package games.cubi.raycastedantiesp.core.tracked;
 
 import games.cubi.logs.Logger;
 import org.jetbrains.annotations.Nullable;

@@ -9,7 +9,7 @@
 package games.cubi.raycastedantiesp.core.tracked;
 
 import games.cubi.locatables.api.BlockSpatial;
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 import games.cubi.utils.lists.InvasivelyLinkedSWMRList;
 import games.cubi.utils.VarHandler;
 

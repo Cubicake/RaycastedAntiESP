@@ -19,7 +19,7 @@ import games.cubi.raycastedantiesp.core.chunks.OccludingChunkData;
 import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 import games.cubi.raycastedantiesp.core.tracked.NettyTileEntity;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 import games.cubi.utils.lists.InvasivelyLinkedSWMRList;
 import games.cubi.utils.VarHandler;
 import games.cubi.raycastedantiesp.core.view.chunks.BlockChunkSectionStore;

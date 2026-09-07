@@ -10,7 +10,7 @@ package games.cubi.raycastedantiesp.core.tracked;
 
 import games.cubi.locatables.api.MutableFloatingSpatial;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 import games.cubi.utils.lists.PrimitiveIntArrayList;
 import games.cubi.utils.lists.IntArrayListMarker;
 import games.cubi.utils.VarHandler;

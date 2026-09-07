@@ -8,7 +8,7 @@
 
 package games.cubi.raycastedantiesp.core.view;
 
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 import games.cubi.utils.IntrusiveSPSCQueue;
 import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
 

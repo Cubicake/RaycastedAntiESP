@@ -11,7 +11,7 @@ package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
-import games.cubi.raycastedantiesp.core.utils.BaseEntitySpawnTask;
+import games.cubi.raycastedantiesp.core.tracked.BaseEntitySpawnTask;
 
 import java.util.function.Consumer;
 

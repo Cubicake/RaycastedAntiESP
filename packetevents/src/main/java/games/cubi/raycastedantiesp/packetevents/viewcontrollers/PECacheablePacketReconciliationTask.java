@@ -14,7 +14,7 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEn
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
-import games.cubi.raycastedantiesp.core.utils.BaseEntitySpawnTask;
+import games.cubi.raycastedantiesp.core.tracked.BaseEntitySpawnTask;
 import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;
 
 final class PECacheablePacketReconciliationTask extends BaseEntitySpawnTask {

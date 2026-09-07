@@ -11,7 +11,7 @@ package games.cubi.raycastedantiesp.packetevents.viewcontrollers;
 import games.cubi.raycastedantiesp.core.players.PlayerData;
 import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 import games.cubi.raycastedantiesp.core.entity.EntityBypassRegistry;
-import games.cubi.raycastedantiesp.core.utils.EntitySpawnTask;
+import games.cubi.raycastedantiesp.core.tracked.EntitySpawnTask;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
 import games.cubi.raycastedantiesp.packetevents.tracked.PacketEventsEntity;

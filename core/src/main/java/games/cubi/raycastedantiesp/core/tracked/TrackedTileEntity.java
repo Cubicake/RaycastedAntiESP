@@ -9,7 +9,7 @@
 package games.cubi.raycastedantiesp.core.tracked;
 
 import games.cubi.locatables.api.ImmutableBlockSpatial;
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 
 public interface TrackedTileEntity<T> extends ImmutableBlockSpatial, Clearable {
     int NEVER_CHECKED = Integer.MIN_VALUE;

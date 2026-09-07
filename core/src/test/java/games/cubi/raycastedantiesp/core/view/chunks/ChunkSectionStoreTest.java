@@ -20,7 +20,7 @@ import games.cubi.raycastedantiesp.core.chunks.OccludingChunkDataImpl;
 import games.cubi.raycastedantiesp.core.chunks.blocks.CharArrayBlockChunkData;
 import games.cubi.raycastedantiesp.core.tracked.NettyTileEntity;
 import games.cubi.raycastedantiesp.core.tracked.TrackedTileEntity;
-import games.cubi.raycastedantiesp.core.utils.Clearable;
+import games.cubi.utils.Clearable;
 import games.cubi.raycastedantiesp.core.view.AbstractBlockView;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.BlockViewTransition;
