@@ -112,22 +112,8 @@ public final class PackedEntityTransitionQueue { //todo: potentially merge this 
     }
 
     private static final class PendingBatch implements Clearable {
-        private EntityViewTransition.Type t1;
-        private EntityViewTransition.Type t2;
-        private EntityViewTransition.Type t3;
-        private EntityViewTransition.Type t4;
-        private EntityViewTransition.Type t5;
-        private EntityViewTransition.Type t6;
-        private EntityViewTransition.Type t7;
-        private EntityViewTransition.Type t8;
-        private TrackedEntity<?> e1;
-        private TrackedEntity<?> e2;
-        private TrackedEntity<?> e3;
-        private TrackedEntity<?> e4;
-        private TrackedEntity<?> e5;
-        private TrackedEntity<?> e6;
-        private TrackedEntity<?> e7;
-        private TrackedEntity<?> e8;
+        private EntityViewTransition.Type t1, t2, t3, t4, t5, t6, t7, t8;
+        private TrackedEntity<?> e1, e2, e3, e4, e5, e6, e7, e8;
         private int worldEpoch;
         private int count;
 
@@ -146,64 +132,33 @@ public final class PackedEntityTransitionQueue { //todo: potentially merge this 
         }
 
         public void clear() {
-            t1 = null;
-            t2 = null;
-            t3 = null;
-            t4 = null;
-            t5 = null;
-            t6 = null;
-            t7 = null;
-            t8 = null;
-            e1 = null;
-            e2 = null;
-            e3 = null;
-            e4 = null;
-            e5 = null;
-            e6 = null;
-            e7 = null;
-            e8 = null;
+            t1 = null; t2 = null; t3 = null; t4 = null;
+            t5 = null; t6 = null; t7 = null; t8 = null;
+
+            e1 = null; e2 = null; e3 = null; e4 = null;
+            e5 = null; e6 = null; e7 = null; e8 = null;
+
             worldEpoch = 0;
             count = 0;
         }
     }
 
     private static final class BatchEntry extends QueueEntry {
-        private final EntityViewTransition.Type t1;
-        private final EntityViewTransition.Type t2;
-        private final EntityViewTransition.Type t3;
-        private final EntityViewTransition.Type t4;
-        private final EntityViewTransition.Type t5;
-        private final EntityViewTransition.Type t6;
-        private final EntityViewTransition.Type t7;
-        private final EntityViewTransition.Type t8;
-        private final TrackedEntity<?> e1;
-        private final TrackedEntity<?> e2;
-        private final TrackedEntity<?> e3;
-        private final TrackedEntity<?> e4;
-        private final TrackedEntity<?> e5;
-        private final TrackedEntity<?> e6;
-        private final TrackedEntity<?> e7;
-        private final TrackedEntity<?> e8;
+        private final EntityViewTransition.Type t1, t2, t3, t4, t5, t6, t7, t8;
+        private final TrackedEntity<?> e1, e2, e3, e4, e5, e6, e7, e8;
         private final int worldEpoch;
         private final int count;
 
         private BatchEntry(PendingBatch pending) {
-            t1 = pending.t1;
-            t2 = pending.t2;
-            t3 = pending.t3;
-            t4 = pending.t4;
-            t5 = pending.t5;
-            t6 = pending.t6;
-            t7 = pending.t7;
-            t8 = pending.t8;
-            e1 = pending.e1;
-            e2 = pending.e2;
-            e3 = pending.e3;
-            e4 = pending.e4;
-            e5 = pending.e5;
-            e6 = pending.e6;
-            e7 = pending.e7;
-            e8 = pending.e8;
+            t1 = pending.t1; t2 = pending.t2;
+            t3 = pending.t3; t4 = pending.t4;
+            t5 = pending.t5; t6 = pending.t6;
+            t7 = pending.t7; t8 = pending.t8;
+
+            e1 = pending.e1; e2 = pending.e2;
+            e3 = pending.e3; e4 = pending.e4;
+            e5 = pending.e5; e6 = pending.e6;
+            e7 = pending.e7; e8 = pending.e8;
             worldEpoch = pending.worldEpoch;
             count = pending.count;
         }
