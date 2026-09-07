@@ -12,8 +12,7 @@ import com.destroystokyo.paper.event.server.ServerTickStartEvent;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.Ticker;
 import games.cubi.raycastedantiesp.core.engine.AsyncEngine;
-import games.cubi.raycastedantiesp.core.engine.AsyncRunner;
-import games.cubi.raycastedantiesp.core.utils.VarHandler;
+import games.cubi.utils.VarHandler;
 import games.cubi.raycastedantiesp.paper.EventListener;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import games.cubi.raycastedantiesp.paper.internals.HackyEntityIDGuard;
@@ -22,7 +21,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 
 import java.lang.invoke.VarHandle;
-import java.util.function.IntSupplier;
 
 public class PaperTicker extends PaperListener implements Ticker {
     private volatile int currentTick; private static final VarHandle CURRENT_TICK = VarHandler.get(PaperTicker.class, "currentTick", int.class);

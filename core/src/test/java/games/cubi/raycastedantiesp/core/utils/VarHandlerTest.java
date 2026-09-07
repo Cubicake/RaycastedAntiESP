@@ -8,13 +8,14 @@
 
 package games.cubi.raycastedantiesp.core.utils;
 
+import games.cubi.utils.VarHandler;
 import org.junit.jupiter.api.Test;
 
 import java.lang.invoke.VarHandle;
 
-import static games.cubi.raycastedantiesp.core.utils.VarHandler.BYTE_ARRAY_HANDLE;
-import static games.cubi.raycastedantiesp.core.utils.VarHandler.CHAR_ARRAY_HANDLE;
-import static games.cubi.raycastedantiesp.core.utils.VarHandler.LONG_ARRAY_HANDLE;
+import static games.cubi.utils.VarHandler.BYTE_ARRAY_HANDLE;
+import static games.cubi.utils.VarHandler.CHAR_ARRAY_HANDLE;
+import static games.cubi.utils.VarHandler.LONG_ARRAY_HANDLE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class VarHandlerTest {

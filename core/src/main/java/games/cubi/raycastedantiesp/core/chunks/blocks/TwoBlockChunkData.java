@@ -15,7 +15,7 @@ import java.util.Arrays;
 
 import static games.cubi.raycastedantiesp.core.chunks.ChunkData.packLocalChecked;
 import static games.cubi.raycastedantiesp.core.chunks.ChunkData.packUncheckedGuarded;
-import static games.cubi.raycastedantiesp.core.utils.VarHandler.LONG_ARRAY_HANDLE;
+import static games.cubi.utils.VarHandler.LONG_ARRAY_HANDLE;
 
 //functionally a bitset
 public class TwoBlockChunkData implements BlockChunkData {

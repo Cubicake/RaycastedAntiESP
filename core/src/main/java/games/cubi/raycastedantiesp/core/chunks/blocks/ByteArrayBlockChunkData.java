@@ -13,7 +13,7 @@ import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
 import games.cubi.raycastedantiesp.core.chunks.ChunkData;
 import java.util.function.IntUnaryOperator;
 
-import static games.cubi.raycastedantiesp.core.utils.VarHandler.BYTE_ARRAY_HANDLE;
+import static games.cubi.utils.VarHandler.BYTE_ARRAY_HANDLE;
 
 public class ByteArrayBlockChunkData extends AbstractPalettedBlockChunkData {
     private final byte[] blockData = new byte[ChunkData.BLOCK_COUNT];

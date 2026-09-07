@@ -9,7 +9,7 @@
 package games.cubi.raycastedantiesp.core.players;
 
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
-import games.cubi.raycastedantiesp.core.utils.VarHandler;
+import games.cubi.utils.VarHandler;
 
 import java.lang.invoke.VarHandle;
 import java.util.Collection;

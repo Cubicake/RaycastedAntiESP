@@ -10,8 +10,8 @@ package games.cubi.raycastedantiesp.core.tracked;
 
 import games.cubi.locatables.api.BlockSpatial;
 import games.cubi.raycastedantiesp.core.utils.Clearable;
-import games.cubi.raycastedantiesp.core.utils.InvasivelyLinkedSWMRList;
-import games.cubi.raycastedantiesp.core.utils.VarHandler;
+import games.cubi.utils.lists.InvasivelyLinkedSWMRList;
+import games.cubi.utils.VarHandler;
 
 import java.lang.invoke.VarHandle;
 

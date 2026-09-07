@@ -8,6 +8,7 @@
 
 package games.cubi.raycastedantiesp.core.utils;
 
+import games.cubi.utils.lists.InvasivelyLinkedSWMRList;
 import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;

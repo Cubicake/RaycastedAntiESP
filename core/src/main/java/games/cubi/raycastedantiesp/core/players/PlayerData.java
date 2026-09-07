@@ -12,7 +12,7 @@ import games.cubi.locatables.api.Locatable;
 import games.cubi.locatables.implementations.ThreadSafeLocatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
-import games.cubi.raycastedantiesp.core.utils.VarHandler;
+import games.cubi.utils.VarHandler;
 import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;

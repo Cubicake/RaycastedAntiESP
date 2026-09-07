@@ -11,7 +11,7 @@ package games.cubi.raycastedantiesp.paper.packets;
 import com.github.retrooper.packetevents.protocol.player.User;
 import games.cubi.raycastedantiesp.packetevents.viewcontrollers.PacketEventsCommonViewController;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
-import games.cubi.raycastedantiesp.core.utils.VarHandler;
+import games.cubi.utils.VarHandler;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import org.bukkit.Bukkit;
 import org.bukkit.World;

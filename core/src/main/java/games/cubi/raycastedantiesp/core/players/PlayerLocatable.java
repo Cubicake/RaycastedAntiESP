@@ -12,7 +12,7 @@ import games.cubi.locatables.api.FloatingLocatableEquality;
 import games.cubi.locatables.api.Locatable;
 import games.cubi.locatables.api.MutableFloatingLocatable;
 import games.cubi.locatables.api.Spatial;
-import games.cubi.raycastedantiesp.core.utils.VarHandler;
+import games.cubi.utils.VarHandler;
 
 import java.lang.invoke.VarHandle;
 import java.util.Objects;

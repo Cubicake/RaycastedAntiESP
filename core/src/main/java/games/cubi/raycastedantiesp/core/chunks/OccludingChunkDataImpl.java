@@ -10,7 +10,7 @@ package games.cubi.raycastedantiesp.core.chunks;
 
 import java.util.Arrays;
 
-import static games.cubi.raycastedantiesp.core.utils.VarHandler.LONG_ARRAY_HANDLE;
+import static games.cubi.utils.VarHandler.LONG_ARRAY_HANDLE;
 
 /**
  * A 4096-bit bitset, where 1 indicates occluding and 0 indicates not occluding.
