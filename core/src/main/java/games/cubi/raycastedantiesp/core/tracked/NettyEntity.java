@@ -440,9 +440,9 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
                 ", velocityY=" + velocityY() +
                 ", velocityZ=" + velocityZ() +
                 ", onGround=" + onGround() +
-                ", leashedIDs=" + nullableArrayToString(leashedIDs) +
+                ", leashedIDs=" + PrimitiveIntArrayList.toString(leashedIDs) +
                 ", leasherID=" + leashingEntity() +
-                ", passengerIDs=" + nullableArrayToString(passengerIDsAcquire()) +
+                ", passengerIDs=" + PrimitiveIntArrayList.toString(passengerIDsAcquire()) +
                 ", vehicleID=" + vehicleID() +
                 ", entityData=" + entityData() +
                 '}';
@@ -451,9 +451,4 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
     private int[] passengerIDsAcquire() {
         return (int[]) PASSENGER_IDS.getAcquire(this);
     }
-
-    private static String nullableArrayToString(int[] values) {
-        return values == null ? null : PrimitiveIntArrayList.toString(values);
-    }
-
 }
