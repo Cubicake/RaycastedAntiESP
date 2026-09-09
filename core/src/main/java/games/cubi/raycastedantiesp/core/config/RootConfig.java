@@ -9,12 +9,27 @@
 package games.cubi.raycastedantiesp.core.config;
 
 import games.cubi.raycastedantiesp.core.config.engine.EngineConfig;
+import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Setting;
 
-import java.util.Map;
-
-public record RootConfig(String configVersion, ChecksConfig checksConfig, EngineConfig engineConfig, BlockProcessorConfig blockProcessorConfig, DebugConfig debugConfig, UpdateConfig updateConfig, Map<Class<? extends Config>, Config> extensionConfigs) implements Config {
-    public <T extends Config> T extensionConfig(Class<T> type) {
-        Config config = extensionConfigs.get(type);
-        return type.cast(config);
-    }
+@ConfigSerializable
+public record RootConfig(
+        String configVersion,
+        @Setting("logging") LoggingConfig loggingConfig,
+        @Setting("checks") ChecksConfig checksConfig,
+        @Setting("engine") EngineConfig engineConfig,
+        @Setting("block-processor") BlockProcessorConfig blockProcessorConfig,
+        @Setting("debug") DebugConfig debugConfig,
+        @Setting("updates") UpdateConfig updateConfig
+) implements Config {
+    public static final String CURRENT_VERSION = "2.1";
+    public static final RootConfig DEFAULT = new RootConfig(
+            CURRENT_VERSION,
+            LoggingConfig.DEFAULT,
+            ChecksConfig.DEFAULT,
+            EngineConfig.DEFAULT,
+            BlockProcessorConfig.DEFAULT,
+            DebugConfig.DEFAULT,
+            UpdateConfig.DEFAULT
+    );
 }
