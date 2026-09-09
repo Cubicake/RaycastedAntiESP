@@ -13,19 +13,24 @@ import games.cubi.raycastedantiesp.core.config.raycast.EntityConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.SoundEffectsConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.TileEntityConfig;
-import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Setting;
 
-public record ChecksConfig(PlayerConfig playerConfig, EntityConfig entityConfig, TileEntityConfig tileEntityConfig, SoundEffectsConfig soundEffectsConfig, ChunkSectionConfig chunkSectionConfig) implements Config {
-    public static ChecksConfig load(ConfigurationNode root) {
-        ConfigurationNode checks = ConfigReader.node(root, "checks");
-        return new ChecksConfig(
-                PlayerConfig.load(ConfigReader.node(checks, "player"), "checks.player"),
-                EntityConfig.load(ConfigReader.node(checks, "entity"), "checks.entity"),
-                TileEntityConfig.load(ConfigReader.node(checks, "tile-entity"), "checks.tile-entity"),
-                SoundEffectsConfig.load(ConfigReader.node(checks, "sound-effects"), "checks.sound-effects"),
-                ChunkSectionConfig.load(ConfigReader.node(checks, "chunk-section"), "checks.chunk-section")
-        );
-    }
+@ConfigSerializable
+public record ChecksConfig(
+        @Setting("player") PlayerConfig playerConfig,
+        @Setting("entity") EntityConfig entityConfig,
+        @Setting("tile-entity") TileEntityConfig tileEntityConfig,
+        @Setting("sound-effects") SoundEffectsConfig soundEffectsConfig,
+        @Setting("chunk-section") ChunkSectionConfig chunkSectionConfig
+) implements Config {
+    public static final ChecksConfig DEFAULT = new ChecksConfig(
+            PlayerConfig.DEFAULT,
+            EntityConfig.DEFAULT,
+            TileEntityConfig.DEFAULT,
+            SoundEffectsConfig.DEFAULT,
+            ChunkSectionConfig.DEFAULT
+    );
 
     public boolean hasEnabledStatusChanges(ChecksConfig startup) {
         return playerConfig.enabled() != startup.playerConfig.enabled()

@@ -8,27 +8,25 @@
 
 package games.cubi.raycastedantiesp.core.config.raycast;
 
-import games.cubi.raycastedantiesp.core.config.ConfigReader;
-import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Comment;
+import org.spongepowered.configurate.objectmapping.meta.Setting;
 
-public class PlayerConfig extends RaycastConfig {
-    private final boolean onlyCheckSneaking;
-
-    private PlayerConfig(RaycastConfig config, boolean onlyCheckSneaking) {
-        super(config.enabled(), config.hideSoundsWhenHidden(), config.getMaxOccludingCount(), config.getAlwaysShowRadius(),
-                config.getRaycastRadius(), config.hideOnSpawnDistance(), config.getVisibleRecheckIntervalTicks(),
-                config.keepClientEntityWhenHidden());
-        this.onlyCheckSneaking = onlyCheckSneaking;
-    }
-
-    public static PlayerConfig load(ConfigurationNode node, String path) {
-        return new PlayerConfig(
-                RaycastConfig.load(node, path, true, true),
-                ConfigReader.bool(ConfigReader.node(node, "only-check-sneaking"), path + ".only-check-sneaking")
-        );
-    }
-
-    public boolean onlyCheckSneaking() {
-        return onlyCheckSneaking;
-    }
+@ConfigSerializable
+public record PlayerConfig(
+        @Setting(nodeFromParent = true)
+        RaycastSettings raycastSettings,
+        @Comment("Suppress sounds produced by hidden players.")
+        boolean hideSoundsWhenHidden,
+        @Comment("Retain hidden players client-side instead of destroying their entities. This will cause a non-moving \"ghost player\" to persist until the real player is visible again.")
+        boolean keepClientEntityWhenHidden,
+        @Comment("Only raycast other players while the viewing player is sneaking.")
+        boolean onlyCheckSneaking
+) implements RaycastConfig {
+    public static final PlayerConfig DEFAULT = new PlayerConfig(
+            new RaycastSettings(true, (byte) 3, (short) 8, (short) 128, (short) 24, (short) 5),
+            true,
+            false,
+            true
+    );
 }

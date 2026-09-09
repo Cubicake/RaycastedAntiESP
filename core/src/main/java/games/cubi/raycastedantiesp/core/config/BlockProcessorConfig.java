@@ -8,19 +8,15 @@
 
 package games.cubi.raycastedantiesp.core.config;
 
-import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Comment;
 
-public record BlockProcessorConfig(BlockProcessorMode mode, boolean trackAllBlocks) implements Config {
-    public static BlockProcessorConfig load(ConfigurationNode root) {
-        ConfigurationNode node = ConfigReader.node(root, "block-processor");
-        String modeName = ConfigReader.string(ConfigReader.node(node, "mode"), "block-processor.mode");
-        BlockProcessorMode mode = BlockProcessorMode.fromString(modeName);
-        if (mode == null) {
-            throw new ConfigLoadException("block-processor.mode has unsupported value '" + modeName + "'");
-        }
-        return new BlockProcessorConfig(
-                mode,
-                ConfigReader.bool(ConfigReader.node(node, "track-all-blocks"), "block-processor.track-all-blocks")
-        );
-    }
+@ConfigSerializable
+public record BlockProcessorConfig(
+        @Comment("Block processor implementation used by the plugin.")
+        BlockProcessorMode mode,
+        @Comment("Track every block rather than only tile entities.")
+        boolean trackAllBlocks
+) implements Config {
+    public static final BlockProcessorConfig DEFAULT = new BlockProcessorConfig(BlockProcessorMode.PACKETEVENTS, false);
 }
