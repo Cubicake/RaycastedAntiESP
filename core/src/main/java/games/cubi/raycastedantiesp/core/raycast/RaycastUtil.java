@@ -54,6 +54,29 @@ public class RaycastUtil {
         return rayAdvancer.occluded <= maxOccluding;
     }
 
+    /**
+     * A very fast, low-accuracy raycast
+     */
+    public static int fastRaycastDirection(int maxOccluding, final BlockView snap, final Spatial start,
+                                           final double dirX, final double dirY, final double dirZ, final int maxSteps) {
+        double startX = start.x();
+        double startY = start.y();
+        double startZ = start.z();
+
+        final RayAdvancer rayAdvancer = new RayAdvancer(startX, startY, startZ, RayDirection.ofDirection(dirX, dirY, dirZ), snap);
+        int remainingSteps = maxSteps;
+
+        while (remainingSteps >= 4) {
+            rayAdvancer.advance();
+            rayAdvancer.advance();
+            rayAdvancer.advance();
+            rayAdvancer.advance();
+            remainingSteps -= 4;
+            if (rayAdvancer.occluded > maxOccluding) return (maxSteps - remainingSteps);
+        }
+        return maxSteps;
+    }
+
     private static sealed class RayAdvancer extends RayPosition permits DebugRayAdvancer {
         private final RayDirection direction;
         private final BlockView blockView;
@@ -157,6 +180,10 @@ public class RaycastUtil {
 
         private static RayDirection from(double endX, double endY, double endZ, double startX, double startY, double startZ) {
             return new RayDirection(endX - startX, endY - startY, endZ - startZ);
+        }
+
+        private static RayDirection ofDirection(double x, double y, double z) {
+            return new RayDirection(x, y, z);
         }
 
         private double getLengthSquared() {
