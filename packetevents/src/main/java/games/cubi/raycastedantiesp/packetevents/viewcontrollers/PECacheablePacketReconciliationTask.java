@@ -33,7 +33,7 @@ final class PECacheablePacketReconciliationTask extends BaseEntitySpawnTask {
     public void run() {
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
-            Logger.error("Reconciliation fail: Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ".", 3, this.getClass());
+            Logger.warning("Reconciliation fail: Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ".", 6, this.getClass());
             if (packet instanceof WrapperPlayServerEntityMetadata metadataPacket) {
                 var data = metadataPacket.getEntityMetadata();
                 for (EntityData<?> eData : data) {
