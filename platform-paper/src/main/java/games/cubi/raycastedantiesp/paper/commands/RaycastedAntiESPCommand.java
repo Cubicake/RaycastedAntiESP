@@ -40,6 +40,7 @@ import net.strokkur.commands.permission.Permission;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -333,6 +334,16 @@ public class RaycastedAntiESPCommand {
 
         @Executes("entity-id")
         void getFromEntityID(int entityID, CommandSender sender) {
+            sender.sendRichMessage("<white>Searching Bukkit for entity id " + entityID + ":");
+            boolean foundBukkit = false;
+            for (World world : Bukkit.getWorlds()) {
+                Entity bukkitEntity = SpigotConversionUtil.getEntityById(world, entityID);
+                if (bukkitEntity != null) {
+                    sendBukkitEntityData(sender, bukkitEntity);
+                    foundBukkit = true;
+                }
+            }
+            if (!foundBukkit) sender.sendRichMessage("<red> Could not find entity via Bukkit.");
             sender.sendRichMessage("<white>Searching all connected player views for entity ID " + entityID + ":");
             int matches = 0;
             for (PlayerData playerData : PlayerRegistry.get().getPlayerDataArray()) {
