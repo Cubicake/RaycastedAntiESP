@@ -31,7 +31,7 @@ class RaycastUtilTest {
         Locatable start = new ImmutableLocatableImpl(world, 0, 0, 0);
         RecordingParticleSpawner particles = new RecordingParticleSpawner();
 
-        assertTrue(RaycastUtil.raycast(start, new ImmutableSpatialImpl(2, 0, 0), 1, 0, 10, true, emptyBlockView(), 1, particles));
+        assertTrue(RaycastUtil.raycastUnrolledAccumulated(1, 0, 10, true, 0f, emptyBlockView(), start, new ImmutableSpatialImpl(2, 0, 0), particles));
         assertEquals(List.of(world), particles.worlds);
     }
 
@@ -41,7 +41,7 @@ class RaycastUtilTest {
         Locatable start = new ImmutableLocatableImpl(world, 0.5, 0.5, 0.5);
         RecordingParticleSpawner particles = new RecordingParticleSpawner();
 
-        assertTrue(RaycastUtil.raycast(start, new ImmutableBlockSpatialImpl(3, 0, 0), 1, 0, 10, true, emptyBlockView(), 1, particles));
+        assertTrue(RaycastUtil.raycastUnrolledAccumulated(1, 0, 10, true, 0f, emptyBlockView(), start, new ImmutableBlockSpatialImpl(3, 0, 0), particles));
         assertEquals(0.5, particles.positions.getFirst().y());
         assertEquals(0.5, particles.positions.getFirst().z());
     }
@@ -65,8 +65,13 @@ class RaycastUtilTest {
 
         @Override
         public void spawnParticleAt(UUID world, Spatial spatial, Colour colour) {
+            spawnParticleAt(world, spatial.x(), spatial.y(), spatial.z(), colour);
+        }
+
+        @Override
+        public void spawnParticleAt(UUID world, double x, double y, double z, Colour colour) {
             worlds.add(world);
-            positions.add(new ImmutableSpatialImpl(spatial.x(), spatial.y(), spatial.z()));
+            positions.add(new ImmutableSpatialImpl(x, y, z));
         }
     }
 }

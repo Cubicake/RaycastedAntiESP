@@ -24,8 +24,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import games.cubi.raycastedantiesp.core.players.NettyData;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PEEntityStateReconciliationTaskTest {
     private static final UUID WORLD = UUID.randomUUID();
@@ -126,6 +130,56 @@ class PEEntityStateReconciliationTaskTest {
         playerData.nettyData().evictOldPendingPostSpawnTasks(EntitySpawnTask.TICKS_BEFORE_EVICTION);
 
         assertNull(playerData.nettyData().consumePendingPostSpawnTasksForEntity(entityID));
+    }
+
+    @Test
+    void recentlyDestroyedEntitySuppressesReconciliationQueuing() {
+        PlayerData playerData = playerData();
+        int entityID = 99;
+        int destroyedTick = 100;
+
+        playerData.nettyData().recordDestroyedEntity(entityID, destroyedTick);
+        assertTrue(playerData.nettyData().isRecentlyDestroyed(entityID, destroyedTick + 5));
+
+        // When recently destroyed, no tasks should be queued for this entity
+        assertNull(playerData.nettyData().consumePendingPostSpawnTasksForEntity(entityID));
+    }
+
+    @Test
+    void recentlyDestroyedEntityExpiresAfterConfiguredTicks() {
+        PlayerData playerData = playerData();
+        int entityID = 101;
+        int destroyedTick = 10;
+
+        playerData.nettyData().recordDestroyedEntity(entityID, destroyedTick);
+        assertTrue(playerData.nettyData().isRecentlyDestroyed(entityID, destroyedTick + 10));
+        assertTrue(playerData.nettyData().isRecentlyDestroyed(entityID, destroyedTick + NettyData.DESTROYED_ENTITY_EXPIRY_TICKS));
+        assertFalse(playerData.nettyData().isRecentlyDestroyed(entityID, destroyedTick + NettyData.DESTROYED_ENTITY_EXPIRY_TICKS + 1));
+    }
+
+    @Test
+    void respawnClearsRecentlyDestroyedState() {
+        PlayerData playerData = playerData();
+        int entityID = 102;
+        int currentTick = 50;
+
+        playerData.nettyData().recordDestroyedEntity(entityID, currentTick);
+        assertTrue(playerData.nettyData().isRecentlyDestroyed(entityID, currentTick));
+
+        playerData.nettyData().removeDestroyedEntity(entityID);
+        assertFalse(playerData.nettyData().isRecentlyDestroyed(entityID, currentTick));
+    }
+
+    @Test
+    void evictOldPendingPostSpawnTasksPrunesExpiredDestroyedEntities() {
+        PlayerData playerData = playerData();
+        int entityID = 103;
+        int currentTick = 100;
+
+        playerData.nettyData().recordDestroyedEntity(entityID, currentTick);
+        playerData.nettyData().evictOldPendingPostSpawnTasks(currentTick + NettyData.DESTROYED_ENTITY_EXPIRY_TICKS + 5);
+
+        assertFalse(playerData.nettyData().isRecentlyDestroyed(entityID, currentTick + NettyData.DESTROYED_ENTITY_EXPIRY_TICKS + 5));
     }
 
     private PlayerData playerData() {

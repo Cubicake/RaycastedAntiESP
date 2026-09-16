@@ -64,6 +64,7 @@ public final class PlayerLocatable implements MutableFloatingLocatable, Floating
     /** Updates the player's foot position while retaining rotation and pose. */
     public void updateFoot(double footX, double footY, double footZ) {
         validateFinite(footX, footY, footZ);
+        validateInitialised();
         synchronized (writerMonitor) {
             X.setOpaque(this, footX);
             Y.setOpaque(this, footY);
@@ -74,6 +75,7 @@ public final class PlayerLocatable implements MutableFloatingLocatable, Floating
     /** Updates the player's rotation while retaining position and pose. */
     public void updateRotation(float yaw, float pitch) {
         validateRotation(yaw, pitch);
+        validateInitialised();
         synchronized (writerMonitor) {
             YAW.setOpaque(this, yaw);
             PITCH.setOpaque(this, pitch);
@@ -83,6 +85,7 @@ public final class PlayerLocatable implements MutableFloatingLocatable, Floating
     /** Updates the player's pose while retaining position and rotation. */
     public void updatePose(PlayerPose pose) {
         Objects.requireNonNull(pose, "pose");
+        validateInitialised();
         synchronized (writerMonitor) {
             POSE.setOpaque(this, pose);
         }
@@ -92,6 +95,7 @@ public final class PlayerLocatable implements MutableFloatingLocatable, Floating
     public void updateFootAndRotation(double footX, double footY, double footZ, float yaw, float pitch) {
         validateFinite(footX, footY, footZ);
         validateRotation(yaw, pitch);
+        validateInitialised();
         synchronized (writerMonitor) {
             X.setOpaque(this, footX);
             Y.setOpaque(this, footY);
@@ -230,6 +234,7 @@ public final class PlayerLocatable implements MutableFloatingLocatable, Floating
             invalidate();
             return this;
         }
+        validateInitialised();
         synchronized (writerMonitor) {
             WORLD.setOpaque(this, world);
             return this;
@@ -344,6 +349,12 @@ public final class PlayerLocatable implements MutableFloatingLocatable, Floating
     private static void validateFinite(double value) {
         if (!Double.isFinite(value)) {
             throw new IllegalArgumentException("Coordinate must be finite");
+        }
+    }
+
+    private void validateInitialised() {
+        if (world() == null || pose() == null) {
+            throw new IllegalStateException("PlayerLocatable has not been initialized");
         }
     }
 

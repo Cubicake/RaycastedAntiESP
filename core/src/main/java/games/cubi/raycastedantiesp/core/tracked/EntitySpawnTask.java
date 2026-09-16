@@ -41,14 +41,9 @@ public interface EntitySpawnTask extends Runnable {
     default EntitySpawnTask trimExpiredTasks(int currentTick) {
         EntitySpawnTask current = this;
         while (current != null && current.thisShouldBeEvicted(currentTick)) {
-            Logger.warning("A task was evicted from the Netty task queue due to being too old! This should not happen under normal circumstances and may indicate a problem with the system being overloaded or tasks taking too long to execute. Current tick=" + currentTick + " Task=" + current, 3, EntitySpawnTask.class);
+            Logger.warning("A task was evicted from the Netty task queue due to being too old! Current tick=" + currentTick + " Task=" + current, 6, EntitySpawnTask.class);
             EntitySpawnTask next = current.getNext();
             current.setNext(null);
-            try {
-                current.run(); // perhaps the task is salvageable even if we missed the correct caller
-            } catch (Exception e) {
-                Logger.error("Error while running evicted future netty task " + current, e, 3, EntitySpawnTask.class);
-            }
             current = next;
         }
         return current;
