@@ -60,6 +60,10 @@ final class ConfigCandidate {
     }
 
     RootConfig parseReadyConfig() {
+        // Hiding sounds from hidden entities is currently unsupported; persist the false defaults.
+        for (String section : List.of("player", "entity")) {
+            repair(NodePath.path("checks", section, "hide-sounds-when-hidden"), "hiding sounds from hidden entities is currently unsupported");
+        }
         int attemptsRemaining = Math.max(2, countLeaves(defaults) + 1);
         while (attemptsRemaining-- > 0) {
             RootConfig root = deserializeWithRepairs(NodePath.path(), RootConfig.class);
