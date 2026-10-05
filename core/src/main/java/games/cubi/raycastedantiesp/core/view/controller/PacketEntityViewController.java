@@ -153,6 +153,19 @@ public abstract class PacketEntityViewController<P> {
         return cancelIfEnabledAndHidden(entityID, playerData);
     }
 
+    protected boolean handleCollectItem(int collectedEntityID, int collectorEntityID, PlayerData playerData) {
+        // Pickup animations do not imply removal; full pickups have a separate destroy packet.
+        return collectItemEndpointHidden(collectedEntityID, playerData) || collectItemEndpointHidden(collectorEntityID, playerData);
+    }
+
+    private boolean collectItemEndpointHidden(int entityID, PlayerData playerData) {
+        if (EntityBypassRegistry.isBypassed(entityID)) {
+            return false;
+        }
+        NettyEntity<?> entity = playerData.entityFromID(entityID);
+        return entity != null && !entity.isSelfEntity() && (!entity.clientVisible());
+    }
+
     @Packet(Packet.Packets.ENTITY_EVENT)
     protected boolean handleEntityEvent(int entityID, PlayerData playerData) {
         return cancelIfEnabledAndHidden(entityID, playerData);

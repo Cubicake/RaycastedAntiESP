@@ -173,6 +173,11 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 if (!isBypassed(packet.getEntityId()) && handleEntityAnimation(packet.getEntityId(), playerData) == REQUIRE_EVENT_CANCELLATION)
                     event.setCancelled(true);
             }
+            case PacketType.Play.Server.COLLECT_ITEM -> {
+                WrapperPlayServerCollectItem packet = new WrapperPlayServerCollectItem(event);
+                if (handleCollectItem(packet.getCollectedEntityId(), packet.getCollectorEntityId(), playerData) == REQUIRE_EVENT_CANCELLATION)
+                    event.setCancelled(true);
+            }
             case PacketType.Play.Server.ENTITY_STATUS -> {
                 WrapperPlayServerEntityStatus packet = new WrapperPlayServerEntityStatus(event);
                 if (!isBypassed(packet.getEntityId()) && handleEntityEvent(packet.getEntityId(), playerData) == REQUIRE_EVENT_CANCELLATION)
