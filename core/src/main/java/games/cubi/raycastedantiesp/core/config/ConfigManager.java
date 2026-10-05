@@ -16,106 +16,135 @@ import games.cubi.raycastedantiesp.core.config.raycast.PlayerConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.SoundEffectsConfig;
 import games.cubi.raycastedantiesp.core.config.raycast.TileEntityConfig;
 import games.cubi.utils.VarHandler;
+import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurationNode;
-import org.spongepowered.configurate.yaml.NodeStyle;
+import org.spongepowered.configurate.ConfigurateException;
+import org.spongepowered.configurate.NodePath;
+import org.spongepowered.configurate.serialize.SerializationException;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.annotation.Documented;
 import java.lang.invoke.VarHandle;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.function.Supplier;
+import java.util.Set;
 
+/**
+ * Coordinates startup, runtime edits, and publication of configuration snapshots.
+ * ConfigCandidate prepares values and repairs; ConfigFile handles persistence.
+ */
 public class ConfigManager {
-    private static final String REQUIRED_CONFIG_VERSION = "2.0";
-    private static ConfigManager instance;
+    private static volatile ConfigManager instance;
+    private static final VarHandle INSTANCE = VarHandler.$tatic(ConfigManager.class, "instance", ConfigManager.class);
 
-    private final Supplier<InputStream> resourceSupplier;
-    private final Path dataFolder;
-    private final Path configPath;
-    private final YamlConfigurationLoader loader;
-    private final List<ConfigExtension<? extends Config>> extensions;
+    private final ConfigFile configFile;
 
-    private ConfigurationNode config;
+    private volatile ActiveState activeState = new ActiveState(LoggingConfig.DEFAULT, null);
+    private static final VarHandle ACTIVE_STATE = VarHandler.get(ConfigManager.class, "activeState", ActiveState.class);
     private RootConfig startupConfig;
-    private volatile RootConfig activeConfig; private static final VarHandle ACTIVE_CONFIG = VarHandler.get(ConfigManager.class, "activeConfig", RootConfig.class);
+    private CommentedConfigurationNode configNode;
 
-    private ConfigManager(Supplier<InputStream> resourceSupplier, Path dataFolder, List<ConfigExtension<? extends Config>> extensions) {
-        this.resourceSupplier = resourceSupplier;
-        this.dataFolder = dataFolder;
-        this.extensions = List.copyOf(extensions);
-        this.configPath = dataFolder.resolve("config.yml");
-        this.loader = YamlConfigurationLoader.builder()
-                .path(configPath)
-                .nodeStyle(NodeStyle.BLOCK)
-                .build();
-        load();
+    ConfigManager(Path dataFolder) {
+        configFile = new ConfigFile(dataFolder);
     }
 
-    public static ConfigManager initialiseConfigManager(Supplier<InputStream> resourceSupplier, Path dataFolder, List<ConfigExtension<? extends Config>> extensions) {
-        if (instance == null) {
-            instance = new ConfigManager(resourceSupplier, dataFolder, extensions);
+    public static synchronized ConfigManager initialiseConfigManager(Path dataFolder) {
+        ConfigManager current = (ConfigManager) INSTANCE.getAcquire();
+        if (current == null) {
+            ConfigManager manager = new ConfigManager(dataFolder);
+            INSTANCE.setRelease(manager);
+            try {
+                manager.loadLoggingConfig();
+            } catch (RuntimeException exception) {
+                INSTANCE.setRelease(null);
+                throw exception;
+            }
+            current = manager;
         }
-        return instance;
+        return current;
     }
 
     public static ConfigManager get() {
-        if (instance == null) {
+        ConfigManager current = (ConfigManager) INSTANCE.getAcquire();
+        if (current == null) {
             Logger.errorAndReturn(new RuntimeException("ConfigManager accessed before being initiated. Please report this."), 2, ConfigManager.class);
         }
-        return instance;
+        return current;
     }
 
-    public void load() {
-        ensureConfigFileExists();
-        ConfigurationNode loaded = loadConfigNode();
-        ConfigurationNode defaults = loadBundledDefaults();
-        if (defaults != null && mergeMissing(defaults, loaded)) {
-            saveConfigNode(loaded);
-        }
-        RootConfig parsed = parse(loaded);
-        validateReload(parsed);
-        config = loaded;
-        if (startupConfig == null) {
-            startupConfig = parsed;
-        }
-        ACTIVE_CONFIG.setOpaque(this, parsed);
+    public static LoggingConfig getLoggingConfigOrDefault() {
+        ConfigManager current = (ConfigManager) INSTANCE.getAcquire();
+        return current == null ? LoggingConfig.DEFAULT : current.getLoggingConfig();
     }
 
-    public SetConfigResult setConfigValue(String path, String rawValue) {
-        ConfigurationNode candidate = loadConfigNode();
-        ConfigurationNode target = node(candidate, path);
+    public synchronized void completeInitialLoad() {
+        if (startupConfig != null) {
+            throw new IllegalStateException("Configuration loading has already been completed");
+        }
+
+        ConfigCandidate candidate = prepare();
+        RootConfig ready = candidate.parseReadyConfig();
+        saveIfChanged(candidate);
+
+        startupConfig = ready;
+        configNode = candidate.node();
+        ACTIVE_STATE.setRelease(this, new ActiveState(ready.loggingConfig(), ready));
+        logRepairs(candidate.repairs());
+    }
+
+    /**
+     * Reloads the complete configuration. The active snapshot is replaced only after parsing and validation succeed.
+     */
+    public synchronized void load() {
+        requireReady();
+        ConfigCandidate candidate = prepare();
+        RootConfig ready = candidate.parseReadyConfig();
+        saveIfChanged(candidate);
+        configNode = candidate.node();
+        logRepairs(candidate.repairs());
+        validateReload(ready);
+        ACTIVE_STATE.setRelease(this, new ActiveState(ready.loggingConfig(), ready));
+    }
+
+    public synchronized SetConfigResult setConfigValue(String path, String rawValue) {
+        requireReady();
+        ConfigCandidate candidate = prepare();
+        ConfigurationNode target = node(candidate.node(), path);
         if (target.virtual()) {
             return SetConfigResult.invalid("Unknown config path: " + path);
         }
 
-        ConfigReader.setRaw(target, ConfigReader.parseRawValue(rawValue));
-
+        try {
+            Object parsedValue = parseRawValue(rawValue);
+            target.set(parsedValue);
+            candidate.markDirty();
+            NodePath targetPath = NodePath.path((Object[]) path.split("\\."));
+            if (parsedValue == null && candidate.hasDefault(targetPath)) {
+                candidate.repair(targetPath, "value cannot be null");
+            }
+        } catch (ConfigurateException e) {
+            return SetConfigResult.invalid("Invalid YAML value: " + rawValue);
+        }
         return applyCandidate(candidate, false);
     }
 
-    public SetConfigResult addConfigListValue(String path, String rawValue) {
+    public synchronized SetConfigResult addConfigListValue(String path, String rawValue) {
+        requireReady();
         return mutateConfigListValue(path, rawValue, ListMutation.ADD);
     }
 
-    public SetConfigResult removeConfigListValue(String path, String rawValue) {
+    public synchronized SetConfigResult removeConfigListValue(String path, String rawValue) {
+        requireReady();
         return mutateConfigListValue(path, rawValue, ListMutation.REMOVE);
     }
 
     private SetConfigResult mutateConfigListValue(String path, String rawValue, ListMutation mutation) {
-        ConfigurationNode candidate = loadConfigNode();
-        ConfigurationNode target = node(candidate, path);
+        ConfigCandidate candidate = prepare();
+        ConfigurationNode target = node(candidate.node(), path);
         if (target.virtual()) {
             return SetConfigResult.invalid("Unknown config path: " + path);
         }
@@ -128,7 +157,13 @@ public class ConfigManager {
             return SetConfigResult.invalid(path + " is not a list path");
         }
 
-        Object parsedValue = ConfigReader.parseRawValue(rawValue);
+        Object parsedValue;
+        try {
+            parsedValue = parseRawValue(rawValue);
+        } catch (ConfigurateException e) {
+            return SetConfigResult.invalid("Invalid YAML value: " + rawValue);
+        }
+
         boolean changed = switch (mutation) {
             case ADD -> {
                 if (values.contains(parsedValue)) {
@@ -139,113 +174,115 @@ public class ConfigManager {
             }
             case REMOVE -> values.remove(parsedValue);
         };
-
         if (!changed) {
             return SetConfigResult.invalid("No change made for " + path);
         }
 
-        ConfigReader.setRaw(target, values);
+        try {
+            target.set(values);
+            candidate.markDirty();
+        } catch (SerializationException e) {
+            return SetConfigResult.invalid("Failed to update " + path);
+        }
         return applyCandidate(candidate, true);
     }
 
-    private SetConfigResult applyCandidate(ConfigurationNode candidate, boolean allowRestartRequired) {
-        RootConfig parsed;
+    private SetConfigResult applyCandidate(ConfigCandidate candidate, boolean allowRestartRequired) {
+        candidate.mergeDefaults();
+        RootConfig ready;
         try {
-            parsed = parse(candidate);
-            validateReload(parsed);
+            ready = candidate.parseReadyConfig();
+            validateReload(ready);
         } catch (RestartRequiredException e) {
             if (!allowRestartRequired) {
                 return SetConfigResult.invalid(e.getMessage());
             }
-            config = candidate;
-            saveConfigNode(candidate);
-            return SetConfigResult.restartRequired(e.getMessage());
+            saveIfChanged(candidate);
+            configNode = candidate.node();
+            logRepairs(candidate.repairs());
+            return SetConfigResult.restartRequired(e.getMessage(), candidate.repairs());
         } catch (ConfigLoadException e) {
             return SetConfigResult.invalid(e.getMessage());
         }
 
-        config = candidate;
-        ACTIVE_CONFIG.setOpaque(this, parsed);
-        saveConfigNode(candidate);
-        return SetConfigResult.ok();
+        saveIfChanged(candidate);
+        configNode = candidate.node();
+        ACTIVE_STATE.setRelease(this, new ActiveState(ready.loggingConfig(), ready));
+        logRepairs(candidate.repairs());
+        return SetConfigResult.ok(candidate.repairs());
+    }
+
+    public LoggingConfig getLoggingConfig() {
+        return ((ActiveState) ACTIVE_STATE.getAcquire(this)).loggingConfig;
     }
 
     public PlayerConfig getPlayerConfig() {
-        return activeConfig().checksConfig().playerConfig();
+        return requireReady().checksConfig().playerConfig();
     }
 
     public EntityConfig getEntityConfig() {
-        return activeConfig().checksConfig().entityConfig();
+        return requireReady().checksConfig().entityConfig();
     }
 
     public TileEntityConfig getTileEntityConfig() {
-        return activeConfig().checksConfig().tileEntityConfig();
+        return requireReady().checksConfig().tileEntityConfig();
     }
 
     public SoundEffectsConfig getSoundEffectsConfig() {
-        return activeConfig().checksConfig().soundEffectsConfig();
+        return requireReady().checksConfig().soundEffectsConfig();
     }
 
     public ChunkSectionConfig getChunkSectionConfig() {
-        return activeConfig().checksConfig().chunkSectionConfig();
+        return requireReady().checksConfig().chunkSectionConfig();
     }
 
     public DebugConfig getDebugConfig() {
-        RootConfig current = activeConfig();
-        return current == null ? null : current.debugConfig();
+        return requireReady().debugConfig();
     }
 
     public UpdateConfig getUpdateConfig() {
-        return activeConfig().updateConfig();
+        return requireReady().updateConfig();
     }
 
     public EngineConfig getEngineConfig() {
-        return activeConfig().engineConfig();
+        return requireReady().engineConfig();
     }
 
     public BlockProcessorConfig getBlockProcessorConfig() {
-        return activeConfig().blockProcessorConfig();
+        return requireReady().blockProcessorConfig();
     }
 
-    public <T extends Config> T getExtensionConfig(Class<T> type) {
-        return activeConfig().extensionConfig(type);
-    }
-
-    private RootConfig activeConfig() {
-        return (RootConfig) ACTIVE_CONFIG.getOpaque(this);
-    }
-
-    public ConfigurationNode getConfigFile() {
-        return config;
-    }
-
-    public Map<String, Object> getConfigValues() {
+    public synchronized Map<String, Object> getConfigValues() {
+        requireReady();
         Map<String, Object> values = new LinkedHashMap<>();
-        collectConfigValues(config, "", values);
-        return values;
+        collectConfigValues(configNode, "", values);
+        return Collections.unmodifiableMap(values);
     }
 
-    private RootConfig parse(ConfigurationNode loaded) {
-        String version = ConfigReader.string(ConfigReader.node(loaded, "config-version"), "config-version");
-        if (!REQUIRED_CONFIG_VERSION.equals(version)) {
-            throw new ConfigLoadException("Unsupported config-version '" + version + "'. RaycastedAntiESP requires config-version '2.0'.");
-        }
+    void loadLoggingConfig() {
+        ConfigCandidate candidate = prepare();
+        LoggingConfig logging = candidate.parseLoggingConfig();
+        saveIfChanged(candidate);
+        configNode = candidate.node();
+        ACTIVE_STATE.setRelease(this, new ActiveState(logging, null));
+        logRepairs(candidate.repairs());
+    }
 
-        ChecksConfig checksConfig = ChecksConfig.load(loaded);
-        EngineConfig engineConfig = EngineConfig.load(loaded);
-        BlockProcessorConfig blockProcessorConfig = BlockProcessorConfig.load(loaded);
-        DebugConfig debugConfig = DebugConfig.load(loaded);
-        UpdateConfig updateConfig = UpdateConfig.load(loaded);
-        Map<Class<? extends Config>, Config> extensionConfigs = new LinkedHashMap<>();
-        for (ConfigExtension<? extends Config> extension : extensions) {
-            extensionConfigs.put(extension.type(), extension.load(loaded, blockProcessorConfig));
-        }
+    private ConfigCandidate prepare() {
+        return new ConfigCandidate(configFile.load(), configFile.createDefaultNode());
+    }
 
-        if (!blockProcessorConfig.trackAllBlocks() && checksConfig.chunkSectionConfig().enabled()) {
-            throw new ConfigLoadException("checks.chunk-section.enabled must be false when block-processor.track-all-blocks is false");
+    private void saveIfChanged(ConfigCandidate candidate) {
+        if (candidate.isDirty()) {
+            configFile.save(candidate.node());
         }
+    }
 
-        return new RootConfig(version, checksConfig, engineConfig, blockProcessorConfig, debugConfig, updateConfig, Map.copyOf(extensionConfigs));
+    private Object parseRawValue(String rawValue) throws ConfigurateException {
+        ConfigurationNode parsed = YamlConfigurationLoader.builder()
+                .defaultOptions(ConfigMapping.options())
+                .buildAndLoadString("value: " + rawValue);
+        return parsed.node("value").raw();
     }
 
     private void validateReload(RootConfig next) {
@@ -261,20 +298,34 @@ public class ConfigManager {
         if (!next.checksConfig().entityConfig().excludedTypes().equals(startupConfig.checksConfig().entityConfig().excludedTypes())) {
             throw new RestartRequiredException("excluded entity types cannot be changed without a restart.");
         }
+        if (!next.checksConfig().tileEntityConfig().excludedBlocks().equals(startupConfig.checksConfig().tileEntityConfig().excludedBlocks())) {
+            throw new RestartRequiredException("excluded tile-entity blocks cannot be changed without a restart.");
+        }
         if (next.checksConfig().hasEnabledStatusChanges(startupConfig.checksConfig())) {
             throw new RestartRequiredException("player and entity checks cannot be enabled or disabled without a restart.");
         }
-        for (ConfigExtension<? extends Config> extension : extensions) {
-            validateExtensionReload(extension, next);
+    }
+
+    private RootConfig requireReady() {
+        RootConfig ready = ((ActiveState) ACTIVE_STATE.getAcquire(this)).readyConfig;
+        if (ready == null) {
+            throw new IllegalStateException("Configuration is not available until completeInitialLoad has finished");
+        }
+        return ready;
+    }
+
+    private void logRepairs(List<ConfigCandidate.Repair> repairs) {
+        for (ConfigCandidate.Repair repair : repairs) {
+            String reason = repair.reason() == null || repair.reason().isBlank() ? "invalid value" : repair.reason();
+            String message = "Invalid config value at " + repair.pathString() + ": " + reason
+                    + ". Replaced it with the default " + displayValue(repair.defaultValue()) + ".";
+            Logger.warning(message, 4, ConfigManager.class);
         }
     }
 
-    private <T extends Config> void validateExtensionReload(ConfigExtension<T> extension, RootConfig next) {
-        T startupExtensionConfig = startupConfig.extensionConfig(extension.type());
-        T nextExtensionConfig = next.extensionConfig(extension.type());
-        if (extension.requiresRestart(startupExtensionConfig, nextExtensionConfig)) {
-            throw new RestartRequiredException("block-processor." + extension.type().getSimpleName() + " cannot be changed without a restart");
-        }
+    private String displayValue(Object value) {
+        String displayed = String.valueOf(value);
+        return displayed.length() <= 160 ? displayed : displayed.substring(0, 157) + "...";
     }
 
     private void collectConfigValues(ConfigurationNode node, String path, Map<String, Object> values) {
@@ -284,195 +335,26 @@ public class ConfigManager {
             }
             return;
         }
-
         if (!node.childrenList().isEmpty()) {
             values.put(path, node.childrenList().stream().map(ConfigurationNode::raw).toList());
             return;
         }
-
         for (Map.Entry<Object, ? extends ConfigurationNode> entry : node.childrenMap().entrySet()) {
             String key = String.valueOf(entry.getKey());
-            String nextPath = path.isEmpty() ? key : path + "." + key;
-            collectConfigValues(entry.getValue(), nextPath, values);
-        }
-    }
-
-    private void ensureConfigFileExists() {
-        try {
-            Files.createDirectories(dataFolder);
-            if (!Files.exists(configPath)) {
-                InputStream resource = resourceSupplier.get();
-                if (resource != null) {
-                    try (resource) {
-                        Files.copy(resource, configPath);
-                    }
-                } else {
-                    Files.createFile(configPath);
-                }
-            }
-            ConfigMigrations.prependConfigDocumentationHeaderIfMissing(configPath);
-            ConfigMigrations.migrateSoundEffectsEnabled(configPath);
-        } catch (IOException e) {
-            throw new ConfigLoadException("Failed to create config.yml", e);
-        }
-    }
-
-    private ConfigurationNode loadConfigNode() {
-        try {
-            return loader.load();
-        } catch (IOException e) {
-            throw new ConfigLoadException("Failed to load config.yml", e);
-        }
-    }
-
-    private ConfigurationNode loadBundledDefaults() {
-        InputStream resource = resourceSupplier.get();
-        if (resource == null) {
-            return null;
-        }
-        try (resource) {
-            return YamlConfigurationLoader.builder()
-                    .source(() -> new BufferedReader(new InputStreamReader(resource)))
-                    .build()
-                    .load();
-        } catch (IOException e) {
-            throw new ConfigLoadException("Failed to load bundled config defaults", e);
-        }
-    }
-
-    private boolean mergeMissing(ConfigurationNode defaults, ConfigurationNode target) {
-        if (target.virtual()) {
-            target.from(defaults);
-            return true;
-        }
-
-        boolean changed = false;
-        if (!defaults.childrenMap().isEmpty()) {
-            for (Map.Entry<Object, ? extends ConfigurationNode> entry : defaults.childrenMap().entrySet()) {
-                changed |= mergeMissing(entry.getValue(), target.node(entry.getKey()));
-            }
-        }
-        return changed;
-    }
-
-    private void saveConfigNode(ConfigurationNode node) {
-        try {
-            loader.save(node);
-        } catch (IOException e) {
-            throw new ConfigLoadException("Failed to save config.yml", e);
-        }
-    }
-
-    /**
-     * Temporary text-level config mutations. Remove this class when these migrations are no longer needed.
-     */
-    private static final class ConfigMigrations {
-        private static final Pattern YAML_KEY = Pattern.compile("^([ \\t]*)([^:#\\s][^:]*):.*$");
-        private static final Pattern SOUND_EFFECTS_ENABLED_TRUE = Pattern.compile("^([ \\t]*enabled[ \\t]*:[ \\t]*)true([ \\t]*(?:#.*)?)$", Pattern.CASE_INSENSITIVE);
-
-        private ConfigMigrations() {
-        }
-
-        private static void prependConfigDocumentationHeaderIfMissing(Path configPath) {
-            try {
-                String content = Files.readString(configPath);
-
-                if (content.startsWith("#")) {
-                    Logger.debug("Config starts with comment");
-                    return;
-                }
-
-                Logger.debug("no starting comment");
-                Files.writeString(configPath, "# An explanation of this configuration file and what all the options do can be found at https://raycastedantiesp.cubi.games/config/" + System.lineSeparator() + content);
-            } catch (Exception e) {
-                Logger.warning(e,3, ConfigManager.class);
-            }
-        }
-
-        @Temporary(forRemovalIn = "0.8.0")
-        private static void migrateSoundEffectsEnabled(Path configPath) {
-            try {
-                String content = Files.readString(configPath, StandardCharsets.UTF_8);
-                String migrated = replaceSoundEffectsEnabled(content);
-                if (!content.equals(migrated)) {
-                    Files.writeString(configPath, migrated, StandardCharsets.UTF_8);
-                }
-            } catch (IOException e) {
-                throw new ConfigLoadException("Failed to migrate sound-effects.enabled in config.yml", e);
-            }
-        }
-
-        private static String replaceSoundEffectsEnabled(String content) {
-            StringBuilder migrated = new StringBuilder(content.length());
-            int lineStart = 0;
-            int checksIndent = -1;
-            int soundEffectsIndent = -1;
-            boolean changed = false;
-
-            while (lineStart < content.length()) {
-                int lineEnd = content.indexOf('\n', lineStart);
-                boolean hasLineEnding = lineEnd >= 0;
-                int contentEnd = hasLineEnding ? lineEnd : content.length();
-                int lineContentEnd = contentEnd > lineStart && content.charAt(contentEnd - 1) == '\r'
-                        ? contentEnd - 1 : contentEnd;
-                String line = content.substring(lineStart, lineContentEnd);
-                String lineEnding = content.substring(lineContentEnd, contentEnd) + (hasLineEnding ? "\n" : "");
-
-                Matcher key = YAML_KEY.matcher(line);
-                if (key.matches()) {
-                    int indent = key.group(1).length();
-                    String name = key.group(2).trim();
-
-                    if (checksIndent < 0) {
-                        if (name.equals("checks")) {
-                            checksIndent = indent;
-                        }
-                    } else if (indent <= checksIndent) {
-                        checksIndent = name.equals("checks") ? indent : -1;
-                        soundEffectsIndent = -1;
-                    } else if (soundEffectsIndent < 0) {
-                        if (name.equals("sound-effects")) {
-                            soundEffectsIndent = indent;
-                        }
-                    } else if (indent <= soundEffectsIndent) {
-                        soundEffectsIndent = name.equals("sound-effects") ? indent : -1;
-                    }
-                }
-
-                if (soundEffectsIndent >= 0 && key.matches()
-                        && key.group(2).trim().equals("enabled")
-                        && key.group(1).length() > soundEffectsIndent) {
-                    Matcher enabled = SOUND_EFFECTS_ENABLED_TRUE.matcher(line);
-                    if (enabled.matches()) {
-                        line = enabled.group(1) + "false" + enabled.group(2);
-                        changed = true;
-                    }
-                }
-
-                migrated.append(line).append(lineEnding);
-                if (!hasLineEnding) {
-                    break;
-                }
-                lineStart = contentEnd + 1;
-            }
-
-            return changed ? migrated.toString() : content;
-        }
-
-        @Documented
-        private @interface Temporary {
-            String forRemovalIn();
+            collectConfigValues(entry.getValue(), path.isEmpty() ? key : path + "." + key, values);
         }
     }
 
     private ConfigurationNode node(ConfigurationNode root, String path) {
-        String[] parts = path.split("\\.");
-        return ConfigReader.node(root, parts);
+        return root.node((Object[]) path.split("\\."));
     }
 
     private enum ListMutation {
         ADD,
         REMOVE
+    }
+
+    private record ActiveState(LoggingConfig loggingConfig, RootConfig readyConfig) {
     }
 
     private static final class RestartRequiredException extends ConfigLoadException {
@@ -481,17 +363,29 @@ public class ConfigManager {
         }
     }
 
-    public record SetConfigResult(boolean success, boolean restartRequired, String message) {
-        public static SetConfigResult ok() {
-            return new SetConfigResult(true, false, "Config value updated.");
+    public record SetConfigResult(boolean success, boolean restartRequired, boolean repaired, String message) {
+        private static SetConfigResult ok(List<ConfigCandidate.Repair> repairs) {
+            if (repairs.isEmpty()) {
+                return new SetConfigResult(true, false, false, "Config value updated.");
+            }
+            return new SetConfigResult(true, false, true, repairMessage(repairs));
         }
 
-        public static SetConfigResult restartRequired(String message) {
-            return new SetConfigResult(true, true, message);
+        private static SetConfigResult restartRequired(String message, List<ConfigCandidate.Repair> repairs) {
+            String result = repairs.isEmpty() ? message : message + " " + repairMessage(repairs);
+            return new SetConfigResult(true, true, !repairs.isEmpty(), result);
         }
 
         public static SetConfigResult invalid(String message) {
-            return new SetConfigResult(false, false, message);
+            return new SetConfigResult(false, false, false, message);
+        }
+
+        private static String repairMessage(List<ConfigCandidate.Repair> repairs) {
+            Set<String> paths = new LinkedHashSet<>();
+            for (ConfigCandidate.Repair repair : repairs) {
+                paths.add(repair.pathString());
+            }
+            return "Invalid values at " + String.join(", ", paths) + " were replaced with defaults.";
         }
     }
 }

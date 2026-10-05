@@ -14,7 +14,7 @@ import games.cubi.raycastedantiesp.paper.commands.AttributionBrigadier;
 import games.cubi.raycastedantiesp.paper.commands.RaycastedAntiESPCommandBrigadier;
 import games.cubi.raycastedantiesp.paper.config.PaperEntityTypeExclusionResolver;
 import games.cubi.raycastedantiesp.paper.engine.PaperAsyncEngine;
-import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcessorConfig;
+import games.cubi.raycastedantiesp.paper.config.PaperBlockSelectorMatcher;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsBlockView;
 import games.cubi.raycastedantiesp.packetevents.view.PacketEventsEntityView;
 import games.cubi.raycastedantiesp.core.view.ViewRegistry;
@@ -42,7 +42,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 import java.util.function.IntSupplier;
-import java.util.List;
 
 public final class RaycastedAntiESP extends JavaPlugin implements CommandExecutor {
     private static ConfigManager config;
@@ -70,11 +69,7 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
 
     @Override
     public void onLoad() {
-        config = ConfigManager.initialiseConfigManager(
-                () -> getResource("config.yml"),
-                getDataFolder().toPath(),
-                List.of(PacketEventsBlockProcessorConfig.EXTENSION)
-        );
+        config = ConfigManager.initialiseConfigManager(getDataFolder().toPath());
         Plugin packetEvents = Bukkit.getPluginManager().getPlugin("packetevents");
         if (packetEvents == null) {
             throw new IllegalStateException("PacketEvents is required but was not found.");
@@ -92,8 +87,11 @@ public final class RaycastedAntiESP extends JavaPlugin implements CommandExecuto
         else {
             currentTickSupplier = new PaperTicker();
         }
+        config.completeInitialLoad();
         PaperEntityTypeExclusionResolver.resolveAndInitialise(config.getEntityConfig().excludedTypes());
-        PacketEventsPaperBlockInfoResolver blockInfoResolver = new PacketEventsPaperBlockInfoResolver();
+        PacketEventsPaperBlockInfoResolver blockInfoResolver = new PacketEventsPaperBlockInfoResolver(
+                new PaperBlockSelectorMatcher(config.getTileEntityConfig().excludedBlocks())
+        );
         boolean trackAllBlocks = config.getBlockProcessorConfig().trackAllBlocks();
         ViewRegistry.initialise(worldEpoch -> new PacketEventsBlockView(blockInfoResolver, trackAllBlocks, worldEpoch), PacketEventsEntityView::createEntityView, PacketEventsEntityView::createPlayerView);
         PacketEventsCommonViewController.initialise(new PaperPacketEventsCommonViewController(currentTickSupplier));

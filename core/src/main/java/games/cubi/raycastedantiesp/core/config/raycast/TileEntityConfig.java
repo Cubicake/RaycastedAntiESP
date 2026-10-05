@@ -8,15 +8,29 @@
 
 package games.cubi.raycastedantiesp.core.config.raycast;
 
-import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Comment;
+import org.spongepowered.configurate.objectmapping.meta.Setting;
 
-public class TileEntityConfig extends RaycastConfig {
-    private TileEntityConfig(RaycastConfig config) {
-        super(config.enabled(), false, config.getMaxOccludingCount(), config.getAlwaysShowRadius(),
-                config.getRaycastRadius(), config.hideOnSpawnDistance(), config.getVisibleRecheckIntervalTicks());
-    }
+import java.util.List;
 
-    public static TileEntityConfig load(ConfigurationNode node, String path) {
-        return new TileEntityConfig(RaycastConfig.load(node, path, false));
+@ConfigSerializable
+public record TileEntityConfig(
+        @Setting(nodeFromParent = true)
+        RaycastSettings raycastSettings,
+        @Comment("Blocks that should not be managed as tile entities. Use namespaced block keys.\n"
+                + "\"minecraft:chest\" matches every chest state.\n"
+                + "\"minecraft:chest[waterlogged=true]\" matches all waterlogged chests, regardless of facing or chest type.\n"
+                + "Omitted properties are wildcards. All specified properties must match. Specify every property to select one exact state.\n"
+                + "A block is excluded if any list entry matches. Changes require a server restart.")
+        List<BlockSelector> excludedBlocks
+) implements RaycastConfig {
+    public static final TileEntityConfig DEFAULT = new TileEntityConfig(
+            new RaycastSettings(true, (byte) 3, (short) 8, (short) 64, (short) 24, (short) -1),
+            List.of(BlockSelector.parse("minecraft:beacon"))
+    );
+
+    public TileEntityConfig {
+        excludedBlocks = List.copyOf(excludedBlocks);
     }
 }

@@ -9,66 +9,44 @@
 package games.cubi.raycastedantiesp.core.config.raycast;
 
 import org.junit.jupiter.api.Test;
-import org.spongepowered.configurate.BasicConfigurationNode;
-import org.spongepowered.configurate.ConfigurationNode;
-import org.spongepowered.configurate.serialize.SerializationException;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RaycastConfigTest {
     @Test
-    void playerAndEntityRetentionSettingsLoadIndependently() throws SerializationException {
-        PlayerConfig playerConfig = PlayerConfig.load(entityNode(true), "checks.player");
-        EntityConfig entityConfig = EntityConfig.load(entityNode(false), "checks.entity");
+    void variantSettingsRemainIndependent() {
+        PlayerConfig defaults = PlayerConfig.DEFAULT;
+        PlayerConfig changed = new PlayerConfig(
+                defaults.raycastSettings(),
+                !defaults.hideSoundsWhenHidden(),
+                !defaults.keepClientEntityWhenHidden(),
+                !defaults.onlyCheckSneaking()
+        );
 
-        assertTrue(playerConfig.keepClientEntityWhenHidden());
-        assertFalse(playerConfig.onlyCheckSneaking());
-        assertFalse(entityConfig.keepClientEntityWhenHidden());
+        assertNotEquals(defaults.hideSoundsWhenHidden(), changed.hideSoundsWhenHidden());
+        assertNotEquals(defaults.keepClientEntityWhenHidden(), changed.keepClientEntityWhenHidden());
+        assertNotEquals(defaults.onlyCheckSneaking(), changed.onlyCheckSneaking());
+        assertEquals(defaults.raycastSettings(), changed.raycastSettings());
     }
 
     @Test
-    void playerSneakingOnlySettingLoadsIndependently() throws SerializationException {
-        ConfigurationNode node = entityNode(true);
-        node.node("only-check-sneaking").set(true);
+    void tileEntityUsesInterfaceDefaultsForUnsupportedSettings() {
+        TileEntityConfig config = TileEntityConfig.DEFAULT;
 
-        PlayerConfig playerConfig = PlayerConfig.load(node, "checks.player");
-
-        assertTrue(playerConfig.onlyCheckSneaking());
-    }
-
-    @Test
-    void tileEntityConfigDoesNotRequireOrEnableClientRetention() throws SerializationException {
-        TileEntityConfig config = TileEntityConfig.load(baseNode(), "checks.tile-entity");
-
+        assertFalse(config.hideSoundsWhenHidden());
         assertFalse(config.keepClientEntityWhenHidden());
     }
 
     @Test
-    void legacyConstructorKeepsDestroyBehaviorWhileNewOverloadCanRetain() {
-        RaycastConfig legacy = new RaycastConfig(true, true, 3, 8, 48, 24, 5);
-        RaycastConfig retaining = new RaycastConfig(true, true, 3, 8, 48, 24, 5, true);
+    void squaredDistancesAreDerivedFromConfiguredDistances() {
+        RaycastConfig config = EntityConfig.DEFAULT;
 
-        assertFalse(legacy.keepClientEntityWhenHidden());
-        assertTrue(retaining.keepClientEntityWhenHidden());
-    }
-
-    private static ConfigurationNode entityNode(boolean keepClientEntityWhenHidden) throws SerializationException {
-        ConfigurationNode node = baseNode();
-        node.node("hide-sounds-when-hidden").set(true);
-        node.node("keep-client-entity-when-hidden").set(keepClientEntityWhenHidden);
-        node.node("only-check-sneaking").set(false);
-        return node;
-    }
-
-    private static ConfigurationNode baseNode() throws SerializationException {
-        ConfigurationNode node = BasicConfigurationNode.root();
-        node.node("enabled").set(true);
-        node.node("max-occluding-count").set(3);
-        node.node("always-show-radius").set(8);
-        node.node("raycast-radius").set(48);
-        node.node("hide-on-spawn-distance").set(24);
-        node.node("visible-recheck-interval-ticks").set(5);
-        return node;
+        assertEquals((int) config.getAlwaysShowRadius() * config.getAlwaysShowRadius(), config.alwaysShowRadiusSquared());
+        assertEquals((int) config.getRaycastRadius() * config.getRaycastRadius(), config.raycastRadiusSquared());
+        assertEquals((int) config.hideOnSpawnDistance() * config.hideOnSpawnDistance(), config.hideOnSpawnDistanceSquared());
+        assertTrue(config.raycastRadiusSquared() >= 0);
     }
 }

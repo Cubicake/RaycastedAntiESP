@@ -11,56 +11,37 @@ package games.cubi.raycastedantiesp.paper.packets;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.chunks.BlockInfoResolver;
-import games.cubi.raycastedantiesp.packetevents.config.PacketEventsBlockProcessorConfig;
-import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import org.bukkit.Material;
 import org.bukkit.block.TileState;
 import org.bukkit.block.data.BlockData;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Predicate;
 
 public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
     private final boolean[] occlusionArray;
     /** Raw Bukkit TileState capability, before plugin config overrides. */
     private final boolean[] rawTileEntityArray;
-    /** Anti-ESP managed tile entity state, after exemptions and force-includes. */
+    /** Anti-ESP managed tile entity state, after configured exclusions. */
     private final boolean[] tileEntityArray;
 
-    public static PacketEventsPaperBlockInfoResolver get;
-
-    public PacketEventsPaperBlockInfoResolver() {
-        get = this;
-        boolean[][] result = iterateBlockIDs(false);
-        occlusionArray = result[0];
-        rawTileEntityArray = result[1];
-        tileEntityArray = Arrays.copyOf(rawTileEntityArray, rawTileEntityArray.length);
-        PacketEventsBlockProcessorConfig config = RaycastedAntiESP.getConfigManager().getExtensionConfig(PacketEventsBlockProcessorConfig.class);
-        if (config != null) {
-            for (int blockStateId : config.tileEntityExemptedIds()) {
-                if (blockStateId >= 0 && blockStateId < tileEntityArray.length) {
-                    tileEntityArray[blockStateId] = false;
-                }
-            }
-            for (int blockStateId : config.tileEntityForceIncludedIds()) {
-                if (blockStateId >= 0 && blockStateId < tileEntityArray.length) {
-                    tileEntityArray[blockStateId] = true;
-                }
-            }
-        }
+    public PacketEventsPaperBlockInfoResolver(Predicate<BlockData> excludedBlocks) {
+        BlockInfoArrays result = iterateBlockStates(Objects.requireNonNull(excludedBlocks, "excludedBlocks"));
+        occlusionArray = result.occluding;
+        rawTileEntityArray = result.rawTileEntity;
+        tileEntityArray = result.managedTileEntity;
     }
 
-    /**
-     * @return Boolean array with two nested boolean arrays. <code>boolean[0]</code> returns the occlusion status array, <code>boolean[1]</code> returns the tile entity status array. Both arrays are indexed by block state ID. Air blocks and invalid IDs are treated as non-occluding and non-tile-entity, and trailing air IDs are ignored to save memory.
-     */
-    public boolean[][] iterateBlockIDs(boolean materialToIDMode) {
+    private BlockInfoArrays iterateBlockStates(Predicate<BlockData> excludedBlocks) {
         boolean run = true;
         int airs = 0;
         int lastNonAirID = 0;
         Map<Integer, Boolean> occlusion = new HashMap<>(111000); //Tests show 30,000 block IDs in 1.21.11, and we scan forwards for 80k air ids just in case, so 111k is enough. This is a pointless micro optimization but why not
-        Map<Integer, Boolean> tileEntity = new HashMap<>(111000);
+        Map<Integer, Boolean> rawTileEntity = new HashMap<>(111000);
+        Map<Integer, Boolean> managedTileEntity = new HashMap<>(111000);
         int iterator = 0;
         while (run) {
             BlockData blockData = SpigotConversionUtil.toBukkitBlockData(WrappedBlockState.getByGlobalId(iterator));
@@ -82,29 +63,27 @@ public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
                 lastNonAirID = iterator;
             }
             boolean occluding = material != Material.BARRIER && material.isOccluding();
-            if (materialToIDMode && material != Material.AIR) {
-                Logger.info(blockData.getAsString() + iterator + occluding,1);
-            }
             occlusion.put(iterator, occluding);
             try {
-                if (blockData.createBlockState() instanceof TileState) {
-                    //Logger.debug("tile at" + iterator + " is tile entity" + material.name());
-                    tileEntity.put(iterator, true);
-                } else {
-                    tileEntity.put(iterator, false);
-                }
+                boolean isTileEntity = blockData.createBlockState() instanceof TileState;
+                rawTileEntity.put(iterator, isTileEntity);
+                managedTileEntity.put(iterator, isTileEntity && !excludedBlocks.test(blockData));
             } catch (Exception a) {
-                tileEntity.put(iterator, false);
+                rawTileEntity.put(iterator, false);
+                managedTileEntity.put(iterator, false);
                 // will sometimes inconsistently happen, just ignore it ig?
             }
             iterator++;
         }
-        boolean[][] result = new boolean[2][lastNonAirID + 1];
+        boolean[] occlusionArray = new boolean[lastNonAirID + 1];
+        boolean[] rawTileEntityArray = new boolean[lastNonAirID + 1];
+        boolean[] managedTileEntityArray = new boolean[lastNonAirID + 1];
         for (int i = 0; i < (lastNonAirID + 1) /*Ignore the trailing airs*/; i++) {
-            result[0][i] = occlusion.get(i);
-            result[1][i] = tileEntity.get(i);
+            occlusionArray[i] = occlusion.get(i);
+            rawTileEntityArray[i] = rawTileEntity.get(i);
+            managedTileEntityArray[i] = managedTileEntity.get(i);
         }
-        return result;
+        return new BlockInfoArrays(occlusionArray, rawTileEntityArray, managedTileEntityArray);
     }
 
     @Override
@@ -137,5 +116,8 @@ public class PacketEventsPaperBlockInfoResolver implements BlockInfoResolver {
 
     private boolean[] dumpTileEntityArray() {
         return tileEntityArray;
+    }
+
+    private record BlockInfoArrays(boolean[] occluding, boolean[] rawTileEntity, boolean[] managedTileEntity) {
     }
 }

@@ -8,19 +8,18 @@
 
 package games.cubi.raycastedantiesp.core.config;
 
-import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Comment;
 
-public record UpdateConfig(boolean checkRelease, boolean checkBeta, boolean checkAlpha, boolean notifyInGame) implements Config {
-
-    public static UpdateConfig load(ConfigurationNode root) {
-        ConfigurationNode node = ConfigReader.node(root, "updates");
-        return new UpdateConfig(
-                ConfigReader.bool(ConfigReader.node(node, "check-release"), "updates.check-release"),
-                ConfigReader.bool(ConfigReader.node(node, "check-beta"), "updates.check-beta"),
-                ConfigReader.bool(ConfigReader.node(node, "check-alpha"), "updates.check-alpha"),
-                ConfigReader.bool(ConfigReader.node(node, "notify-in-game"), "updates.notify-in-game")
-        );
-    }
+@ConfigSerializable
+public record UpdateConfig(
+        boolean checkRelease,
+        boolean checkBeta,
+        boolean checkAlpha,
+        @Comment("When true, players with permission are notified; otherwise only the console is notified.")
+        boolean notifyInGame
+) implements Config {
+    public static final UpdateConfig DEFAULT = new UpdateConfig(true, true, true, true);
 
     public boolean anyChannelEnabled() {
         return checkRelease || checkBeta || checkAlpha;

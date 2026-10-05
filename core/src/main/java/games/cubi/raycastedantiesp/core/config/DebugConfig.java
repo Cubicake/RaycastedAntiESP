@@ -8,78 +8,23 @@
 
 package games.cubi.raycastedantiesp.core.config;
 
-import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.objectmapping.ConfigSerializable;
+import org.spongepowered.configurate.objectmapping.meta.Comment;
 
-import java.util.List;
-
-public record DebugConfig(byte infoLevel, List<String> infoExemptedClasses, byte warnLevel, List<String> warnExemptedClasses,
-                          byte errorLevel, List<String> errorExemptedClasses, boolean debugParticles, boolean timings) implements Config {
-
-    public static DebugConfig load(ConfigurationNode root) {
-        ConfigurationNode node = ConfigReader.node(root, "debug");
-        return new DebugConfig(
-                level(ConfigReader.node(node, "info-level"), "debug.info-level"),
-                ConfigReader.stringList(ConfigReader.node(node, "info-exempted-classes"), "debug.info-exempted-classes"),
-                level(ConfigReader.node(node, "warn-level"), "debug.warn-level"),
-                ConfigReader.stringList(ConfigReader.node(node, "warn-exempted-classes"), "debug.warn-exempted-classes"),
-                level(ConfigReader.node(node, "error-level"), "debug.error-level"),
-                ConfigReader.stringList(ConfigReader.node(node, "error-exempted-classes"), "debug.error-exempted-classes"),
-                ConfigReader.bool(ConfigReader.node(node, "particles"), "debug.particles"),
-                ConfigReader.bool(ConfigReader.node(node, "timings"), "debug.timings")
-        );
-    }
-
-    public byte getInfoLevel() {
-        return infoLevel;
-    }
-
-    public byte getWarnLevel() {
-        return warnLevel;
-    }
-
-    public byte getErrorLevel() {
-        return errorLevel;
-    }
+@ConfigSerializable
+public record DebugConfig(
+        @Comment("Show raycast debug particles.")
+        boolean particles,
+        @Comment("Record and report engine timing information.")
+        boolean timings
+) implements Config {
+    public static final DebugConfig DEFAULT = new DebugConfig(false, false);
 
     public boolean showDebugParticles() {
-        return debugParticles;
+        return particles;
     }
 
     public boolean recordTimings() {
         return timings;
-    }
-
-    public boolean isExempted(Severity severity, Class<?>... sources) {
-        List<String> exempted = switch (severity) {
-            case INFO -> infoExemptedClasses;
-            case WARN -> warnExemptedClasses;
-            case ERROR -> errorExemptedClasses;
-        };
-        if (sources == null || exempted.isEmpty()) {
-            return false;
-        }
-        for (Class<?> source : sources) {
-            if (source == null) {
-                continue;
-            }
-            if (exempted.contains(source.getSimpleName()) || exempted.contains(source.getName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static byte level(ConfigurationNode node, String path) {
-        int level = ConfigReader.integer(node, path);
-        if (level < 0 || level > 10) {
-            throw new ConfigLoadException(path + " must be between 0 and 10");
-        }
-        return (byte) level;
-    }
-
-    public enum Severity {
-        INFO,
-        WARN,
-        ERROR
     }
 }

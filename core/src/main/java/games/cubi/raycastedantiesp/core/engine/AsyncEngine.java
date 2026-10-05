@@ -386,6 +386,8 @@ public abstract class AsyncEngine implements Engine {
 
     private void checkEntities(PlayerData player, Locatable playerLocation, EntityConfig entityConfig, boolean debugParticles, BlockView blockView, int currentTick, int worldEpoch, TickTimingBatch timings) {
         EntityView<?> entityView = player.entityView();
+        int alwaysShowRadiusSquared = entityConfig.alwaysShowRadiusSquared();
+        int raycastRadiusSquared = entityConfig.raycastRadiusSquared();
 
         int checked = entityView.forEachNeedingRecheckEntity(entityConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), worldEpoch, entity -> {
             if (entity.glowing()) {
@@ -397,7 +399,7 @@ public abstract class AsyncEngine implements Engine {
             }
 
             timings.incrementEntityRaycasts();
-            boolean canSee = RaycastUtil.raycastUnrolledAccumulated(entityConfig.getMaxOccludingCount(), entityConfig.alwaysShowRadiusSquared, entityConfig.raycastRadiusSquared, debugParticles, entity.getYOffset(), blockView, playerLocation, entity,  particleSpawner);
+            boolean canSee = RaycastUtil.raycastUnrolledAccumulated(entityConfig.getMaxOccludingCount(), alwaysShowRadiusSquared, raycastRadiusSquared, debugParticles, entity.getYOffset(), blockView, playerLocation, entity, particleSpawner);
             entityView.setVisibility(entity, canSee, currentTick, worldEpoch);
         });
         timings.addEntityChecked(checked);
@@ -405,6 +407,8 @@ public abstract class AsyncEngine implements Engine {
 
     private void checkPlayers(PlayerData player, Locatable playerLocation, PlayerConfig playerConfig, boolean debugParticles, BlockView blockView, int currentTick, int worldEpoch, TickTimingBatch timings) {
         EntityView<?> playerView = player.playerView();
+        int alwaysShowRadiusSquared = playerConfig.alwaysShowRadiusSquared();
+        int raycastRadiusSquared = playerConfig.raycastRadiusSquared();
 
         int checked = playerView.forEachNeedingRecheckEntity(playerConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), worldEpoch, otherPlayer -> {
             if (otherPlayer.glowing() || (playerConfig.onlyCheckSneaking() && !otherPlayer.sneaking())) {
@@ -415,7 +419,7 @@ public abstract class AsyncEngine implements Engine {
                 return;
             }
             timings.incrementPlayerRaycasts();
-            boolean canSee = RaycastUtil.raycastUnrolledAccumulated(playerConfig.getMaxOccludingCount(), playerConfig.alwaysShowRadiusSquared, playerConfig.raycastRadiusSquared, debugParticles, 1.5f, blockView, playerLocation, otherPlayer,  particleSpawner);
+            boolean canSee = RaycastUtil.raycastUnrolledAccumulated(playerConfig.getMaxOccludingCount(), alwaysShowRadiusSquared, raycastRadiusSquared, debugParticles, 1.5f, blockView, playerLocation, otherPlayer, particleSpawner);
             playerView.setVisibility(otherPlayer, canSee, currentTick, worldEpoch);
         });
         timings.addPlayerChecked(checked);
@@ -435,14 +439,16 @@ public abstract class AsyncEngine implements Engine {
 
     private void checkTileEntities(PlayerData player, Locatable playerLocation, TileEntityConfig tileEntityConfig, boolean debugParticles, BlockView blockView, int currentTick, int worldEpoch, TickTimingBatch timings) {
         long modeToken = blockView.tileEntityCheckModeToken();
+        int alwaysShowRadiusSquared = tileEntityConfig.alwaysShowRadiusSquared();
+        int raycastRadiusSquared = tileEntityConfig.raycastRadiusSquared();
         int checked = blockView.updateVisibilityForEachNeedingRecheck(tileEntityConfig.getVisibleRecheckIntervalTicks(), currentTick, modeToken, worldEpoch, tileEntityLocation -> {
 
-            if (playerLocation.distanceSquared(tileEntityLocation) > (double) tileEntityConfig.getRaycastRadius() * tileEntityConfig.getRaycastRadius()) {
+            if (playerLocation.distanceSquared(tileEntityLocation) > raycastRadiusSquared) {
                 timings.incrementTileRadiusSkipped();
                 return BlockView.VisibilityResolver.HIDE;
             }
             timings.incrementTileRaycasts();
-            boolean canSee = RaycastUtil.raycastUnrolledAccumulated(tileEntityConfig.getMaxOccludingCount(), tileEntityConfig.alwaysShowRadiusSquared, tileEntityConfig.raycastRadiusSquared, debugParticles, 0, blockView, playerLocation, tileEntityLocation, particleSpawner);
+            boolean canSee = RaycastUtil.raycastUnrolledAccumulated(tileEntityConfig.getMaxOccludingCount(), alwaysShowRadiusSquared, raycastRadiusSquared, debugParticles, 0, blockView, playerLocation, tileEntityLocation, particleSpawner);
             return canSee ? BlockView.VisibilityResolver.SHOW : BlockView.VisibilityResolver.HIDE;
         });
         timings.addTileChecked(checked);

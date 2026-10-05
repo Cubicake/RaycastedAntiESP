@@ -24,7 +24,6 @@ import games.cubi.raycastedantiesp.core.view.BlockView;
 import games.cubi.raycastedantiesp.core.view.EntityView;
 import games.cubi.raycastedantiesp.paper.RaycastedAntiESP;
 import games.cubi.raycastedantiesp.paper.UpdateChecker;
-import games.cubi.raycastedantiesp.paper.packets.PacketEventsPaperBlockInfoResolver;
 
 import games.cubi.raycastedantiesp.paper.utils.PaperScheduler;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
@@ -121,11 +120,6 @@ public class RaycastedAntiESPCommand {
         UpdateChecker.checkForUpdates(RaycastedAntiESP.get(), sender);
     }
 
-    @Executes("print-block-ids")
-    void printBlockIDsCommand() {
-        PacketEventsPaperBlockInfoResolver.get.iterateBlockIDs(true);
-    }
-
     private void sendConfigMutationResult(CommandSender sender, ConfigManager.SetConfigResult result, String action, String key, String value) {
         if (!result.success()) {
             sender.sendRichMessage("<red>Invalid config change: <white>" + result.message());
@@ -134,6 +128,8 @@ public class RaycastedAntiESPCommand {
         sender.sendRichMessage("<white>" + action + " <green>" + value + "<white> for <green>" + key);
         if (result.restartRequired()) {
             sender.sendRichMessage("<yellow>This change was saved but requires a restart: <white>" + result.message());
+        } else if (result.repaired()) {
+            sender.sendRichMessage("<yellow>" + result.message());
         }
     }
 

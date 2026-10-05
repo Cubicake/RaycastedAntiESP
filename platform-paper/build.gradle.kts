@@ -7,6 +7,7 @@
  */
 
 import java.time.Instant
+import org.gradle.api.file.FileCollection
 import org.gradle.jvm.toolchain.JavaToolchainService
 
 plugins {
@@ -15,6 +16,8 @@ plugins {
     id("xyz.jpenilla.run-paper") version "3.0.2"
     id("com.gradleup.shadow") version "9.4.0"
 }
+
+val patchedConfigurateYaml = rootProject.extra["patchedConfigurateYaml"] as FileCollection
 
 repositories {
     mavenCentral()
@@ -29,7 +32,7 @@ dependencies {
     //paperweight.paperDevBundle("26.2.build.+")
     compileOnly("com.github.retrooper:packetevents-spigot:2.12.0")
     compileOnly("org.spongepowered:configurate-core:4.2.0")
-    compileOnly("org.spongepowered:configurate-yaml:4.2.0")
+    implementation(patchedConfigurateYaml)
 
     compileOnly("de.oliver:FancyHolograms:2.9.1")
     compileOnly("de.oliver:FancyNpcs:2.9.2")
@@ -157,6 +160,10 @@ tasks.shadowJar {
     relocate(
         "org.bstats",
         "games.cubi.libs.raycastedantiesp.bstats"
+    )
+    relocate(
+        "org.spongepowered.configurate.yaml",
+        "games.cubi.libs.raycastedantiesp.configurate.yaml"
     )
     minimize {} // get rid of leafpile bloat
     archiveBaseName.set("RaycastedAntiESP")
