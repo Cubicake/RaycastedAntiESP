@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * A namespaced block key, optionally narrowed to one concrete state by property values.
+ * A namespaced block key, optionally restricted by property values. Omitted properties match any value.
  */
 public record BlockSelector(String value) {
     private static final Pattern NAMESPACE = Pattern.compile("[a-z0-9_.-]+");
