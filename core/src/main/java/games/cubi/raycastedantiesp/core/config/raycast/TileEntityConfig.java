@@ -18,7 +18,11 @@ import java.util.List;
 public record TileEntityConfig(
         @Setting(nodeFromParent = true)
         RaycastSettings raycastSettings,
-        @Comment("Blocks that should not be managed as tile entities. A block key (\"minecraft:chest\") matches all states; properties (\"chest[facing=north,type=single,waterlogged=false]\") select one exact state.")
+        @Comment("Blocks that should not be managed as tile entities. Use namespaced block keys.\n"
+                + "\"minecraft:chest\" matches every chest state.\n"
+                + "\"minecraft:chest[waterlogged=true]\" matches all waterlogged chests, regardless of facing or chest type.\n"
+                + "Omitted properties are wildcards. All specified properties must match. Specify every property to select one exact state.\n"
+                + "A block is excluded if any list entry matches. Changes require a server restart.")
         List<BlockSelector> excludedBlocks
 ) implements RaycastConfig {
     public static final TileEntityConfig DEFAULT = new TileEntityConfig(
