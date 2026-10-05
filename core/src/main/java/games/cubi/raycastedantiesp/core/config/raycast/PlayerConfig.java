@@ -25,7 +25,7 @@ public record PlayerConfig(
 ) implements RaycastConfig {
     public static final PlayerConfig DEFAULT = new PlayerConfig(
             new RaycastSettings(true, (byte) 3, (short) 8, (short) 128, (short) 24, (short) 5),
-            true,
+            false,
             false,
             true
     );

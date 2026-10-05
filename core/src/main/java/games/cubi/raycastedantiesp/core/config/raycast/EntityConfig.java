@@ -54,7 +54,7 @@ public record EntityConfig(
 ) implements RaycastConfig {
     public static final EntityConfig DEFAULT = new EntityConfig(
             new RaycastSettings(true, (byte) 3, (short) 8, (short) 92, (short) 24, (short) 5),
-            true,
+            false,
             false,
             new LinkedHashSet<>(List.of(
                     "minecraft:arrow",
