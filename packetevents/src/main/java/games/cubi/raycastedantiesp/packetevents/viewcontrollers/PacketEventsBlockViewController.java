@@ -301,7 +301,7 @@ public abstract class PacketEventsBlockViewController implements PacketListener 
         if (playerLocation == null || playerLocation.world() == null || !playerLocation.world().equals(packetWorld)) {
             return false;
         }
-        return location.distanceSquared(playerLocation) <= tileEntityConfig.hideOnSpawnDistanceSquared;
+        return location.distanceSquared(playerLocation) <= tileEntityConfig.hideOnSpawnDistanceSquared();
     }
 
     private WrapperPlayServerBlockEntityData buildBlockEntityDataPacket(BlockSpatial location, PacketEventsTileEntityReplayData replayData) {

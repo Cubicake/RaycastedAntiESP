@@ -127,7 +127,7 @@ public abstract class PacketEntityViewController<P> {
             Locatable ownLocation = playerData.ownLocation();
             boolean staleOwnLocation = ownLocation == null || ownLocation.world() == null || !ownLocation.world().equals(world);
             double distanceSquared = staleOwnLocation ? Double.POSITIVE_INFINITY : ownLocation.distanceSquared(entity);
-            if (distanceSquared > config.hideOnSpawnDistanceSquared) {
+            if (distanceSquared > config.hideOnSpawnDistanceSquared()) {
                 entity.setVisible(false);
                 entity.setClientVisible(false);
                 if (isPlayer) {

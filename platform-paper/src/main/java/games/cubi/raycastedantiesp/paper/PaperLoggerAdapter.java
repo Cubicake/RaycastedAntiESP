@@ -11,7 +11,8 @@ package games.cubi.raycastedantiesp.paper;
 import games.cubi.logs.CheckPreviousLogForError;
 import games.cubi.logs.PlatformLogger;
 import games.cubi.raycastedantiesp.core.config.ConfigManager;
-import games.cubi.raycastedantiesp.core.config.DebugConfig;
+import games.cubi.raycastedantiesp.core.config.LogLevelConfig;
+import games.cubi.raycastedantiesp.core.config.LoggingConfig;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Range;
@@ -80,21 +81,11 @@ public class PaperLoggerAdapter implements PlatformLogger {
      * Note that by default the log levels are at 5, so any logs which should appear normally should be at 1-5. Additionally, loggers which fire several times a tick should be at 10, once a tick at 9, and loggers firing frequently at 6-8
      * */
 
-    private int getLevel(Level severity, DebugConfig debug) {
+    private LoggingConfig.Severity getConfigSeverity(Level severity) {
         return switch (severity) {
-            case INFO -> debug.getInfoLevel();
-            case WARN -> debug.getWarnLevel();
-            case ERROR -> debug.getErrorLevel();
-            default -> 1;
-        };
-    }
-
-    private DebugConfig.Severity getDebugSeverity(Level severity) {
-        return switch (severity) {
-            case INFO -> DebugConfig.Severity.INFO;
-            case WARN -> DebugConfig.Severity.WARN;
-            case ERROR -> DebugConfig.Severity.ERROR;
-            default -> DebugConfig.Severity.ERROR;
+            case INFO -> LoggingConfig.Severity.INFO;
+            case WARN -> LoggingConfig.Severity.WARN;
+            case ERROR -> LoggingConfig.Severity.ERROR;
         };
     }
     /**
@@ -144,19 +135,13 @@ public class PaperLoggerAdapter implements PlatformLogger {
     }
 
     private void forwardLog(String message, Level severity, int level, Class<?>... source) {
-        ConfigManager configManager = RaycastedAntiESP.getConfigManager();
         if (LOG_TO_FILE) {
             queueFileLog(PlatformLogger.constructFileLogMessage(message, severity, level, source), severity);
         }
-        if (configManager != null && configManager.getDebugConfig() != null) {
-            DebugConfig debug = configManager.getDebugConfig();
-
-            if (debug.isExempted(getDebugSeverity(severity), source)) {
-                return;
-            }
-            if (getLevel(severity, debug) < level) {
-                return;
-            }
+        LoggingConfig logging = ConfigManager.getLoggingConfigOrDefault();
+        LogLevelConfig levelConfig = logging.forSeverity(getConfigSeverity(severity));
+        if (levelConfig.isExempted(source) || levelConfig.level() < level) {
+            return;
         }
 
         message = source != null ? PlatformLogger.constructMessage(message, source) : message;
