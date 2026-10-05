@@ -275,10 +275,62 @@ public class NettyData implements Clearable {
                 entry.setValue(survivingHead);
             }
         }
+        if (!recentlyDestroyedEntityIDs.isEmpty()) {
+            var it = recentlyDestroyedEntityIDs.int2IntEntrySet().fastIterator();
+            while (it.hasNext()) {
+                var entry = it.next();
+                int age = currentTick - entry.getIntValue();
+                if (age < 0 || age > DESTROYED_ENTITY_EXPIRY_TICKS) {
+                    it.remove();
+                }
+            }
+        }
     }
 
     //
     // END Netty entity spawn task queue.
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //
+
+    //
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // START Recently destroyed entity tracking:
+    //
+    public static final int DESTROYED_ENTITY_EXPIRY_TICKS = 40;
+    /**
+     * Maps entityID -> tick when destroyed. Used to avoid queuing speculative post-spawn reconciliation
+     * tasks for trailing packets (e.g. position sync, metadata, attributes) arriving after an entity has been untracked/destroyed.
+     */
+    private final Int2IntOpenHashMap recentlyDestroyedEntityIDs = createRecentlyDestroyedMap();
+
+    private static Int2IntOpenHashMap createRecentlyDestroyedMap() {
+        Int2IntOpenHashMap map = new Int2IntOpenHashMap(DEFAULT_MAP_SIZE);
+        map.defaultReturnValue(Integer.MIN_VALUE);
+        return map;
+    }
+
+    public void recordDestroyedEntity(int entityID, int currentTick) {
+        recentlyDestroyedEntityIDs.put(entityID, currentTick);
+    }
+
+    public boolean isRecentlyDestroyed(int entityID, int currentTick) {
+        int destroyedTick = recentlyDestroyedEntityIDs.get(entityID);
+        if (destroyedTick == Integer.MIN_VALUE) {
+            return false;
+        }
+        int age = currentTick - destroyedTick;
+        if (age < 0 || age > DESTROYED_ENTITY_EXPIRY_TICKS) {
+            recentlyDestroyedEntityIDs.remove(entityID);
+            return false;
+        }
+        return true;
+    }
+
+    public void removeDestroyedEntity(int entityID) {
+        recentlyDestroyedEntityIDs.remove(entityID);
+    }
+    //
+    // END Recently destroyed entity tracking.
     // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     //
 
@@ -383,6 +435,7 @@ public class NettyData implements Clearable {
         unresolvedPassengerIDsByVehicleID.clear();
         unresolvedVehicleIDsByPassengerID.clear();
         pendingPostEntitySpawnTasksByEntityID.clear();
+        recentlyDestroyedEntityIDs.clear();
         evictPendingPostSpawnTasksOnNextPacket = false;
     }
 

@@ -338,6 +338,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
+            if (playerData.nettyData().isRecentlyDestroyed(entityID, currentTick)) {
+                return entityID;
+            }
             Logger.warning("Received relative move packet for unknown entity, id=" + entityID + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
             playerData.nettyData().addPostEntitySpawnTask(entityID, PEEntityStateReconciliationTask.relativeMove(
                     playerData, entityID, packet.getDeltaX(), packet.getDeltaY(), packet.getDeltaZ(), packet.isOnGround(), currentTick));
@@ -355,6 +358,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
+            if (playerData.nettyData().isRecentlyDestroyed(entityID, currentTick)) {
+                return entityID;
+            }
             Logger.warning("Received relative move and rotation packet for unknown entity, id=" + entityID + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
             playerData.nettyData().addPostEntitySpawnTask(entityID, PEEntityStateReconciliationTask.relativeMoveAndRotation(
                     playerData, entityID, packetWrapper.getDeltaX(), packetWrapper.getDeltaY(), packetWrapper.getDeltaZ(),
@@ -376,6 +382,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         Vector3d velocity = packetWrapper.getDeltaMovement();
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
+            if (playerData.nettyData().isRecentlyDestroyed(entityID, currentTick)) {
+                return entityID;
+            }
             Logger.warning("Received teleport packet for unknown entity, id=" + entityID + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
             playerData.nettyData().addPostEntitySpawnTask(entityID, PEEntityStateReconciliationTask.teleport(
                     playerData, entityID, position.getX(), position.getY(), position.getZ(), packetWrapper.getYaw(), packetWrapper.getPitch(),
@@ -398,6 +407,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         Vector3d velocity = values.getDeltaMovement();
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
+            if (playerData.nettyData().isRecentlyDestroyed(entityID, currentTick)) {
+                return entityID;
+            }
             Logger.warning("Received position sync packet for unknown entity, id=" + entityID + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
             playerData.nettyData().addPostEntitySpawnTask(entityID, PEEntityStateReconciliationTask.positionSync(
                     playerData, entityID, position.getX(), position.getY(), position.getZ(), values.getYaw(), values.getPitch(),
@@ -476,6 +488,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         }
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
+            if (playerData.nettyData().isRecentlyDestroyed(entityID, currentTick)) {
+                return;
+            }
             Logger.warning("Attempted to cache packet for unknown entity, id=" + entityID + " packet=" + packet.getClass().getSimpleName() + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
             playerData.nettyData().addPostEntitySpawnTask(entityID, new PECacheablePacketReconciliationTask(playerData, entityID, packet, currentTick));
             return;
@@ -490,6 +505,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
+            if (playerData.nettyData().isRecentlyDestroyed(entityID, currentTick)) {
+                return entityID;
+            }
             Logger.warning("Received rotation packet for unknown entity, id=" + entityID + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
             playerData.nettyData().addPostEntitySpawnTask(entityID, PEEntityStateReconciliationTask.rotation(
                     playerData, entityID, packetWrapper.getYaw(), packetWrapper.getPitch(), packetWrapper.isOnGround(), currentTick));
@@ -507,6 +525,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
+            if (playerData.nettyData().isRecentlyDestroyed(entityID, currentTick)) {
+                return entityID;
+            }
             Logger.warning("Received head look packet for unknown entity, id=" + entityID + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
             playerData.nettyData().addPostEntitySpawnTask(entityID, PEEntityStateReconciliationTask.headLook(
                     playerData, entityID, packetWrapper.getHeadYaw(), currentTick));
@@ -524,6 +545,9 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
         NettyEntity<?> entity = playerData.entityFromID(entityID);
         if (entity == null) {
+            if (playerData.nettyData().isRecentlyDestroyed(entityID, currentTick)) {
+                return entityID;
+            }
             Logger.warning("Received velocity packet for unknown entity, id=" + entityID + ". Queuing retry.", 6, PacketEventsEntityViewController.class);
             playerData.nettyData().addPostEntitySpawnTask(entityID, PEEntityStateReconciliationTask.velocity(
                     playerData, entityID, packetWrapper.getVelocity().getX(), packetWrapper.getVelocity().getY(), packetWrapper.getVelocity().getZ(), currentTick));

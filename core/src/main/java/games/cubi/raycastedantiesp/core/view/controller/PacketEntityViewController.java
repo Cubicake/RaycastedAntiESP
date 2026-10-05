@@ -78,6 +78,11 @@ public abstract class PacketEntityViewController<P> {
                 playerData.entityView().clear();
                 playerData.playerView().clear();
                 nettyData.clearPendingReconciliationState();
+                if (remainingEntityIDs != null) {
+                    for (int id : remainingEntityIDs) {
+                        nettyData.recordDestroyedEntity(id, currentTick);
+                    }
+                }
                 nettyData.getSelfEntity().clear();
             }
             nettyData.setCurrentWorldName(world).setCurrentWorldMinHeight(minWorldHeight);
@@ -108,6 +113,7 @@ public abstract class PacketEntityViewController<P> {
      */
     @Packet(Packet.Packets.SPAWN_ENTITY)
     protected boolean handleEntitySpawn(P packet, int entityID, boolean isPlayer, PlayerData playerData, UUID world, int currentTick) {
+        playerData.nettyData().removeDestroyedEntity(entityID);
         boolean returnValue = handleEntitySpawn0(packet, isPlayer, playerData, world, currentTick);
         playerData.nettyData().runPendingPostSpawnTaskForEntity(entityID);
         return returnValue;
@@ -377,6 +383,7 @@ public abstract class PacketEntityViewController<P> {
 
     protected void handleDestroyEntities(int[] entityIDs, PlayerData playerData, int currentTick) {
         for (int entityID : entityIDs) {
+            playerData.nettyData().recordDestroyedEntity(entityID, currentTick);
             if (playerData.nettyData().consumeExpectedWorldTransitionDestroyEntityID(entityID)) {
                 playerData.nettyData().clearPendingPostSpawnTasksForEntity(entityID);
                 playerData.entityView().removeEntity(entityID);
@@ -662,6 +669,7 @@ public abstract class PacketEntityViewController<P> {
      * to own the authoritative relationship state.
      */
     protected void handleBypassedEntitySpawn(int entityID, PlayerData playerData, int currentTick) {
+        playerData.nettyData().removeDestroyedEntity(entityID);
         // Vanilla may send entity state before its spawn packet, and those packets were already
         // forwarded to the client. Discard deferred tracking work rather than replaying duplicates.
         playerData.nettyData().clearPendingPostSpawnTasksForEntity(entityID);
