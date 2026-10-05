@@ -7,10 +7,13 @@
  */
 
 import java.time.Instant
+import org.gradle.api.file.FileCollection
 
 plugins {
     id("java-library")
 }
+
+val patchedConfigurateYaml = rootProject.extra["patchedConfigurateYaml"] as FileCollection
 
 repositories {
     mavenCentral()
@@ -20,7 +23,7 @@ repositories {
 
 dependencies {
     compileOnly("org.spongepowered:configurate-core:4.2.0")
-    compileOnly("org.spongepowered:configurate-yaml:4.2.0")
+    compileOnly(patchedConfigurateYaml)
     compileOnly("it.unimi.dsi:fastutil:8.5.18")
 
     implementation(project(":locatables"))
@@ -33,6 +36,7 @@ dependencies {
     testImplementation(project(":leafpile"))
     testImplementation(project(":logging"))
     testImplementation("org.spongepowered:configurate-core:4.2.0")
+    testImplementation(patchedConfigurateYaml)
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("it.unimi.dsi:fastutil:8.5.18")
