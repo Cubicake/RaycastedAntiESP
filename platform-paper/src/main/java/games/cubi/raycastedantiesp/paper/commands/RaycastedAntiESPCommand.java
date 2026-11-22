@@ -174,7 +174,7 @@ public class RaycastedAntiESPCommand {
             private static volatile long benchmarkSink;
 
             @DefaultExecutes
-            void benchmark(@DefaultToExecutor Player player, @IntArg(min = 1, max = Short.MAX_VALUE - 1) OptionalInt overrideRaycastDistance) {
+            void benchmark(@DefaultToExecutor Player player, @IntArg(min = 1, max = Short.MAX_VALUE - 1) OptionalInt overrideRaycastDistance, @IntArg(min = 0, max = Short.MAX_VALUE - 1) OptionalInt overrideWarmup, @IntArg(min = 1, max = Short.MAX_VALUE - 1) OptionalInt overrideBatches) {
                 int raycastDistance = overrideRaycastDistance.orElse(DEFAULT_RAYCAST_DISTANCE);
                 Locatable[] locatables = new Locatable[BENCHMARK_CORPUS_SIZE];
                 PlayerData playerData = PlayerRegistry.get().getPlayerData(player.getUniqueId());
@@ -205,7 +205,8 @@ public class RaycastedAntiESPCommand {
 
                     long warmupChecksum = 0;
                     int corpusIndex = 0;
-                    for (int batch = 0; batch < BENCHMARK_WARMUP_BATCHES; batch++) {
+                    int warmup = overrideWarmup.orElse(BENCHMARK_WARMUP_BATCHES);
+                    for (int batch = 0; batch < warmup; batch++) {
                         warmupChecksum += runRaycastBatch(playerLocatable, locatables, corpusIndex, maxRaycastRadiusSquared, blockView);
                         corpusIndex = (corpusIndex + BENCHMARK_BATCH_SIZE) & BENCHMARK_CORPUS_MASK;
                     }
@@ -214,15 +215,16 @@ public class RaycastedAntiESPCommand {
                     double[] nanosecondsPerRay = new double[BENCHMARK_ROUNDS];
                     double[] bytesPerRay = new double[BENCHMARK_ROUNDS];
                     long[] checksums = new long[BENCHMARK_ROUNDS];
-                    double[] batchNanosecondsPerRay = new double[BENCHMARK_ROUNDS * BENCHMARK_MEASUREMENT_BATCHES];
-                    int invocationsPerRound = BENCHMARK_BATCH_SIZE * BENCHMARK_MEASUREMENT_BATCHES;
+                    int batches = overrideBatches.orElse(BENCHMARK_MEASUREMENT_BATCHES);
+                    double[] batchNanosecondsPerRay = new double[BENCHMARK_ROUNDS * batches];
+                    int invocationsPerRound = BENCHMARK_BATCH_SIZE * batches;
                     int batchSampleIndex = 0;
                     for (int round = 0; round < BENCHMARK_ROUNDS; round++) {
                         long allocatedBefore = measureAllocations ? allocationBean.getThreadAllocatedBytes(threadId) : 0;
                         long startTime = System.nanoTime();
                         long checksum = 0;
                         corpusIndex = 0;
-                        for (int batch = 0; batch < BENCHMARK_MEASUREMENT_BATCHES; batch++) {
+                        for (int batch = 0; batch < batches; batch++) {
                             long batchStartTime = System.nanoTime();
                             int batchChecksum = runRaycastBatch(playerLocatable, locatables, corpusIndex, maxRaycastRadiusSquared, blockView);
                             long batchDuration = System.nanoTime() - batchStartTime;
@@ -254,7 +256,7 @@ public class RaycastedAntiESPCommand {
                     String benchmarkThread = Thread.currentThread().getName() + " (id " + threadId + ")";
                     PaperScheduler.runForAudience(RaycastedAntiESP.get(), player, () -> {
                         player.sendRichMessage("Benchmark thread: " + benchmarkThread);
-                        player.sendRichMessage("Warmup rays: " + (BENCHMARK_BATCH_SIZE * BENCHMARK_WARMUP_BATCHES));
+                        player.sendRichMessage("Warmup rays: " + (BENCHMARK_BATCH_SIZE * warmup));
                         for (int round = 0; round < BENCHMARK_ROUNDS; round++) {
                             String allocationResult = measureAllocations ? String.format(Locale.ROOT, "%.3f B/ray", bytesPerRay[round]) : "allocation unavailable";
                             player.sendRichMessage(String.format(Locale.ROOT, "Round %d: %.3f ns/ray, %s, checksum %d", round + 1, nanosecondsPerRay[round], allocationResult, checksums[round]));
