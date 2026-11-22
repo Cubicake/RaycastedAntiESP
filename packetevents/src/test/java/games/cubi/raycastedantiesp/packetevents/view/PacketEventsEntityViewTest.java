@@ -220,7 +220,7 @@ class PacketEventsEntityViewTest {
         self.setVehicleID(3);
         self.addLeashedEntity(4);
         self.setLeashingEntity(5);
-        self.setPacketReplayData(PacketEventsEntityReplayData.create());
+        PacketEventsEntityReplayData replay = self.packetReplayData();
 
         self.clear();
 
@@ -228,7 +228,8 @@ class PacketEventsEntityViewTest {
         assertEquals(-1, self.vehicleID());
         assertNull(self.leashedEntityIDsOrNull());
         assertEquals(-2, self.leashingEntity());
-        assertNull(self.packetReplayData());
+        assertSame(replay, self.packetReplayData());
+        assertTrue(replay.getPackets().isEmpty());
     }
 
     @Test

@@ -79,7 +79,6 @@ public interface TrackedEntity<PacketReplayData> extends MutableFloatingSpatial 
 
     /** Packet-thread-only cached packet state. */
     PacketReplayData packetReplayData();
-    TrackedEntity<?> setPacketReplayData(PacketReplayData packetReplayData);
 
     float getYOffset();
 

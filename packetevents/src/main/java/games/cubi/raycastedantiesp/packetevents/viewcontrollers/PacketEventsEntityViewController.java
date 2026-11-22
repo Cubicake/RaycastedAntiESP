@@ -485,7 +485,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
             playerData.nettyData().addPostEntitySpawnTask(entityID, new PECacheablePacketReconciliationTask(playerData, entityID, packet, currentTick));
             return;
         }
-        ensureReplayData((PacketEventsEntity) entity).addPacket(packet);
+        ((PacketEventsEntity) entity).packetReplayData().addPacket(packet);
     }
 
     @Override
@@ -552,9 +552,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     private PacketEventsEntity trackEntitySpawn(PlayerData playerData, UUID entityUUID, int entityID, UUID world, double x, double y, double z, EntityType entityType) {
-        PacketEventsEntity entity = new PacketEventsEntity(playerData, x, y, z, entityID, entityUUID, false, getPrimitiveEntityType(entityType), true /*default value as this is handled in PacketEntityViewController*/);
-        ensureReplayData(entity);
-        return entity;
+        return new PacketEventsEntity(playerData, x, y, z, entityID, entityUUID, false, getPrimitiveEntityType(entityType), true /*default value as this is handled in PacketEntityViewController*/);
     }
 
     private void processEntityTransitions(PlayerData data, User viewer, EntityView<PacketEventsEntity> entityView) {
@@ -591,7 +589,7 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 entity.setClientVisible(false);
             }
             case SPAWN_AND_SYNC, SYNC -> {
-                PacketEventsEntityReplayData replayData = ensureReplayData(entity);
+                PacketEventsEntityReplayData replayData = entity.packetReplayData();
                 sendEntityShow(viewer, data, entity, replayData, action == ClientTransitionAction.SPAWN_AND_SYNC);
                 entity.setClientVisible(true);
             }
@@ -825,15 +823,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
 
     private PacketEventsEntity getTrackedEntity(EntityView<PacketEventsEntity> entityView, int entityID) {
         return entityView.getEntity(entityID);
-    }
-
-    PacketEventsEntityReplayData ensureReplayData(PacketEventsEntity entity) {
-        PacketEventsEntityReplayData replayData = entity.packetReplayData();
-        if (replayData == null) {
-            replayData = PacketEventsEntityReplayData.create();
-            entity.setPacketReplayData(replayData);
-        }
-        return replayData;
     }
 
     private void sendEntityShow(User viewer, PlayerData data, PacketEventsEntity entity, PacketEventsEntityReplayData replayData,

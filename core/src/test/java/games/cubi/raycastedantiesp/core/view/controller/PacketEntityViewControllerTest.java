@@ -268,12 +268,14 @@ class PacketEntityViewControllerTest {
     }
 
     private static final class TestEntity extends NettyEntity<Clearable> {
+        private static final Clearable EMPTY_REPLAY_DATA = () -> {};
+
         private TestEntity(PlayerData owningPlayer, int entityID, UUID entityUUID) {
-            super(owningPlayer, entityID, entityUUID);
+            super(owningPlayer, entityID, entityUUID, EMPTY_REPLAY_DATA);
         }
 
         private TestEntity(PlayerData owningPlayer, int entityID, UUID entityUUID, boolean visible) {
-            super(owningPlayer, 0, 0, 0, entityID, entityUUID, false, 0, visible);
+            super(owningPlayer, 0, 0, 0, entityID, entityUUID, false, 0, visible, EMPTY_REPLAY_DATA);
         }
 
         private static TestEntity createSelf(PlayerData owningPlayer, int entityID, UUID playerUUID) {

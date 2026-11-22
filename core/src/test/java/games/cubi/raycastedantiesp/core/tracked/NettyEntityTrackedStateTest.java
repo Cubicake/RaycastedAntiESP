@@ -111,8 +111,10 @@ class NettyEntityTrackedStateTest {
     }
 
     private static final class TestEntity extends NettyEntity<Clearable> {
+        private static final Clearable EMPTY_REPLAY_DATA = () -> {};
+
         private TestEntity() {
-            super(null, 0, 0, 0, 1, UUID.randomUUID(), false, 0, true);
+            super(null, 0, 0, 0, 1, UUID.randomUUID(), false, 0, true, EMPTY_REPLAY_DATA);
         }
     }
 }

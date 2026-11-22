@@ -17,6 +17,7 @@ import games.cubi.utils.VarHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.VarHandle;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -58,7 +59,7 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
 
 
     private int entityData;
-    private PacketReplayData packetReplayData; // For use storing the packets we can't be bothered to directly store, with all cached packets being sent back out to the client when entity is visible again.
+    private final PacketReplayData packetReplayData;
 
     // Mutable by the engine and packet threads.
     private volatile int lastChecked; private static final VarHandle LAST_CHECKED = VarHandler.get(NettyEntity.class, "lastChecked", int.class);
@@ -73,7 +74,7 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
     public static final int NO_LEASHER = -2;
     public static final int SELF_ENTITY_TYPE = -29;
 
-    public NettyEntity(PlayerData owningPlayer, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, int entityType, boolean visible) {
+    public NettyEntity(PlayerData owningPlayer, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, int entityType, boolean visible, PacketReplayData packetReplayData) {
         X.set(this, x); Y.set(this, y); Z.set(this, z);
 
         this.entityID = entityID;
@@ -84,16 +85,18 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
         this.visible = visible;
 
         this.owningPlayer = owningPlayer;
+        this.packetReplayData = Objects.requireNonNull(packetReplayData, "packetReplayData");
     }
 
     // For creating the self entity, where we don't have access to its position. Always visible.
-    protected NettyEntity(PlayerData selfData, int selfPlayerID, UUID ownUUID) {
+    protected NettyEntity(PlayerData selfData, int selfPlayerID, UUID ownUUID, PacketReplayData packetReplayData) {
         entityID = selfPlayerID;
         entityUUID = ownUUID;
         owningPlayer = selfData;
         isSelfEntity = true;
         entityType = SELF_ENTITY_TYPE;
         visible = true;
+        this.packetReplayData = Objects.requireNonNull(packetReplayData, "packetReplayData");
     }
 
     @Override
@@ -357,12 +360,6 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
     }
 
     @Override
-    public TrackedEntity<?> setPacketReplayData(PacketReplayData packetReplayData) {
-        this.packetReplayData = packetReplayData;
-        return this;
-    }
-
-    @Override
     public float getYOffset() {
         return 0.5f; //todo: move away from hardcoded offset
     }
@@ -439,8 +436,7 @@ public abstract class NettyEntity<PacketReplayData extends Clearable> implements
 
     @Override
     public void clear() {
-        if (packetReplayData != null) packetReplayData.clear();
-        packetReplayData = null;
+        packetReplayData.clear();
 
         TRACKED_FLAGS.setOpaque(this, (byte) 0);
         VEHICLE_ID.setOpaque(this, NO_VEHICLE);

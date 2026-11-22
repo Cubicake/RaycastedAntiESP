@@ -45,7 +45,7 @@ final class PECacheablePacketReconciliationTask extends BaseEntitySpawnTask {
         if (packet instanceof WrapperPlayServerEntityMetadata metadataPacket) {
             PacketEventsEntityViewController.applyTrackedMetadata(entity, metadataPacket.getEntityMetadata());
         }
-        PacketEventsEntityViewController.get().ensureReplayData((PacketEventsEntity) entity).addPacket(packet);
+        ((PacketEventsEntity) entity).packetReplayData().addPacket(packet);
     }
 
     @Override
