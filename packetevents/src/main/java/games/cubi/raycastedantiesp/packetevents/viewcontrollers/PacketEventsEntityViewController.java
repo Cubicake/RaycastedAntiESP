@@ -50,6 +50,7 @@ import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_LEASHER;
 import static games.cubi.raycastedantiesp.core.tracked.NettyEntity.NO_VEHICLE;
 
 public abstract class PacketEventsEntityViewController extends PacketEntityViewController<PacketWrapper<?>> implements PacketListener {
+    protected static final int DEFAULT_METADATA_FIELD_COUNT = 30;
     private static final int NO_ENTITY = -1; // HackyEntityIDGuard prevents -1 from ever being assigned to a real entity.
     private static final byte PROTOCOL_FLAG_SNEAKING = 0x02;
     private static final byte PROTOCOL_FLAG_GLOWING = 0x40;
@@ -425,7 +426,8 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         if (metadata == null) {
             return;
         }
-        for (EntityData<?> value : metadata) {
+        for (int i = metadata.size() - 1; i >= 0; i--) {
+            EntityData<?> value = metadata.get(i);
             if (value.getIndex() != 0) {
                 continue;
             }
@@ -552,7 +554,13 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
     }
 
     private PacketEventsEntity trackEntitySpawn(PlayerData playerData, UUID entityUUID, int entityID, UUID world, double x, double y, double z, EntityType entityType) {
-        return new PacketEventsEntity(playerData, x, y, z, entityID, entityUUID, false, getPrimitiveEntityType(entityType), true /*default value as this is handled in PacketEntityViewController*/);
+        int typeID = getPrimitiveEntityType(entityType);
+        return new PacketEventsEntity(playerData, x, y, z, entityID, entityUUID, false, typeID, true, metadataFieldCount(typeID));
+    }
+
+    /** Expected size for the server's entity type. */
+    protected int metadataFieldCount(int entityTypeID) {
+        return DEFAULT_METADATA_FIELD_COUNT;
     }
 
     private void processEntityTransitions(PlayerData data, User viewer, EntityView<PacketEventsEntity> entityView) {
@@ -762,13 +770,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         return copy;
     }
 
-    private WrapperPlayServerEntityMetadata copyEntityMetadataPacket(WrapperPlayServerEntityMetadata packet) {
-        return new WrapperPlayServerEntityMetadata(
-                packet.getEntityId(),
-                copyEntityMetadata(packet.getEntityMetadata())
-        );
-    }
-
     private WrapperPlayServerEntityEquipment copyEntityEquipmentPacket(WrapperPlayServerEntityEquipment packet) {
         return new WrapperPlayServerEntityEquipment(
                 packet.getEntityId(),
@@ -788,10 +789,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 packet.getEntityId(),
                 packet.getPotionType()
         );
-    }
-
-    private List<EntityData<?>> copyEntityMetadata(List<EntityData<?>> metadata) {
-        return metadata == null ? List.of() : List.copyOf(metadata);
     }
 
     private List<Equipment> copyEquipment(List<Equipment> equipment) {
@@ -832,10 +829,14 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         }
         sendEntityAbsoluteCorrection(viewer, entity);
 
+        List<EntityData<?>> metadata = replayData.metadataForReplay();
+        if (!metadata.isEmpty()) {
+            // PacketEvents encodes the borrowed list before enqueueing the write.
+            viewer.writePacketSilently(new WrapperPlayServerEntityMetadata(entity.entityID(), metadata));
+        }
+
         for (PacketWrapper<?> cachedPacket : replayData.getPackets()) {
-            if (cachedPacket.getClass() == WrapperPlayServerEntityMetadata.class) {
-                viewer.writePacketSilently(copyEntityMetadataPacket((WrapperPlayServerEntityMetadata) cachedPacket));
-            } else if (cachedPacket.getClass() == WrapperPlayServerEntityEquipment.class) {
+            if (cachedPacket.getClass() == WrapperPlayServerEntityEquipment.class) {
                 viewer.writePacketSilently(copyEntityEquipmentPacket((WrapperPlayServerEntityEquipment) cachedPacket));
             } else if (cachedPacket.getClass() == WrapperPlayServerEntityVelocity.class) {
                 viewer.writePacketSilently(copyEntityVelocityPacket((WrapperPlayServerEntityVelocity) cachedPacket));
