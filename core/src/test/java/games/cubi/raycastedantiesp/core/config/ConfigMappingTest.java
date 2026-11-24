@@ -2,9 +2,11 @@ package games.cubi.raycastedantiesp.core.config;
 
 import games.cubi.raycastedantiesp.core.config.engine.EngineMode;
 import games.cubi.raycastedantiesp.core.config.raycast.BlockSelector;
+import games.cubi.utils.events.CubiKey;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.spongepowered.configurate.CommentedConfigurationNode;
+import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.NodePath;
 import org.spongepowered.configurate.objectmapping.ConfigSerializable;
 import org.spongepowered.configurate.objectmapping.meta.Comment;
@@ -31,6 +33,7 @@ class ConfigMappingTest {
         assertEquals(RootConfig.DEFAULT, node.get(RootConfig.class));
         assertEquals(RootConfig.DEFAULT.engineConfig().mode().getName(), node.node("engine", "mode").raw());
         assertInstanceOf(String.class, node.node("engine", "mode").raw());
+        assertEquals(PlayerLocationSourceConfig.DEFAULT.key().toString(), node.node("location-source", "key").raw());
         assertNotNull(node.node("checks", "player", "enabled").comment());
         assertEquals(
                 List.copyOf(RootConfig.DEFAULT.checksConfig().entityConfig().excludedTypes()),
@@ -113,6 +116,18 @@ class ConfigMappingTest {
 
             assertEquals(value, node.raw());
         }
+    }
+
+    @Test
+    void cubiKeyRoundTripsWithCanonicalNamespaceAndVerbatimKey() throws IOException {
+        CubiKey expected = CubiKey.from(CommentedValue.class, "external:source");
+        ConfigurationNode node = YamlConfigurationLoader.builder()
+                .defaultOptions(ConfigMapping.options())
+                .buildAndLoadString("location-source:\n  key: " + expected);
+
+        assertEquals(expected, node.node("location-source").get(PlayerLocationSourceConfig.class).key());
+        node.node("location-source").set(PlayerLocationSourceConfig.class, new PlayerLocationSourceConfig(expected));
+        assertEquals(expected.toString(), node.node("location-source", "key").raw());
     }
 
     @Test

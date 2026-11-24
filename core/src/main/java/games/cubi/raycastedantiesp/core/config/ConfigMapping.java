@@ -2,6 +2,7 @@ package games.cubi.raycastedantiesp.core.config;
 
 import games.cubi.raycastedantiesp.core.config.engine.EngineMode;
 import games.cubi.raycastedantiesp.core.config.raycast.BlockSelector;
+import games.cubi.utils.events.CubiKey;
 import org.jetbrains.annotations.NotNull;
 import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurationOptions;
@@ -12,6 +13,7 @@ import org.spongepowered.configurate.serialize.TypeSerializer;
 import org.spongepowered.configurate.serialize.TypeSerializerCollection;
 import org.spongepowered.configurate.util.NamingSchemes;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -23,6 +25,7 @@ import java.util.function.LongFunction;
 final class ConfigMapping {
     private static final String HEADER = "An explanation of this configuration file and what all the options do can be found at https://raycastedantiesp.cubi.games/config/";
     private static final String LEGACY_HEADER = "An explanation of this configuration file and what the options do can be found at https://raycastedantiesp.cubi.games/config/";
+    private static final Constructor<CubiKey> CUBI_KEY_CONSTRUCTOR = cubiKeyConstructor();
     private static final ConfigurationOptions OPTIONS = createOptions();
 
     private ConfigMapping() {
@@ -109,6 +112,7 @@ final class ConfigMapping {
                 .registerExact(int.class, integerSerializer)
                 .registerExact(Integer.class, integerSerializer)
                 .registerExact(BlockSelector.class, blockSelectorSerializer())
+                .registerExact(CubiKey.class, cubiKeySerializer())
                 .registerExact(EngineMode.class, enumSerializer(EngineMode::fromString, EngineMode::getName))
                 .registerExact(BlockProcessorMode.class, enumSerializer(BlockProcessorMode::fromString, BlockProcessorMode::getName))
                 .registerAnnotatedObjects(mapper)
@@ -230,5 +234,46 @@ final class ConfigMapping {
                 node.raw(value == null ? null : value.toString());
             }
         };
+    }
+
+    private static TypeSerializer<CubiKey> cubiKeySerializer() {
+        return new TypeSerializer<>() {
+            @Override
+            public CubiKey deserialize(@NotNull Type expectedType, @NotNull ConfigurationNode node) throws SerializationException {
+                if (!(node.rawScalar() instanceof String value)) {
+                    throw new SerializationException(expectedType, "Expected a CubiKey string in namespace:key format");
+                }
+                int separator = value.indexOf(':');
+                if (separator < 0) {
+                    throw new SerializationException(expectedType, "Expected a CubiKey in namespace:key format");
+                }
+                String namespace = value.substring(0, separator);
+                String key = value.substring(separator + 1);
+                if (namespace.isBlank() || key.isBlank()) {
+                    throw new SerializationException(expectedType, "CubiKey namespace and key must be non-blank");
+                }
+                try {
+                    return CUBI_KEY_CONSTRUCTOR.newInstance(namespace, key);
+                } catch (ReflectiveOperationException exception) {
+                    throw new SerializationException(expectedType, "Could not construct the CubiKey", exception);
+                }
+            }
+
+            @Override
+            public void serialize(@NotNull Type expectedType, CubiKey value, @NotNull ConfigurationNode node) {
+                node.raw(value == null ? null : value.toString());
+            }
+        };
+    }
+
+    private static Constructor<CubiKey> cubiKeyConstructor() {
+        try {
+            // Use the configured namespace verbatim. The public factory derives it from a class.
+            Constructor<CubiKey> constructor = CubiKey.class.getDeclaredConstructor(String.class, String.class);
+            constructor.setAccessible(true);
+            return constructor;
+        } catch (NoSuchMethodException exception) {
+            throw new ExceptionInInitializerError(exception);
+        }
     }
 }
