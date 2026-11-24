@@ -252,6 +252,10 @@ public class ConfigManager {
         return requireReady().blockProcessorConfig();
     }
 
+    public PlayerLocationSourceConfig getPlayerLocationSourceConfig() {
+        return requireReady().locationSource();
+    }
+
     public synchronized Map<String, Object> getConfigValues() {
         requireReady();
         Map<String, Object> values = new LinkedHashMap<>();

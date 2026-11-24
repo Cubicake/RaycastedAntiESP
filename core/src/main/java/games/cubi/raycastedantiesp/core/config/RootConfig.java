@@ -20,7 +20,8 @@ public record RootConfig(
         @Setting("engine") EngineConfig engineConfig,
         @Setting("block-processor") BlockProcessorConfig blockProcessorConfig,
         @Setting("debug") DebugConfig debugConfig,
-        @Setting("updates") UpdateConfig updateConfig
+        @Setting("updates") UpdateConfig updateConfig,
+        PlayerLocationSourceConfig locationSource
 ) implements Config {
     public static final String CURRENT_VERSION = "2.1";
     public static final RootConfig DEFAULT = new RootConfig(
@@ -30,6 +31,7 @@ public record RootConfig(
             EngineConfig.DEFAULT,
             BlockProcessorConfig.DEFAULT,
             DebugConfig.DEFAULT,
-            UpdateConfig.DEFAULT
+            UpdateConfig.DEFAULT,
+            PlayerLocationSourceConfig.DEFAULT
     );
 }

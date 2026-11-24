@@ -144,6 +144,38 @@ class ConfigManagerTest {
     }
 
     @Test
+    void cubiKeyCanBeUpdatedAndReloaded() {
+        ConfigManager manager = earlyManager();
+        manager.completeInitialLoad();
+        String configuredKey = "external-provider:source";
+
+        ConfigManager.SetConfigResult result = manager.setConfigValue("location-source.key", configuredKey);
+
+        assertTrue(result.success());
+        assertFalse(result.repaired());
+        assertEquals("external-provider", manager.getPlayerLocationSourceConfig().key().namespace);
+        assertEquals("source", manager.getPlayerLocationSourceConfig().key().key);
+        manager.load();
+        assertEquals(configuredKey, manager.getPlayerLocationSourceConfig().key().toString());
+    }
+
+    @Test
+    void invalidCubiKeyIsRepairedAtTheConfigPath() throws IOException {
+        ConfigManager manager = earlyManager();
+        manager.completeInitialLoad();
+
+        for (String invalidValue : List.of("42", "missing-separator", "':source'", "'provider:'", "'provider: '")) {
+            ConfigManager.SetConfigResult result = manager.setConfigValue("location-source.key", invalidValue);
+
+            assertTrue(result.success(), invalidValue);
+            assertTrue(result.repaired(), invalidValue);
+            assertTrue(result.message().contains("location-source.key"));
+            assertEquals(PlayerLocationSourceConfig.DEFAULT, manager.getPlayerLocationSourceConfig());
+            assertEquals(PlayerLocationSourceConfig.DEFAULT.key().toString(), loadNode().node("location-source", "key").raw());
+        }
+    }
+
+    @Test
     void excludedBlockMutationIsSavedForRestartWithoutChangingActiveSnapshot() throws IOException {
         ConfigManager manager = earlyManager();
         manager.completeInitialLoad();
