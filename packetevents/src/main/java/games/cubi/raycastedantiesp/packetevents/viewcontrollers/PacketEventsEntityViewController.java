@@ -829,12 +829,6 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
         }
         sendEntityAbsoluteCorrection(viewer, entity);
 
-        List<EntityData<?>> metadata = replayData.metadataForReplay();
-        if (!metadata.isEmpty()) {
-            // PacketEvents encodes the borrowed list before enqueueing the write.
-            viewer.writePacketSilently(new WrapperPlayServerEntityMetadata(entity.entityID(), metadata));
-        }
-
         for (PacketWrapper<?> cachedPacket : replayData.getPackets()) {
             if (cachedPacket.getClass() == WrapperPlayServerEntityEquipment.class) {
                 viewer.writePacketSilently(copyEntityEquipmentPacket((WrapperPlayServerEntityEquipment) cachedPacket));
@@ -851,6 +845,13 @@ public abstract class PacketEventsEntityViewController extends PacketEntityViewC
                 Logger.warning("Unsupported cached packet type for replay: " + cachedPacket.getClass().getName(), 2, PacketEventsEntityViewController.class);
             }
         }
+
+        // Metadata should be written after the other packets, because the metadata may be referencing data set by those packets
+        List<EntityData<?>> metadata = replayData.metadataForReplay();
+        if (!metadata.isEmpty()) {
+            viewer.writePacketSilently(new WrapperPlayServerEntityMetadata(entity.entityID(), metadata));
+        }
+
         writeEntityRelationships(viewer, data, entity, entity.entityID());
     }
 
