@@ -8,7 +8,9 @@
 
 package games.cubi.raycastedantiesp.core.players;
 
+import games.cubi.raycastedantiesp.core.config.ConfigManager;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
+import games.cubi.utils.ImplementationRegistry;
 import games.cubi.utils.VarHandler;
 
 import java.lang.invoke.VarHandle;
@@ -19,6 +21,28 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public final class PlayerRegistry {
+    public static final ImplementationRegistry<PlayerLocationSource> PLAYER_LOCATION_SOURCE_REGISTRY = new ImplementationRegistry<>();
+
+    private static final class LocationSourceHolder {
+        private static final PlayerLocationSource INSTANCE = fetch();
+
+        private static PlayerLocationSource fetch() {
+            PLAYER_LOCATION_SOURCE_REGISTRY.freeze();
+            return PLAYER_LOCATION_SOURCE_REGISTRY.getFrom(ConfigManager.get().getPlayerLocationSourceConfig().key());
+        }
+    }
+
+    static PlayerLocatable getLocationSourceFor(PlayerData playerData) {
+        return LocationSourceHolder.INSTANCE.getLocationSourceFor(playerData);
+    }
+
+    /**
+     * The supplier of the PlayerLocatable must keep it up-to-date. It can reference the PlayerLocatable in its own datastore, or it can use the PlayerRegistry and lookup via UUID.
+     */
+    @FunctionalInterface
+    public interface PlayerLocationSource {
+        PlayerLocatable getLocationSourceFor(PlayerData playerData);
+    }
 
     @FunctionalInterface
     public interface SelfEntityCreator {
