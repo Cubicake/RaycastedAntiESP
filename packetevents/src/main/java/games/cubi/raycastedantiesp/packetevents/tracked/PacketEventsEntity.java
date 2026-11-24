@@ -16,7 +16,11 @@ import java.util.UUID;
 
 public class PacketEventsEntity extends NettyEntity<PacketEventsEntityReplayData> {
     public PacketEventsEntity(PlayerData owningPlayer, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, int entityType, boolean visible) {
-        super(owningPlayer, x, y, z, entityID, entityUUID, isSelfEntity, entityType, visible, PacketEventsEntityReplayData.create());
+        this(owningPlayer, x, y, z, entityID, entityUUID, isSelfEntity, entityType, visible, 0);
+    }
+
+    public PacketEventsEntity(PlayerData owningPlayer, double x, double y, double z, int entityID, UUID entityUUID, boolean isSelfEntity, int entityType, boolean visible, int metadataFieldCount) {
+        super(owningPlayer, x, y, z, entityID, entityUUID, isSelfEntity, entityType, visible, PacketEventsEntityReplayData.create(metadataFieldCount));
     }
 
     private PacketEventsEntity(PlayerData selfData, int selfEntityID, UUID selfEntityUUID) {

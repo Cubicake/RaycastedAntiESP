@@ -101,6 +101,19 @@ class PacketEventsEntityViewControllerTest {
         assertTrue(entity.glowing());
     }
 
+    @Test
+    void repeatedSharedFlagsUseTheLastValueInThePacket() {
+        PacketEventsEntity entity = entity();
+
+        PacketEventsEntityViewController.applyTrackedMetadata(entity, List.of(
+                new EntityData<>(0, null, (byte) 0x02),
+                new EntityData<>(0, null, (byte) 0x40)
+        ));
+
+        assertFalse(entity.sneaking());
+        assertTrue(entity.glowing());
+    }
+
     private static PacketEventsEntity entity() {
         return new PacketEventsEntity(null, 0, 0, 0, 1, UUID.randomUUID(), false, 0, true);
     }
