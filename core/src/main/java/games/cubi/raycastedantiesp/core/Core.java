@@ -10,6 +10,7 @@ package games.cubi.raycastedantiesp.core;
 
 import games.cubi.logs.PlatformLogger;
 import games.cubi.logs.Logger;
+import games.cubi.raycastedantiesp.core.players.PlayerRegistry;
 
 public class Core {
 
@@ -35,4 +36,8 @@ public class Core {
     }
 
     public void intelliJStopThinkingThisIsAUtilClass() {}
+
+    public void lateInitialisationLogic() {
+        PlayerRegistry.selectLocationSource();
+    }
 }

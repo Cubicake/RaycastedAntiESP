@@ -36,6 +36,10 @@ public final class PlayerRegistry {
         return LocationSourceHolder.INSTANCE.getLocationSourceFor(playerData);
     }
 
+    public static void selectLocationSource() {
+        if (LocationSourceHolder.INSTANCE == null) throw new RuntimeException("Somehow no location source was selected.");
+    }
+
     /**
      * The supplier of the PlayerLocatable must keep it up-to-date. It can reference the PlayerLocatable in its own datastore, or it can use the PlayerRegistry and lookup via UUID.
      */
