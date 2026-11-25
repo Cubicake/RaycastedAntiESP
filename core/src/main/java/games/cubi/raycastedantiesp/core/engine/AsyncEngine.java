@@ -411,7 +411,7 @@ public abstract class AsyncEngine implements Engine {
         int raycastRadiusSquared = playerConfig.raycastRadiusSquared();
 
         int checked = playerView.forEachNeedingRecheckEntity(playerConfig.getVisibleRecheckIntervalTicks(), currentTick, !(timings instanceof TickTimingBatchNoOp), worldEpoch, otherPlayer -> {
-            if (otherPlayer.glowing() || (playerConfig.onlyCheckSneaking() && !otherPlayer.sneaking())) {
+            if (otherPlayer.glowing() || (!otherPlayer.sneaking() && playerConfig.alwaysShowStanding(playerLocation.distanceSquared(otherPlayer)))) {
                 playerView.setVisibility(otherPlayer, true, currentTick, worldEpoch);
                 return;
             }
