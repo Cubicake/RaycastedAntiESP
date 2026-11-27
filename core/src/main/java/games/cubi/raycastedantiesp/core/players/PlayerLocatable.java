@@ -8,10 +8,17 @@
 
 package games.cubi.raycastedantiesp.core.players;
 
+import games.cubi.locatables.api.ImmutableLocatable;
 import games.cubi.locatables.api.MutableFloatingLocatable;
+import games.cubi.locatables.api.Spatial;
+import games.cubi.locatables.implementations.ImmutableLocatableImpl;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
 
 /**
- * The supplier of this object promises to keep it up-to-date at all times
+ * The location source maintains the player's feet position, rotation and pose.
+ * The world is null while the position is unavailable. Reads of multiple fields may span an update.
  */
 public interface PlayerLocatable extends MutableFloatingLocatable {
     float yaw();
@@ -26,5 +33,16 @@ public interface PlayerLocatable extends MutableFloatingLocatable {
 
     default double cameraY() {
         return y() + cameraYOffset();
+    }
+
+    /** Copies the camera position, or returns null while the position is unavailable. */
+    default @Nullable ImmutableLocatable cameraLocation() {
+        UUID world = world();
+        return world == null ? null : new ImmutableLocatableImpl(world, x(), cameraY(), z());
+    }
+
+    /** Returns positive infinity when the camera is unavailable in the expected world. */
+    default double cameraDistanceSquared(UUID expectedWorld, Spatial target) {
+        return expectedWorld.equals(world()) ? target.distanceSquared(x(), cameraY(), z()) : Double.POSITIVE_INFINITY;
     }
 }
