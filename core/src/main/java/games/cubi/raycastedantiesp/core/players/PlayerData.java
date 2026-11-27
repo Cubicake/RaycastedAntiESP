@@ -8,8 +8,6 @@
 
 package games.cubi.raycastedantiesp.core.players;
 
-import games.cubi.locatables.api.Locatable;
-import games.cubi.locatables.implementations.ThreadSafeLocatable;
 import games.cubi.logs.Logger;
 import games.cubi.raycastedantiesp.core.tracked.NettyEntity;
 import games.cubi.utils.VarHandler;
@@ -31,7 +29,7 @@ public class PlayerData {
     private final int joinTick;
     private volatile boolean hasBypassPermission;
     private volatile boolean connected;
-    private final ThreadSafeLocatable ownLocation;
+    private final PlayerLocatable playerLocation;
 
     private final BlockView blockView;
     private final EntityView<?> entityView;
@@ -51,7 +49,7 @@ public class PlayerData {
         blockView = ViewRegistry.createBlockView(worldEpochSupplier);
         entityView = ViewRegistry.createEntityView(worldEpochSupplier);
         playerView = ViewRegistry.createPlayerEntityView(worldEpochSupplier);
-        ownLocation = new ThreadSafeLocatable(null, 0, 0, 0);
+        playerLocation = Objects.requireNonNull(PlayerRegistry.getLocationSourceFor(this), "Player location source returned null");
         NettyEntity<?> selfEntity = Logger.requireNonNull(
                 selfEntityCreator.createSelfEntity(this, selfEntityID, player),
                 "Self entity creator returned null",
@@ -124,16 +122,9 @@ public class PlayerData {
         WORLD_EPOCH.setRelease(this, current + 1);
     }
 
-    public void updateOwnLocation(UUID world, double x, double y, double z) {
-        ownLocation.set(x, y, z, world);
-    }
-
-    /**
-     * Returns a live, thread-safe view of the player's current location.
-     * Casting the result to a mutable type and modifying it is unsupported.
-     */
-    public Locatable ownLocation() {
-        return ownLocation;
+    /** Returns the live location maintained by the selected source for this player session. */
+    public PlayerLocatable playerLocation() {
+        return playerLocation;
     }
 
     public UUID getPlayerUUID() {
@@ -195,7 +186,7 @@ public class PlayerData {
                 "playerUUID=" + playerUUID +
                 ", joinTick=" + joinTick +
                 ", hasBypassPermission=" + hasBypassPermission() +
-                ", ownLocation=" + ownLocation +
+                ", playerLocation=" + playerLocation +
                 ", blockView=" + blockView +
                 ", entityView=" + entityView +
                 ", playerView=" + playerView +
