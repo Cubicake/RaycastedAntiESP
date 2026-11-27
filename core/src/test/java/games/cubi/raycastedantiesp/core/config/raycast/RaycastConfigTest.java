@@ -23,13 +23,27 @@ class RaycastConfigTest {
                 defaults.raycastSettings(),
                 !defaults.hideSoundsWhenHidden(),
                 !defaults.keepClientEntityWhenHidden(),
-                !defaults.onlyCheckSneaking()
+                !defaults.onlyCheckSneaking(),
+                defaults.onlyCheckSneakingRadius()
         );
 
         assertNotEquals(defaults.hideSoundsWhenHidden(), changed.hideSoundsWhenHidden());
         assertNotEquals(defaults.keepClientEntityWhenHidden(), changed.keepClientEntityWhenHidden());
         assertNotEquals(defaults.onlyCheckSneaking(), changed.onlyCheckSneaking());
         assertEquals(defaults.raycastSettings(), changed.raycastSettings());
+    }
+
+    @Test
+    void standingPlayersAreAlwaysShownOnlyWithinTheRadius() {
+        PlayerConfig defaults = PlayerConfig.DEFAULT;
+        assertTrue(defaults.alwaysShowStanding(64 * 64));
+        assertFalse(defaults.alwaysShowStanding(65 * 65));
+
+        PlayerConfig wider = new PlayerConfig(defaults.raycastSettings(), false, false, true, (short) 100);
+        assertTrue(wider.alwaysShowStanding(99 * 99));
+
+        PlayerConfig everyone = new PlayerConfig(defaults.raycastSettings(), false, false, false, (short) 64);
+        assertFalse(everyone.alwaysShowStanding(1));
     }
 
     @Test
