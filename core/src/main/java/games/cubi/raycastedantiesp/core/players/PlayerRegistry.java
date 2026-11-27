@@ -44,6 +44,10 @@ public final class PlayerRegistry {
      * The supplier of the PlayerLocatable must keep it up-to-date. It can reference the PlayerLocatable in its own datastore, or it can use the PlayerRegistry and lookup via UUID.
      */
     public interface PlayerLocationSource {
+        /**
+         * Supplies the live location on the player registration thread, before the player is published in the registry.
+         * The returned location must be non-null and support concurrent reads of individual fields from the packet and engine threads.
+         */
         PlayerLocatable getLocationSourceFor(PlayerData playerData);
 
         /**
